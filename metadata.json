@@ -1,0 +1,11 @@
+{
+  "name": "ONE GUDALUR",
+  "description": "Place Intelligence, Community Network & Civic Action Platform for Gudalur, The Nilgiris. Verified alerts, locality communities, civic issue tracking, Gudalur ID, and lawful civic action.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

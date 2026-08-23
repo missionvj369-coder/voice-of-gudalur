@@ -1,0 +1,17 @@
+{
+  "name": "OneGudalur - Nilgiris Civic & Intelligence Hub",
+  "short_name": "OneGudalur",
+  "description": "Place intelligence, verified wildlife alerts, bus network schedules, and offline emergency protocols for Gudalur & Pandalur taluks, The Nilgiris.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#059669",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
