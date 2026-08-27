@@ -39,11 +39,14 @@ const CommentSection: React.FC<CommentSectionProps> = ({ parentId }) => {
     e.preventDefault();
     if (!user || !newComment.trim()) return;
 
+    const currentUid = (user as any).uid || user.id || 'anon_user';
+    const currentName = profile?.name || (user as any).displayName || (user as any).user_metadata?.full_name || 'Resident';
+
     try {
       await addDoc(collection(db, 'comments'), {
         parentId,
-        userId: user.uid,
-        userName: profile?.name || user.displayName || 'Anonymous User',
+        userId: currentUid,
+        userName: currentName,
         text: newComment.trim(),
         createdAt: Date.now()
       });
@@ -62,6 +65,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({ parentId }) => {
     }
   };
 
+  const currentUid = user ? ((user as any).uid || user.id) : null;
+
   return (
     <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
       <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -78,7 +83,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ parentId }) => {
             <div className="flex-grow">
                <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-900">{comment.userName}</span>
-                  {(user?.uid === comment.userId || profile?.role === 'admin') && (
+                  {(currentUid === comment.userId || profile?.role === 'PLATFORM_ADMIN' || profile?.role === 'CORE_ADMIN') && (
                     <button 
                       onClick={() => comment.id && handleDelete(comment.id)}
                       className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"

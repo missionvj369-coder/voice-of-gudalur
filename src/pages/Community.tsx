@@ -59,12 +59,15 @@ const Community: React.FC = () => {
     e.preventDefault();
     if (!user) return;
     
+    const currentUid = (user as any).uid || user.id || 'anon_user';
+    const currentName = profile?.name || (user as any).displayName || (user as any).user_metadata?.full_name || 'Gudalur Resident';
+
     try {
       if (postType === 'status') {
         await addDoc(collection(db, 'community_posts'), {
-          userId: user.uid,
-          userName: profile?.name || user.displayName || 'Gudalur Resident',
-          userRole: profile?.role || 'user',
+          userId: currentUid,
+          userName: currentName,
+          userRole: profile?.role || 'LOCAL_MEMBER',
           content: newContent.content,
           category: newContent.category,
           likesCount: 0,
@@ -72,8 +75,8 @@ const Community: React.FC = () => {
         });
       } else {
         await addDoc(collection(db, 'help_requests'), {
-          userId: user.uid,
-          userName: profile?.name || user.displayName || 'Gudalur Citizen',
+          userId: currentUid,
+          userName: currentName,
           title: newContent.title,
           description: newContent.content,
           status: 'open',

@@ -31,7 +31,12 @@ export const SupportPetitionModal: React.FC<SupportPetitionModalProps> = ({
   const handleSupport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile && name.trim()) {
-      await registerResident(name, '', localityId);
+      await registerResident({
+        name: name.trim(),
+        phone: '',
+        localityId,
+        pincode: '643211'
+      });
     }
     if (onSupported) {
       onSupported(petition.id);

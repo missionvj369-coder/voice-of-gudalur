@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -25,9 +25,34 @@ let weatherCache: { data: any; timestamp: number } | null = null;
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json());
+
+  // Security headers
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' https://onegudalur.org; " +
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "img-src 'self' data: https: blob:; " +
+      "font-src 'self' https://fonts.gstatic.com; " +
+      "connect-src 'self' https://*.supabase.co https://api.open-meteo.com https://air-quality-api.open-meteo.com; " +
+      "frame-ancestors 'none'; " +
+      "base-uri 'self'; " +
+      "form-action 'self'"
+    );
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  });
 
   // Health route
   app.get('/api/health', (req, res) => {
@@ -38,7 +63,7 @@ async function startServer() {
     });
   });
 
-  // Weather & Environmental Ingestion API (Gudalur, Nilgiris: 11.5034° N, 76.4925° E)
+  // Weather & Environmental Ingestion API (Gudalur, Nilgiris: 11.5034Â° N, 76.4925Â° E)
   app.get('/api/weather', async (req, res) => {
     try {
       const now = Date.now();
@@ -120,7 +145,7 @@ async function startServer() {
       if (!apiKey) {
         return res.json({
           reply: lang === 'ta' 
-            ? 'கூடலூர் தகவல் மையம்: கூடலூர் நகராட்சி மற்றும் நீலகிரி மாவட்ட அரசு குறைதீர்ப்பு எண்: 1100 (முதல்வரின் முகவரி), மின்துறை உதவி எண்: 94987 94987, வனத்துறை அவசர எண்: 1800 425 6100.'
+            ? 'à®•à¯‚à®Ÿà®²à¯‚à®°à¯ à®¤à®•à®µà®²à¯ à®®à¯ˆà®¯à®®à¯: à®•à¯‚à®Ÿà®²à¯‚à®°à¯ à®¨à®•à®°à®¾à®Ÿà¯à®šà®¿ à®®à®±à¯à®±à¯à®®à¯ à®¨à¯€à®²à®•à®¿à®°à®¿ à®®à®¾à®µà®Ÿà¯à®Ÿ à®…à®°à®šà¯ à®•à¯à®±à¯ˆà®¤à¯€à®°à¯à®ªà¯à®ªà¯ à®Žà®£à¯: 1100 (à®®à¯à®¤à®²à¯à®µà®°à®¿à®©à¯ à®®à¯à®•à®µà®°à®¿), à®®à®¿à®©à¯à®¤à¯à®±à¯ˆ à®‰à®¤à®µà®¿ à®Žà®£à¯: 94987 94987, à®µà®©à®¤à¯à®¤à¯à®±à¯ˆ à®…à®µà®šà®° à®Žà®£à¯: 1800 425 6100.'
             : 'ONE GUDALUR Civic Navigator: For urgent civic grievances use CM Helpline 1100, TNEB Minnal 94987 94987, and Gudalur Forest Division 1800 425 6100. Localities SS Nagar, First Mile, Kasimvayal, and Thorapalli are connected.'
         });
       }
@@ -178,7 +203,7 @@ Role:
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = path.join(__dirname, 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));

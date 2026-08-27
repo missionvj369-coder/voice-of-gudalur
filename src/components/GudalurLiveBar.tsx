@@ -50,7 +50,7 @@ export const GudalurLiveBar: React.FC = () => {
 
           <div className="flex items-center gap-1.5 text-slate-300">
             <CloudSun size={14} className="text-amber-400" />
-            <span>{weather ? `${weather.temp}°C` : '22°C'}</span>
+            <span>{weather && typeof weather.temp === 'number' ? `${weather.temp}°C` : '21°C'}</span>
             <span className="text-slate-500 hidden sm:inline">•</span>
             <span className="text-slate-400 hidden sm:inline">Western Plateau (1,000m)</span>
           </div>

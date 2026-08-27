@@ -687,8 +687,8 @@ export const GOVERNMENT_CHANNELS: GovernmentChannel[] = [
 export const CITIZEN_PETITIONS: Petition[] = [
   {
     id: 'pet_01_tiger_wildlife_fence',
-    title: 'Urgent Action: AI Thermal Detection, Solar Fencing & Rapid Response Units for Tiger & Elephant Hotspots in Gudalur & O\'Valley',
-    titleTa: 'அவசர கோரிக்கை: கூடலூர் மற்றும் ஓ\'வேலியில் புலி, யானை மனித-வனவிலங்கு மோதலை தடுக்க AI கேமராக்கள், சூரிய மின்வேலிகள் மற்றும் 24x7 அதிரடிப்படை',
+    title: 'Protect Our Families - Demand Immediate AI Thermal Early Warning & Wildlife Fencing in O\'Valley & Gudalur',
+    titleTa: 'எங்கள் குடும்பங்களைப் பாதுகாக்க - ஓ\'வேலி & கூடலூரில் உடனடி AI எச்சரிக்கை & வனவிலங்கு வேலி அமைத்தல்',
     problem: 'Frequent tiger incursions and elephant herd movements into residential hamlets, estate worker lines, and schools in O\'Valley, SS Nagar, Cherambadi, and Thorapalli have resulted in fatal human encounters, severe livestock loss, and continuous fear among plantation workers.',
     problemTa: 'ஓ\'வேலி, எஸ்.எஸ். நகர், சேரம்பாடி மற்றும் தோரப்பள்ளி பகுதிகளில் அடிக்கடி நிகழும் புலி மற்றும் யானை தாக்குதல்களால் மனித உயிரிழப்புகள், கால்நடை இழப்புகள் மற்றும் பொதுமக்கள் மத்தியில் தீவிர அச்சம் நிலவுகிறது.',
     demand: '1. Deploy AI-powered Thermal Infrared Early Warning Cameras along all forest-plantation fringes.\n2. Erect and maintain energized solar fencing along vulnerable settlements.\n3. Increase Rapid Response Team (RRT) field patrol vehicles from 2 to 8 with specialized tranquilizer veterinarians stationed permanently at Gudalur.',
@@ -706,8 +706,8 @@ export const CITIZEN_PETITIONS: Petition[] = [
   },
   {
     id: 'pet_02_multispecialty_hospital',
-    title: 'Sanction 24x7 Multispecialty Emergency & Trauma Care Hospital with ICU & Antivenom / Wildlife Trauma Units in Gudalur',
-    titleTa: 'கூடலூரில் 24 மணி நேர தீவிர சிகிச்சை, அவசர விபத்து பிரிவு மற்றும் வனவிலங்கு சிகிச்சை வசதியுடன் கூடிய அரசு பன்னோக்கு மருத்துவமனை அமைக்க வேண்டும்',
+    title: 'Stop Preventable Deaths - Demand 24x7 Emergency Trauma Care & Antivenom Center for Gudalur',
+    titleTa: 'தடுக்கக்கூடிய இறப்புகளை நிறுத்த - கூடலூரில் 24x7 அவசர சிகிச்சை & விஷ மாற்று மையம் அமைக்கக் கோருங்கள்',
     problem: 'Gudalur Taluk GH lacks a dedicated CT scan, round-the-clock neurotrauma surgeons, and intensive ICU ventilators. Critically injured victims of wildlife attacks, road accidents, and snakebites must travel 75 km to Ooty or 110 km to Kozhikode Medical College, losing precious golden hour treatment.',
     problemTa: 'கூடலூர் அரசு மருத்துவமனையில் 24 மணி நேர நரம்பியல் அறுவை சிகிச்சை, தீவிர சிகிச்சை பிரிவு (ICU) இல்லாததால் விபத்து மற்றும் வனவிலங்கு தாக்குதலுக்குள்ளாகும் நோயாளிகள் 110 கி.மீ தூரமுள்ள கோழிக்கோடு அல்லது ஊட்டிக்கு கொண்டு செல்லப்படும் வழியிலேயே உயிரிழக்கின்றனர்.',
     demand: 'Upgrade Gudalur Government Hospital into a 250-bed District Multispecialty Center with Permanent Wildlife Trauma, Cardiology, and Neuro-Trauma Wings.',
@@ -729,8 +729,8 @@ export const CITIZEN_PETITIONS: Petition[] = [
   },
   {
     id: 'pet_03_section17_janmam_rights',
-    title: 'Expedite Title Settlement & Smallholder Farmer Patta Rights for Section 17 Janmam Lands in Gudalur & Pandalur Taluks',
-    titleTa: 'கூடலூர் மற்றும் பந்தலூர் வட்டங்களில் பிரிவு 17 ஜன்மம் நிலங்களில் சிறு விவசாயிகள் மற்றும் குடியிருப்போருக்கு நிரந்தர பட்டா வழங்க வேண்டும்',
+    title: 'Secure Our Land Rights - Expedite Patta Settlement for Smallholder Farmers in Section 17 Lands',
+    titleTa: 'எங்கள் நில உரிமையைப் பாதுகாக்க - பிரிவு 17 நிலங்களில் சிறு விவசாயிகளுக்கு விரைவாக பட்டா வழங்கக் கோருங்கள்',
     problem: 'Decades of unresolved Gudalur Janmam Abolition Act (Section 17) proceedings have left thousands of smallholder tea farmers and traditional residents unable to secure housing bank loans, agricultural subsidies, or legal land transfers.',
     problemTa: 'நீண்டகாலமாக நிலுவையில் உள்ள ஜன்மம் நில பிரச்சனைகளால் ஆயிரக்கணக்கான சிறு தேயிலை விவசாயிகள் மற்றும் எளிய மக்கள் வங்கிக் கடன் மற்றும் அரசின் மானியங்களை பெற முடியாமல் தவிக்கின்றனர்.',
     demand: 'Convene Special High-Power Settlement Commission to grant title ownership deeds to all genuine residents and smallholders holding under 5 acres.',

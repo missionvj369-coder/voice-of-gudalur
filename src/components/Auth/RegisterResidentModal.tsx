@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { ShieldCheck, MapPin, Phone, User, Check, X, Compass, Loader2 } from 'lucide-react';
+import { ShieldCheck, MapPin, Phone, User, Check, X, Compass, Loader2, IdCard, Copy, CheckCircle2, LogIn } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { GUDALUR_LOCALITIES } from '../../data/gudalurMasterData';
+import { LoginResidentModal } from './LoginResidentModal';
 import toast from 'react-hot-toast';
+import type { UserProfile } from '../../types';
 
 interface Props {
   isOpen: boolean;
@@ -12,10 +14,10 @@ interface Props {
 }
 
 export const RegisterResidentModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
-  const { user, profile, registerResident, userCoords, acquireLiveLocation, loginWithGoogle } = useAuth();
+  const { user, profile, registerResident, userCoords, acquireLiveLocation } = useAuth();
   const { lang, t } = useLanguage();
 
-  const [name, setName] = useState(profile?.name || user?.displayName || '');
+  const [name, setName] = useState(profile?.name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
   const [localityId, setLocalityId] = useState(profile?.localityId || GUDALUR_LOCALITIES[0].id);
   const [customPlaceName, setCustomPlaceName] = useState(profile?.customPlaceName || '');
@@ -23,6 +25,20 @@ export const RegisterResidentModal: React.FC<Props> = ({ isOpen, onClose, onSucc
   const [isLocating, setIsLocating] = useState(false);
   const [gpsCaptured, setGpsCaptured] = useState<boolean>(!!userCoords);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [issuedProfile, setIssuedProfile] = useState<UserProfile | null>(null);
+  const [idCopied, setIdCopied] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+
+  if (showLogin) {
+    return (
+      <LoginResidentModal
+        isOpen={isOpen}
+        onClose={onClose}
+        onSuccess={onSuccess}
+        onNeedRegister={() => setShowLogin(false)}
+      />
+    );
+  }
 
   if (!isOpen) return null;
 
@@ -38,13 +54,24 @@ export const RegisterResidentModal: React.FC<Props> = ({ isOpen, onClose, onSucc
     }
   };
 
+  const handleCopyId = () => {
+    if (issuedProfile) {
+      navigator.clipboard.writeText(
+        `ONE GUDALUR Resident ID: ${issuedProfile.gudalurId} | Phone: ${issuedProfile.phone} | Name: ${issuedProfile.name}`
+      );
+      setIdCopied(true);
+      setTimeout(() => setIdCopied(false), 2000);
+      toast.success('Gudalur ID copied to clipboard!');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       toast.error(lang === 'ta' ? 'பெயரை உள்ளிடவும்' : 'Please enter your full name');
       return;
     }
-    if (!phone.trim() || phone.trim().length < 10) {
+    if (!phone.trim() || phone.replace(/\D/g, '').length < 10) {
       toast.error(lang === 'ta' ? 'செல்லுபடியாகும் 10 இலக்க தொலைபேசி எண்ணை உள்ளிடவும்' : 'Please provide a valid 10-digit mobile number');
       return;
     }
@@ -55,7 +82,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ isOpen, onClose, onSucc
 
     setIsSubmitting(true);
     try {
-      await registerResident({
+      const registered = await registerResident({
         name: name.trim(),
         phone: phone.trim(),
         localityId,
@@ -64,20 +91,72 @@ export const RegisterResidentModal: React.FC<Props> = ({ isOpen, onClose, onSucc
         lat: userCoords?.lat,
         lng: userCoords?.lng
       });
-      toast.success(
-        lang === 'ta'
-          ? 'கூடலூர் குடிமக்கள் அட்டை வெற்றிகரமாக உருவாக்கப்பட்டது!'
-          : 'Gudalur Resident Citizen Card successfully registered!'
-      );
-      if (onSuccess) onSuccess();
-      onClose();
+      // Show the issued unique Gudalur ID on the success screen
+      setIssuedProfile(registered);
     } catch (err: any) {
       console.error('Registration failed:', err);
-      toast.error(lang === 'ta' ? 'பதிவு செய்வதில் பிழை ஏற்பட்டது' : 'Failed to save resident registration');
+      if (err?.code === 'DUPLICATE_PHONE' || /already registered/i.test(err?.message || '')) {
+        toast.error(err.message, { duration: 6000 });
+        setShowLogin(true);
+      } else {
+        toast.error(lang === 'ta' ? 'பதிவு செய்வதில் பிழை ஏற்பட்டது' : 'Failed to save resident registration');
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  /* ============ SUCCESS SCREEN — the issued unique Gudalur ID ============ */
+  if (issuedProfile) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+        <div className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 text-center space-y-5">
+          <div className="mx-auto p-3 w-fit rounded-2xl bg-emerald-100 text-emerald-700">
+            <CheckCircle2 size={32} />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-xl font-black font-serif text-slate-900">
+              {lang === 'ta' ? 'பதிவு வெற்றி!' : 'Registration Successful!'}
+            </h2>
+            <p className="text-xs text-slate-500 font-medium">
+              {lang === 'ta'
+                ? 'உங்கள் தனிப்பட்ட கூடலூர் ஐடி உருவாக்கி சேமிக்கப்பட்டது. இதை சேமித்து வைக்கவும்.'
+                : 'Your unique Gudalur ID was generated and saved. Keep it safe — login anytime with this ID + your phone number. No password needed.'}
+            </p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-slate-900 text-white space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Your Gudalur ID Number</p>
+            <p className="text-2xl font-mono font-black tracking-wider">{issuedProfile.gudalurId}</p>
+            <div className="flex flex-wrap items-center justify-center gap-3 text-[11px] text-slate-300 font-mono">
+              <span>📞 {issuedProfile.phone}</span>
+              <span>👤 {issuedProfile.name}</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleCopyId}
+            className="w-full py-3 rounded-2xl border-2 border-slate-200 hover:border-emerald-500 text-slate-700 hover:text-emerald-700 font-bold text-sm transition flex items-center justify-center gap-2"
+          >
+            {idCopied ? <Check size={18} className="text-emerald-600" /> : <Copy size={16} />}
+            <span>{idCopied ? (lang === 'ta' ? 'நகலெடுக்கப்பட்டது!' : 'ID Copied!') : (lang === 'ta' ? 'ஐடியை நகலெடுக்க' : 'Copy & Save My ID')}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (onSuccess) onSuccess();
+              onClose();
+            }}
+            className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition"
+          >
+            {lang === 'ta' ? 'தொடரவும்' : 'Continue to My Resident Card'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
@@ -108,21 +187,20 @@ export const RegisterResidentModal: React.FC<Props> = ({ isOpen, onClose, onSucc
           </div>
         </div>
 
-        {!user && (
-          <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="text-xs text-emerald-900">
-              <p className="font-bold">{lang === 'ta' ? 'Google கணக்கு மூலம் தொடரவும்' : 'Link with Google Account'}</p>
-              <p className="text-emerald-700">{lang === 'ta' ? 'விரைவான உள்நுழைவு மற்றும் பாதுகாப்பான தரவு' : 'Fast one-click verified authentication'}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => loginWithGoogle()}
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition whitespace-nowrap"
-            >
-              {lang === 'ta' ? 'Google உள்நுழைவு' : 'Sign in with Google'}
-            </button>
+        {/* Phone-only auth notice */}
+        <div className="mb-5 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start gap-3">
+          <IdCard size={20} className="text-emerald-700 shrink-0 mt-0.5" />
+          <div className="text-xs text-emerald-900">
+            <p className="font-bold">
+              {lang === 'ta' ? 'தொலைபேசி எண் மட்டுமே — கடவுச்சொல் இல்லை' : 'Phone number only — no password'}
+            </p>
+            <p className="text-emerald-700 mt-0.5">
+              {lang === 'ta'
+                ? 'பதிவு செய்தவுடன் ஒரு தனிப்பட்ட கூடலூர் ஐடி (எ.கா. GD-2026-123456) உருவாக்கப்பட்டு சேமிக்கப்படும். அந்த ஐடி + தொலைபேசி எண் மூலம் எப்போது வேண்டுமானாலும் உள்நுழையலாம்.'
+                : 'On registration a unique Gudalur ID (e.g. GD-2026-123456) is generated and saved for you. Login anytime with that ID + your phone number.'}
+            </p>
           </div>
-        )}
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           
@@ -265,6 +343,20 @@ export const RegisterResidentModal: React.FC<Props> = ({ isOpen, onClose, onSucc
               )}
             </button>
           </div>
+
+          {/* Already registered? Passwordless login */}
+          <button
+            type="button"
+            onClick={() => setShowLogin(true)}
+            className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:underline"
+          >
+            <LogIn size={13} />
+            <span>
+              {lang === 'ta'
+                ? 'ஏற்கனவே ஐடி உள்ளதா? தொலைபேசி + ஐடி மூலம் உள்நுழைக'
+                : 'Already have an ID? Login with Phone + ID'}
+            </span>
+          </button>
 
         </form>
 

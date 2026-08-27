@@ -1,13 +1,11 @@
-const CACHE_NAME = 'onegudalur-offline-v1';
+const CACHE_NAME = 'onegudalur-offline-v3';
 
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/live',
-  '/services',
-  '/bus-timings',
-  '/government'
+  '/favicon.svg',
+  '/src/index.css',
 ];
 
 self.addEventListener('install', (event) => {

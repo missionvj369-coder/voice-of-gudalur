@@ -7,8 +7,6 @@ import {
   Share2, 
   CheckCircle2, 
   AlertTriangle, 
-  Volume2, 
-  VolumeX, 
   MapPin, 
   ArrowRight, 
   Building2, 
@@ -22,11 +20,9 @@ import {
   Check,
   ChevronRight,
   Compass,
-  FileText,
   Mail,
   Send,
   Copy,
-  ExternalLink,
   Globe,
   ShieldCheck,
   Skull,
@@ -37,11 +33,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage, type Language } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { MANIFESTO_DATA, ManifestoContent } from '../data/manifestoData';
-import { EMAIL_RECIPIENTS, EMAIL_PETITION_DATA } from '../data/emailPetitionData';
 import { SendEmailModal } from '../components/Manifesto/SendEmailModal';
 import { generateManifestoPdf } from '../utils/manifestoPdfGenerator';
-import { db } from '../lib/firebase';
-import { doc, setDoc, increment, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { cn } from '../lib/utils';
 import crisisBloodBg from '../assets/images/gudalur_crisis_blood_1787476675818.jpg';
@@ -52,131 +46,91 @@ export const Manifesto: React.FC = () => {
 
   const manifesto: ManifestoContent = MANIFESTO_DATA[lang] || MANIFESTO_DATA.en;
 
-  // Signatures / Endorsements state
-  const [signaturesCount, setSignaturesCount] = useState<number>(() => {
-    const saved = localStorage.getItem('onegudalur_manifesto_signatures');
-    return saved ? parseInt(saved, 10) : 14820;
-  });
+  // Signatures / Endorsements state — starts at 0; only REAL rows from Supabase are counted.
+  const [signaturesCount, setSignaturesCount] = useState<number>(0);
 
   const [hasEndorsed, setHasEndorsed] = useState<boolean>(() => {
     return localStorage.getItem('onegudalur_has_endorsed_manifesto') === 'true';
   });
 
   const [endorserName, setEndorserName] = useState(profile?.name || '');
-  const [endorserLocality, setEndorserLocality] = useState(profile?.locality || 'O\'Valley');
+  const [endorserLocality, setEndorserLocality] = useState(profile?.localityName || 'O\'Valley');
   const [showSignModal, setShowSignModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailSelectedLang, setEmailSelectedLang] = useState<Language>(lang);
-
-  // Audio Speech Synthesis
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  // Official email submission proof — unlocks the signed PDF ONLY after a real submission record.
+  const [submissionRef, setSubmissionRef] = useState<string | null>(null);
+  const [isSubmittingEndorse, setIsSubmittingEndorse] = useState(false);
 
   // Sync selected email lang when app lang changes
   useEffect(() => {
     setEmailSelectedLang(lang);
   }, [lang]);
 
-  // Sync endorsement count from Firestore
+  // Sync endorsement count from Supabase (falls back to cached count offline)
   useEffect(() => {
-    const docRef = doc(db, 'manifesto_stats', 'global');
-    const unsub = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.count && data.count > 14000) {
-          setSignaturesCount(data.count);
-          localStorage.setItem('onegudalur_manifesto_signatures', data.count.toString());
+    let cancelled = false;
+    db.getManifestoSignatureCount()
+      .then(({ count }) => {
+        if (!cancelled && typeof count === 'number' && count >= 0) {
+          setSignaturesCount(count);
         }
-      }
-    }, (err) => {
-      console.warn('Firestore manifesto sync warning:', err);
-    });
-
-    return () => unsub();
+      })
+      .catch((err) => {
+        console.warn('Supabase manifesto sync warning:', err);
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle Speech
-  const handleToggleSpeech = () => {
-    if (!('speechSynthesis' in window)) {
-      toast.error('Text-to-speech is not supported on this browser.');
+  
+
+  // Handle Endorsement Submit — only records a REAL, identified resident endorsement.
+  const handleEndorse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = (endorserName.trim() || profile?.name || '').trim();
+    const loc = (endorserLocality.trim() || profile?.localityName || 'Local Gudalur').trim();
+
+    if (!name) {
+      toast.error('Please enter your full name.');
+      return;
+    }
+    // A genuine endorsement needs a registered Gudalur Resident Card so it stays a real, verifiable record.
+    if (!profile?.phone || !profile?.gudalurId) {
+      setShowSignModal(false);
+      toast.error('Please register your Gudalur Resident Card first so your endorsement is a real, verifiable record.');
       return;
     }
 
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      return;
-    }
-
-    window.speechSynthesis.cancel();
-
-    // Prepare speech text
-    const textToSpeak = `${manifesto.title}. ${manifesto.openingQuote}. ${manifesto.proclamation}. ${manifesto.sections.map(s => `${s.title}. ${s.content.join(' ')}`).join('. ')}. ${manifesto.callToAction.slogans.join('. ')}. ${manifesto.callToAction.closing}`;
-    
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    
-    // Set appropriate language code
-    if (lang === 'ta') utterance.lang = 'ta-IN';
-    else if (lang === 'ml') utterance.lang = 'ml-IN';
-    else if (lang === 'kn') utterance.lang = 'kn-IN';
-    else utterance.lang = 'en-IN';
-
-    utterance.rate = 0.92;
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-
-    window.speechSynthesis.speak(utterance);
-    setIsSpeaking(true);
-    toast.success('Reading proclamation aloud...');
-  };
-
-  // Stop speech when changing language or unmounting
-  useEffect(() => {
-    return () => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, [lang]);
-
-  // Handle Endorsement Submit
-  const handleEndorse = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-
-    const name = endorserName.trim() || profile?.name || 'Citizen of Gudalur';
-    const loc = endorserLocality || profile?.locality || 'Gudalur Taluk';
-
-    const newCount = signaturesCount + 1;
-    setSignaturesCount(newCount);
-    setHasEndorsed(true);
-    localStorage.setItem('onegudalur_has_endorsed_manifesto', 'true');
-    localStorage.setItem('onegudalur_manifesto_signatures', newCount.toString());
-    setShowSignModal(false);
-
+    setIsSubmittingEndorse(true);
     try {
-      const statsRef = doc(db, 'manifesto_stats', 'global');
-      await setDoc(statsRef, { count: increment(1), lastUpdated: Date.now() }, { merge: true });
-
-      // Record signature doc
-      const sigId = `sig_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      await setDoc(doc(db, 'manifesto_signatures', sigId), {
+      const { error } = await db.addManifestoSignature({
         name,
         locality: loc,
-        timestamp: Date.now(),
-        lang
+        contact: profile.phone,
+        gudalur_id: profile.gudalurId,
       });
+      if (error) {
+        toast.error('Could not register your endorsement. Please check your connection and try again.');
+        return;
+      }
+      // Only reflect a genuine, DB-confirmed endorsement.
+      setSignaturesCount((c) => c + 1);
+      setHasEndorsed(true);
+      setShowSignModal(false);
+      toast.success('Your endorsement is registered as a real, verifiable record.');
     } catch (err) {
-      console.warn('Silent fallback for Firestore endorsement:', err);
+      console.error('Endorsement error:', err);
+      toast.error('Could not register your endorsement. Please try again.');
+    } finally {
+      setIsSubmittingEndorse(false);
     }
-
-    toast.success('Your endorsement has been registered with OneGudalur!', {
-      icon: '✊'
-    });
   };
 
   // WhatsApp Broadcast
   const handleWhatsAppShare = () => {
     let text = `🩸 *${manifesto.title}*\n\n`;
-    text += `✊ "${manifesto.openingQuote}"\n\n`;
+    text += `✊ "${manifesto.subtitle}"\n\n`;
     text += `⚠️ *WHY ARE WE DYING? — THE HARD TRUTH:*\n`;
     text += `• 11 Traditional Migratory Corridors blocked by walls & fences.\n`;
     text += `• Elephants & Tigers trapped in fragmented pockets next to human lines.\n`;
@@ -193,16 +147,37 @@ export const Manifesto: React.FC = () => {
     window.open(url, '_blank');
   };
 
-  // PDF Generation
+  // PDF Generation — allowed ONLY after an official email submission has been recorded.
   const handleDownloadPdf = () => {
+    if (!submissionRef) {
+      setShowEmailModal(true);
+      toast('Send the official email to the authorities first — your signed PDF proof unlocks after submission.', { icon: '🔒' });
+      return;
+    }
     generateManifestoPdf(
       manifesto,
       lang,
       signaturesCount,
       profile?.name || (hasEndorsed ? endorserName : undefined),
-      profile?.locality || endorserLocality
+      profile?.localityName || endorserLocality,
+      submissionRef
     );
-    toast.success('Downloaded Official Representation Memorandum PDF!');
+    toast.success('Downloaded your signed memorandum with official submission proof.');
+  };
+
+  // Invoked after the email modal records a REAL submission — unlocks & auto-downloads the signed PDF.
+  const handleEmailSubmitted = (ref: string) => {
+    setSubmissionRef(ref);
+    setShowEmailModal(false);
+    generateManifestoPdf(
+      manifesto,
+      lang,
+      signaturesCount,
+      profile?.name || (hasEndorsed ? endorserName : undefined),
+      profile?.localityName || endorserLocality,
+      ref
+    );
+    toast.success(`Official submission recorded (${ref}). Your signed PDF is ready.`, { icon: '📄' });
   };
 
   return (
@@ -320,20 +295,6 @@ export const Manifesto: React.FC = () => {
               <span>{lang === 'ta' ? 'அரசுக்கு மின்னஞ்சல் அனுப்புக' : lang === 'ml' ? 'ഇമെയിൽ അയക്കുക' : lang === 'kn' ? 'ಇಮೇಲ್ ಕಳುಹಿಸಿ' : 'Send Official Email to CM & NTCA'}</span>
             </button>
 
-            {/* Read Aloud Toggle */}
-            <button
-              onClick={handleToggleSpeech}
-              className={cn(
-                "flex items-center gap-2 px-4 py-3.5 rounded-2xl border font-bold text-xs backdrop-blur-md transition",
-                isSpeaking 
-                  ? "bg-amber-500/30 border-amber-400 text-amber-200"
-                  : "bg-black/60 hover:bg-black/80 border-red-900/70 text-stone-200"
-              )}
-            >
-              {isSpeaking ? <VolumeX size={16} /> : <Volume2 size={16} />}
-              <span>{isSpeaking ? (lang === 'ta' ? 'நிறுத்துக' : 'Stop Narration') : (lang === 'ta' ? 'வாசிப்பைக் கேட்க' : 'Listen Proclamation')}</span>
-            </button>
-
             {/* WhatsApp Share */}
             <button
               onClick={handleWhatsAppShare}
@@ -357,13 +318,13 @@ export const Manifesto: React.FC = () => {
           <div className="pt-5 border-t border-red-900/50 flex flex-wrap items-center justify-between gap-4 text-xs text-stone-300">
             <div className="flex items-center gap-3">
               <div className="flex -space-x-2">
-                <div className="h-8 w-8 rounded-full bg-red-700 border-2 border-black flex items-center justify-center text-[10px] font-black text-white shadow-md">14k</div>
+                <div className="h-8 w-8 rounded-full bg-red-700 border-2 border-black flex items-center justify-center text-[10px] font-black text-white shadow-md">OG</div>
                 <div className="h-8 w-8 rounded-full bg-rose-900 border-2 border-black flex items-center justify-center text-[10px] font-black text-white">OV</div>
                 <div className="h-8 w-8 rounded-full bg-stone-800 border-2 border-black flex items-center justify-center text-[10px] font-black text-amber-400">CH</div>
               </div>
               <div>
                 <p className="font-bold text-white text-sm">
-                  {signaturesCount.toLocaleString()} {lang === 'ta' ? 'கூடலூர் குடிமக்கள் கையொப்பம்' : lang === 'kn' ? 'ನಾಗರಿಕ ಬೆಂಬಲಗಳು' : 'Verified Resident Endorsements'}
+                  {signaturesCount.toLocaleString()} {lang === 'ta' ? 'கூடலூர் குடிமக்கள் கையொப்பம்' : lang === 'kn' ? 'ನಾಗರಿಕ ಬೆಂಬಲಗಳು' : 'Resident Endorsements'}
                 </p>
                 <p className="text-[11px] text-red-300 font-medium">
                   {lang === 'ta' ? 'ஓவேலி, சேரம்பாடி, பந்தலூர் உள்ளிட்ட 24 விளிம்புப் பகுதிகளிலிருந்து' : 'Across O\'Valley, Cherambadi, Pandalur & 24 Frontline Localities'}
@@ -371,12 +332,12 @@ export const Manifesto: React.FC = () => {
               </div>
             </div>
 
-            {/* Direct Gateway to Sub-Page Civic Hub */}
+            {/* Direct Gateway to Act for Gudalur Petitions */}
             <Link
-              to="/hub"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-black/70 hover:bg-red-950 text-red-300 hover:text-white border border-red-700/60 text-xs font-bold transition group backdrop-blur-md"
+              to="/act"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white text-xs font-black shadow-lg shadow-emerald-950/50 transition group"
             >
-              <span>{lang === 'ta' ? 'கூடலூர் தகவல் மையம் & நேரலை' : lang === 'kn' ? 'ನಾಗರಿಕ ಮಾಹಿತಿ ಕೇಂದ್ರ' : 'Go to Gudalur Civic Hub & Pulse'}</span>
+              <span>{lang === 'ta' ? 'அதிகாரப்பூர்வ கோரிக்கைகள் & மனுக்கள்' : lang === 'kn' ? 'ನಾಗರಿಕ ಬೇಡಿಕೆಗಳು & ಮನವಿಗಳು' : 'Act for Gudalur — Petitions & Solutions'}</span>
               <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
@@ -430,14 +391,17 @@ export const Manifesto: React.FC = () => {
             <span className="px-3 py-1 rounded-xl bg-red-900/60 text-red-300 font-black text-xs uppercase tracking-wider border border-red-700/50">
               {manifesto.sections[0].part}
             </span>
-            <h2 className="text-xl sm:text-2xl font-serif font-black text-white">
-              {manifesto.sections[0].title}
-            </h2>
+            {/* The hero already carries this part's headline — no duplicated title here */}
+            {manifesto.sections[0].title && (
+              <h2 className="text-xl sm:text-2xl font-serif font-black text-white">
+                {manifesto.sections[0].title}
+              </h2>
+            )}
           </div>
 
           <div className="text-stone-300 text-sm sm:text-base leading-relaxed space-y-4 font-sans">
             {manifesto.sections[0].content.map((paragraph, idx) => (
-              <p key={idx} className={idx === 0 ? "font-serif text-base sm:text-lg text-red-200 font-bold border-l-2 border-red-500 pl-4 py-1 bg-red-950/30 rounded-r-xl" : ""}>
+              <p key={idx}>
                 {paragraph}
               </p>
             ))}
@@ -451,8 +415,8 @@ export const Manifesto: React.FC = () => {
                 <strong className="text-red-400">Documented Frontline Conflict Zones:</strong> Lauriston (O'Valley), Cherambadi, Seaforth, Glenrock, Mayfield, Pandalur fringe tea estates.
               </span>
             </div>
-            <Link to="/wildlife" className="text-red-300 font-bold hover:text-white hover:underline flex items-center gap-1">
-              <span>View Sighting Log</span>
+            <Link to="/act" className="text-red-300 font-bold hover:text-white hover:underline flex items-center gap-1">
+              <span>Act on This Crisis</span>
               <ChevronRight size={14} />
             </Link>
           </div>
@@ -536,227 +500,6 @@ export const Manifesto: React.FC = () => {
           </div>
         </section>
 
-        {/* 3.5 Citizen Emergency Representation & Direct Email Console */}
-        <section id="official-email-petition" className="rounded-3xl bg-stone-950 text-white p-6 sm:p-10 border-2 border-red-900/80 shadow-2xl space-y-6">
-          
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-red-900/40 pb-6">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-red-700/80 text-white border border-red-500 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md">
-                  <Mail size={12} />
-                  Direct Administrative Action
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-black/60 text-red-300 border border-red-900 text-[10px] font-semibold hidden sm:inline">
-                  TO: CM Cell | CC: NTCA + UN Bodies
-                </span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-serif font-black text-white">
-                {lang === 'ta' ? 'அரசுக்கு நேரடி மின்னஞ்சல் மனு' : lang === 'ml' ? 'മുഖ്യമന്ത്രിക്കും NTCA-യ്ക്കും ഇമെയിൽ സന്ദേശം' : lang === 'kn' ? 'ಮುಖ್ಯಮಂತ್ರಿ ಮತ್ತು NTCA ಗೆ ನೇರ ಇಮೇಲ್ ಮನವಿ' : 'Direct Citizen Representation to CM Cell & NTCA'}
-              </h2>
-              <p className="text-xs sm:text-sm text-stone-300 max-w-2xl">
-                {lang === 'ta'
-                  ? 'கீழே மொழியைத் தேர்வு செய்து "மின்னஞ்சல் அனுப்புக" பட்டனை அழுத்தவும். உங்கள் மின்னஞ்சல் செயலியில் (Gmail/Outlook) தானாகவே அனைத்து அதிகாரிகளின் முகவரிகள், பொருள் மற்றும் 4 அம்சக் கோரிக்கைகள் நிரப்பப்படும்.'
-                  : 'Select your preferred language below and click "Send Email". Your default mail app or Gmail will instantly load with all 10 verified recipient addresses, subject, and the complete 4-point mandate.'}
-              </p>
-            </div>
-
-            {/* Language Selector Pills */}
-            <div className="flex items-center bg-black p-1 rounded-2xl border border-red-900 shadow-inner shrink-0 self-start md:self-auto">
-              {(['en', 'ta', 'ml', 'kn'] as Language[]).map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setEmailSelectedLang(l)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-xl text-xs font-bold transition-all',
-                    emailSelectedLang === l
-                      ? 'bg-red-600 text-white shadow-md'
-                      : 'text-stone-400 hover:text-white hover:bg-stone-800'
-                  )}
-                >
-                  {l === 'en' ? 'English' : l === 'ta' ? 'தமிழ்' : l === 'ml' ? 'മലയാളം' : 'ಕನ್ನಡ'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Recipient Overview Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            
-            {/* Primary TO */}
-            <div className="p-4 rounded-2xl bg-black/80 border border-red-950 space-y-2">
-              <div className="flex items-center justify-between text-stone-400">
-                <span className="font-black text-red-400 uppercase tracking-wider text-[10px] flex items-center gap-1">
-                  <Building2 size={13} />
-                  PRIMARY RECIPIENTS (TO)
-                </span>
-                <span className="font-mono text-[10px] text-stone-500">2 Exec Offices</span>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between bg-stone-900/90 px-3 py-2 rounded-xl border border-stone-800">
-                  <div>
-                    <p className="font-bold text-white text-xs">Chief Minister's Special Cell</p>
-                    <p className="font-mono text-red-300 text-[11px]">cmcell@tn.gov.in</p>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-800">TN CMO</span>
-                </div>
-                <div className="flex items-center justify-between bg-stone-900/90 px-3 py-2 rounded-xl border border-stone-800">
-                  <div>
-                    <p className="font-bold text-white text-xs">Chief Minister's Office</p>
-                    <p className="font-mono text-red-300 text-[11px]">cmo@tn.gov.in</p>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-800">TN Exec</span>
-                </div>
-              </div>
-            </div>
-
-            {/* CC List Box */}
-            <div className="p-4 rounded-2xl bg-black/80 border border-red-950 space-y-2">
-              <div className="flex items-center justify-between text-stone-400">
-                <span className="font-black text-amber-400 uppercase tracking-wider text-[10px] flex items-center gap-1">
-                  <ShieldCheck size={13} />
-                  CARBON COPY LIST (CC) — 8 REGULATORS & UN
-                </span>
-                <button
-                  onClick={() => setShowEmailModal(true)}
-                  className="text-red-400 hover:text-white text-[10px] font-semibold underline"
-                >
-                  View Full Directory
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                <div className="bg-stone-900/90 p-2 rounded-xl border border-stone-800">
-                  <p className="font-bold text-stone-200">NTCA New Delhi</p>
-                  <p className="font-mono text-stone-400 text-[10px] truncate">ms-ntca@nic.in</p>
-                </div>
-                <div className="bg-stone-900/90 p-2 rounded-xl border border-stone-800">
-                  <p className="font-bold text-stone-200">IG Forests, NTCA</p>
-                  <p className="font-mono text-stone-400 text-[10px] truncate">ig-ntca@nic.in</p>
-                </div>
-                <div className="bg-stone-900/90 p-2 rounded-xl border border-stone-800">
-                  <p className="font-bold text-stone-200">District Collector Nilgiris</p>
-                  <p className="font-mono text-stone-400 text-[10px] truncate">collrnlg@tn.nic.in</p>
-                </div>
-                <div className="bg-stone-900/90 p-2 rounded-xl border border-stone-800">
-                  <p className="font-bold text-stone-200">MLA Gudalur</p>
-                  <p className="font-mono text-stone-400 text-[10px] truncate">mlagudalur@tn.gov.in</p>
-                </div>
-                <div className="bg-stone-900/90 p-2 rounded-xl border border-stone-800">
-                  <p className="font-bold text-stone-200">TN Wildlife Crime Board</p>
-                  <p className="font-mono text-stone-400 text-[10px] truncate">tnfwccb@gmail.com</p>
-                </div>
-                <div className="bg-stone-900/90 p-2 rounded-xl border border-stone-800">
-                  <p className="font-bold text-stone-200">UNEP & UN OHCHR</p>
-                  <p className="font-mono text-stone-400 text-[10px] truncate">unep-news@un.org</p>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Email Content Box */}
-          <div className="p-5 rounded-2xl bg-black border border-red-900/60 space-y-4">
-            
-            {/* Subject */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-stone-400 text-xs">
-                <span className="font-bold uppercase tracking-wider text-[10px] text-red-400">
-                  Subject Line ({emailSelectedLang.toUpperCase()})
-                </span>
-                <button
-                  onClick={() => {
-                    const content = EMAIL_PETITION_DATA[emailSelectedLang] || EMAIL_PETITION_DATA.en;
-                    navigator.clipboard.writeText(content.subject);
-                    toast.success('Copied subject line!');
-                  }}
-                  className="text-stone-400 hover:text-white flex items-center gap-1 text-[11px]"
-                >
-                  <Copy size={12} />
-                  <span>Copy Subject</span>
-                </button>
-              </div>
-              <p className="font-serif font-bold text-red-300 text-sm sm:text-base bg-stone-900/90 p-3 rounded-xl border border-stone-800">
-                {(EMAIL_PETITION_DATA[emailSelectedLang] || EMAIL_PETITION_DATA.en).subject}
-              </p>
-            </div>
-
-            {/* Body */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-stone-400 text-xs">
-                <span className="font-bold uppercase tracking-wider text-[10px] text-red-400">
-                  Representation Body
-                </span>
-                <button
-                  onClick={() => {
-                    const content = EMAIL_PETITION_DATA[emailSelectedLang] || EMAIL_PETITION_DATA.en;
-                    const fullText = `${content.salutation}\n\n${content.body}\n\n${content.signoff}`;
-                    navigator.clipboard.writeText(fullText);
-                    toast.success('Copied email body!');
-                  }}
-                  className="text-stone-400 hover:text-white flex items-center gap-1 text-[11px]"
-                >
-                  <Copy size={12} />
-                  <span>Copy Body</span>
-                </button>
-              </div>
-              <div className="max-h-60 overflow-y-auto p-4 rounded-xl bg-stone-900/90 border border-stone-800 text-xs sm:text-sm text-stone-200 whitespace-pre-line leading-relaxed font-sans">
-                {(EMAIL_PETITION_DATA[emailSelectedLang] || EMAIL_PETITION_DATA.en).salutation}
-                {'\n\n'}
-                {(EMAIL_PETITION_DATA[emailSelectedLang] || EMAIL_PETITION_DATA.en).body}
-                {'\n\n'}
-                {(EMAIL_PETITION_DATA[emailSelectedLang] || EMAIL_PETITION_DATA.en).signoff}
-              </div>
-            </div>
-
-          </div>
-
-          {/* Action Dispatch Buttons */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-            <button
-              onClick={() => setShowEmailModal(true)}
-              className="px-4 py-3 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 font-bold text-xs flex items-center gap-1.5 transition"
-            >
-              <FileText size={15} />
-              <span>Full Screen Dispatch & Customization</span>
-            </button>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Send via Gmail Web */}
-              <button
-                onClick={() => {
-                  const content = EMAIL_PETITION_DATA[emailSelectedLang] || EMAIL_PETITION_DATA.en;
-                  const to = EMAIL_RECIPIENTS.to.map(r => r.email).join(',');
-                  const cc = EMAIL_RECIPIENTS.cc.map(r => r.email).join(',');
-                  const fullBody = `${content.salutation}\n\n${content.body}\n\n${content.signoff}`;
-                  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&cc=${encodeURIComponent(cc)}&su=${encodeURIComponent(content.subject)}&body=${encodeURIComponent(fullBody)}`;
-                  window.open(gmailUrl, '_blank');
-                  toast.success('Opening Gmail Compose with all 10 recipients and content...');
-                }}
-                className="px-4 py-3 rounded-xl bg-stone-800 hover:bg-stone-700 text-white font-bold text-xs flex items-center gap-1.5 border border-stone-600 transition"
-              >
-                <ExternalLink size={14} />
-                <span>Open in Gmail Web</span>
-              </button>
-
-              {/* Direct Send via Mailto */}
-              <button
-                onClick={() => {
-                  const content = EMAIL_PETITION_DATA[emailSelectedLang] || EMAIL_PETITION_DATA.en;
-                  const to = EMAIL_RECIPIENTS.to.map(r => r.email).join(',');
-                  const cc = EMAIL_RECIPIENTS.cc.map(r => r.email).join(',');
-                  const fullBody = `${content.salutation}\n\n${content.body}\n\n${content.signoff}`;
-                  const mailtoUrl = `mailto:${to}?cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(content.subject)}&body=${encodeURIComponent(fullBody)}`;
-                  window.location.href = mailtoUrl;
-                  toast.success('Opening mail client with pre-filled representation...', { icon: '✉️' });
-                }}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-600 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-red-950 transition transform hover:-translate-y-0.5 border border-red-400/40"
-              >
-                <Send size={15} />
-                <span>Send Official Email (All 10 Authorities)</span>
-              </button>
-            </div>
-          </div>
-
-        </section>
 
         {/* Part IV: Call to Action & Stand As One */}
         <section className="bg-stone-950 text-white rounded-3xl p-6 sm:p-12 border-2 border-red-600 shadow-2xl text-center space-y-6 relative overflow-hidden">
@@ -851,7 +594,7 @@ export const Manifesto: React.FC = () => {
                 <p className="text-xs sm:text-sm text-stone-300">
                   {lang === 'ta' 
                     ? 'நமது கூட்டுக்குரல் அரசு மற்றும் உச்சநீதிமன்ற கவனத்திற்குச் செல்ல உங்கள் ஆதரவை பதிவு செய்யுங்கள்.'
-                    : 'Join 14,800+ citizens demanding safe homes, dismantled corridor blockades, and 24/7 rapid response protection.'}
+                    : 'Your endorsement is a real, verifiable record submitted to the authorities.'}
                 </p>
               </div>
 
@@ -912,6 +655,7 @@ export const Manifesto: React.FC = () => {
             isOpen={showEmailModal}
             onClose={() => setShowEmailModal(false)}
             initialLang={emailSelectedLang}
+            onSubmitted={handleEmailSubmitted}
           />
         )}
       </AnimatePresence>

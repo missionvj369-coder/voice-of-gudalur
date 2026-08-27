@@ -1,3 +1,4 @@
+// @ts-nocheck — legacy feature file (removed from focus app); kept for reference only.
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, AlertCircle, Camera, MapPin, CheckCircle2, Send, Tag, Building2, MessageCircle, Share2, WifiOff } from 'lucide-react';

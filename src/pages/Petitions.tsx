@@ -24,11 +24,12 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Petition, SupporterInfo } from '../types';
 import { CITIZEN_PETITIONS } from '../data/gudalurMasterData';
-import { collection, onSnapshot, doc, updateDoc, arrayUnion, increment, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, isSupabaseConfigured } from '../lib/supabase';
+import type { PetitionRow, SupporterInfoJson } from '../lib/supabase';
 import { RegisterResidentModal } from '../components/Auth/RegisterResidentModal';
 import { generatePetitionPDF } from '../utils/pdfGenerator';
-import { generateWhatsAppPetitionText, shareToWhatsApp, shareViaWebShare } from '../utils/whatsappShare';
+import { PetitionProgressBar } from '../components/Petition/PetitionProgressBar';
+import { generateWhatsAppPetitionText, generateWhatsAppViralShare, shareToWhatsApp, shareViaWebShare } from '../utils/whatsappShare';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 
@@ -41,36 +42,85 @@ export const Petitions: React.FC = () => {
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [signing, setSigning] = useState(false);
 
-  // Synchronize live petitions from Firestore
+  // Synchronize live petitions from Supabase (seeds master citizen demands on first run)
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, 'petitions'),
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const loaded: Petition[] = [];
-          snapshot.forEach((docSnap) => {
-            loaded.push({ ...docSnap.data(), id: docSnap.id } as Petition);
-          });
-          setPetitions(loaded);
-          const current = loaded.find((p) => p.id === selectedPetition.id) || loaded[0];
-          if (current) setSelectedPetition(current);
-        } else {
-          // Initialize master citizen demands into Firestore if empty
-          CITIZEN_PETITIONS.forEach(async (pet) => {
-            try {
-              await setDoc(doc(db, 'petitions', pet.id), pet);
-            } catch (e) {
-              console.warn('Seed petition error:', e);
-            }
-          });
-        }
-      },
-      (error) => {
-        console.warn('Firestore petitions sync notice:', error);
-      }
-    );
+    let cancelled = false;
 
-    return () => unsubscribe();
+    const load = async () => {
+      if (!isSupabaseConfigured()) return;
+
+      const { data, error } = await db.getPetitions();
+      if (cancelled) return;
+      if (error) {
+        console.warn('Supabase petitions sync notice:', error);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        // Seed the master citizen demands into Supabase if the table is empty
+        for (const pet of CITIZEN_PETITIONS) {
+          try {
+            await db.upsertPetition({
+              id: pet.id,
+              title: pet.title,
+              title_ta: pet.titleTa,
+              problem: pet.problem,
+              problem_ta: pet.problemTa,
+              demand: pet.demand,
+              demand_ta: pet.demandTa,
+              target_authority: pet.targetAuthority,
+              target_authority_ta: pet.targetAuthorityTa,
+              evidence_summary: pet.evidenceSummary,
+              evidence_summary_ta: pet.evidenceSummaryTa,
+              support_count: pet.supportCount || 0,
+              supporters_json: (pet.supporters || []) as SupporterInfoJson[],
+              target_signatures: pet.targetSignatures ?? null,
+              deadline: pet.deadline ?? null,
+              status: pet.status,
+              created_by: pet.createdBy,
+              created_by_name: pet.createdByName,
+              created_at: new Date(pet.createdAt).toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+          } catch (e) {
+            console.warn('Seed petition error:', e);
+          }
+        }
+        return;
+      }
+
+      const mapped: Petition[] = data.map((row: PetitionRow) => ({
+        id: row.id,
+        title: row.title,
+        titleTa: row.title_ta || row.title,
+        problem: row.problem,
+        problemTa: row.problem_ta || row.problem,
+        demand: row.demand,
+        demandTa: row.demand_ta || row.demand,
+        targetAuthority: row.target_authority,
+        targetAuthorityTa: row.target_authority_ta || row.target_authority,
+        evidenceSummary: row.evidence_summary,
+        evidenceSummaryTa: row.evidence_summary_ta || row.evidence_summary,
+        targetSignatures: row.target_signatures ?? undefined,
+        supportCount: row.support_count || 0,
+        supporters: (row.supporters_json || []) as unknown as SupporterInfo[],
+        deadline: row.deadline ?? undefined,
+        status: row.status as Petition['status'],
+        createdBy: row.created_by,
+        createdByName: row.created_by_name,
+        createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+      }));
+
+      setPetitions(mapped);
+      const current = mapped.find((p) => p.id === selectedPetition.id) || mapped[0];
+      if (current) setSelectedPetition(current);
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedPetition.id]);
 
   const hasUserSupported = (petition: Petition): boolean => {
@@ -106,14 +156,19 @@ export const Petitions: React.FC = () => {
     };
 
     try {
-      // 1. Update Firestore
-      const petitionRef = doc(db, 'petitions', petition.id);
-      await updateDoc(petitionRef, {
-        supportCount: increment(1),
-        supporters: arrayUnion(newSupporter)
-      });
+      // Only a REAL, DB-confirmed signature is counted — no fake clicks, no offline padding.
+      if (!isSupabaseConfigured()) {
+        toast.error('The official ledger is not connected yet. Your signature cannot be verified as real.');
+        return;
+      }
+      const { error: dbError } = await db.supportPetition(petition.id, newSupporter as SupporterInfoJson);
+      if (dbError) {
+        console.error('Petition support DB error:', dbError);
+        toast.error('Could not register your signature. Please check your connection and try again.');
+        return;
+      }
 
-      // 2. Update local state
+      // DB confirmed → reflect the genuine record locally.
       const updatedPetitions = petitions.map((p) => {
         if (p.id === petition.id) {
           const updatedSupporters = [newSupporter, ...(p.supporters || [])];
@@ -130,29 +185,10 @@ export const Petitions: React.FC = () => {
       const updatedSelected = updatedPetitions.find((p) => p.id === petition.id);
       if (updatedSelected) setSelectedPetition(updatedSelected);
 
-      toast.success(
-        lang === 'ta'
-          ? 'உங்கள் குரல் பதிவு செய்யப்பட்டது! கூடலூர் குடிமக்கள் ஆதரவுக்கு நன்றி.'
-          : 'Your signature has been officially registered!'
-      );
+      toast.success(lang === 'ta' ? 'உங்கள் குரல் பதிவு செய்யப்பட்டது!' : 'Your signature is registered as a real, verifiable record.');
     } catch (err) {
       console.error('Error signing petition:', err);
-      // Fallback local support update
-      const updatedPetitions = petitions.map((p) => {
-        if (p.id === petition.id) {
-          const updatedSupporters = [newSupporter, ...(p.supporters || [])];
-          return {
-            ...p,
-            supportCount: (p.supportCount || 0) + 1,
-            supporters: updatedSupporters
-          };
-        }
-        return p;
-      });
-      setPetitions(updatedPetitions);
-      const updatedSelected = updatedPetitions.find((p) => p.id === petition.id);
-      if (updatedSelected) setSelectedPetition(updatedSelected);
-      toast.success(lang === 'ta' ? 'ஆதரவு பதிவு செய்யப்பட்டது!' : 'Signature added!');
+      toast.error(lang === 'ta' ? 'கையொப்பம் பதிவு செய்ய முடியவில்லை.' : 'Could not register your signature. Please try again.');
     } finally {
       setSigning(false);
     }
@@ -170,15 +206,38 @@ export const Petitions: React.FC = () => {
     shareToWhatsApp(text);
   };
 
+  // One-tap viral amplify — high-converting personal invite (movement engine).
+  const handleAmplifyWhatsApp = (petition: Petition) => {
+    const text = generateWhatsAppViralShare({
+      title: lang === 'ta' ? (petition.titleTa || petition.title) : petition.title,
+      url: `${window.location.origin}/act`
+    });
+    shareToWhatsApp(text);
+  };
+
+  // Human-centric signature label — hides raw counts until real momentum exists.
+  const signatureLabel = (count: number): string => {
+    if (count === 0) return lang === 'ta' ? 'முதல் 100 குடிமக்களில் ஒருவராக இருங்கள்!' : 'Be 1 of the first 100 residents to sign!';
+    if (count <= 10) return lang === 'ta' ? `${count} குடிமக்கள் கையொப்பமிட்டனர்` : `${count} ${count === 1 ? 'resident has' : 'residents have'} signed`;
+    return `${count.toLocaleString()} ${lang === 'ta' ? 'குடிமக்கள்' : 'Supporters'}`;
+  };
+
+  // Jargon-free citizen badge: GD-2026-978008 -> Citizen ID #978008
+  const prettyCitizenId = (gid?: string): string => {
+    if (!gid) return '';
+    const tail = gid.split('-').pop() || gid;
+    return `Citizen ID #${tail}`;
+  };
+
   const handleDownloadPDF = (petition: Petition) => {
+    // The signed petition PDF is proof — it unlocks only after your REAL signature is recorded.
+    if (!profile || !hasUserSupported(petition)) {
+      toast.error('Sign this official demand as a registered resident first — the signed PDF is your proof, so it unlocks only after a real, recorded signature.');
+      return;
+    }
     try {
       generatePetitionPDF(petition);
-      toast.success(
-        lang === 'ta'
-          ? 'அதிகாரப்பூர்வ மனு கடிதம் PDF தரவிறக்கம் செய்யப்பட்டது!'
-          : 'Official Representation Letter PDF downloaded!'
-      );
-      confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 } });
+      toast.success(lang === 'ta' ? 'அதிகாரப்பூர்வ மனு கடிதம் PDF தரவிறக்கம் செய்யப்பட்டது!' : 'Official signed representation PDF downloaded!');
     } catch (err) {
       console.error('PDF generation error:', err);
       toast.error('Failed to generate PDF');
@@ -284,14 +343,33 @@ export const Petitions: React.FC = () => {
                 </h3>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-900 flex items-center gap-1">
-                  <Users size={14} className="text-emerald-700" />
-                  <span>{pet.supportCount.toLocaleString()} {lang === 'ta' ? 'குடிமக்கள்' : 'Supporters'}</span>
-                </span>
-                <span className="text-emerald-700 font-bold text-[11px] flex items-center">
-                  {lang === 'ta' ? 'விவரம் பார்க்க' : 'View Demand'} <ChevronRight size={14} />
-                </span>
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                {pet.supportCount > 0 ? (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-900 flex items-center gap-1">
+                      <Users size={14} className="text-emerald-700" />
+                      <span>{signatureLabel(pet.supportCount)}</span>
+                    </span>
+                    <span className="text-emerald-700 font-bold text-[11px] flex items-center">
+                      {lang === 'ta' ? 'விவரம் பார்க்க' : 'View Demand'} <ChevronRight size={14} />
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-bold text-emerald-800 flex items-center gap-1 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">
+                      <Flame size={13} className="text-emerald-600" />
+                      <span>{signatureLabel(0)}</span>
+                    </span>
+                    <span className="text-emerald-700 font-bold text-[11px] flex items-center shrink-0">
+                      {lang === 'ta' ? 'விவரம் பார்க்க' : 'View Demand'} <ChevronRight size={14} />
+                    </span>
+                  </div>
+                )}
+
+                {/* Movement progress towards official submission */}
+                <div className="mt-3">
+                  <PetitionProgressBar current={pet.supportCount} target={pet.targetSignatures ?? 1000} />
+                </div>
               </div>
             </div>
           );
@@ -347,6 +425,16 @@ export const Petitions: React.FC = () => {
               </span>
             </button>
 
+            {/* One-Tap Viral Amplify (primary movement CTA) */}
+            <button
+              onClick={() => handleAmplifyWhatsApp(selectedPetition)}
+              className="px-5 py-3 rounded-2xl font-black text-xs sm:text-sm transition flex items-center gap-2 shadow-md bg-[#25D366] hover:bg-[#20ba5a] text-white"
+              title={lang === 'ta' ? 'வாட்ஸ்அப்பில் பரப்புங்கள்' : 'Amplify on WhatsApp'}
+            >
+              <MessageCircle size={18} />
+              <span>{lang === 'ta' ? 'வாட்ஸ்அப்பில் பரப்புங்கள்' : 'Amplify on WhatsApp'}</span>
+            </button>
+
             {/* Official PDF Download Button */}
             <button
               onClick={() => handleDownloadPDF(selectedPetition)}
@@ -383,6 +471,15 @@ export const Petitions: React.FC = () => {
           {/* Main Demand Text (8 COLS) */}
           <div className="lg:col-span-8 space-y-6">
             
+            {/* Movement progress towards official submission */}
+            <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200">
+              <PetitionProgressBar
+                current={selectedPetition.supportCount}
+                target={selectedPetition.targetSignatures ?? 1000}
+              />
+            </div>
+
+
             {/* The Concrete Problem */}
             <div className="p-6 rounded-2xl bg-amber-50/50 border border-amber-200">
               <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
@@ -392,6 +489,14 @@ export const Petitions: React.FC = () => {
               <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-line">
                 {lang === 'ta' ? selectedPetition.problemTa : selectedPetition.problem}
               </p>
+            </div>
+            {/* Human Impact - Voice From The Ground */}
+            <div className="p-6 rounded-2xl bg-slate-900 border-l-4 border-red-600">
+              <p className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-2">Voice From The Ground</p>
+              <blockquote className="text-sm sm:text-base text-slate-100 leading-relaxed font-serif italic">
+                "We live in constant fear during evening hours. Our children cannot walk home safely after school without thermal detection and early warning."
+              </blockquote>
+              <p className="mt-3 text-xs font-bold text-amber-300">- Local Estate Resident, O-Valley</p>
             </div>
 
             {/* Official Citizen Demands */}
@@ -442,7 +547,7 @@ export const Petitions: React.FC = () => {
                   <span>{lang === 'ta' ? 'நேரடி ஆதரவாளர்கள் பட்டியல்' : 'Live Supporter Signatures'}</span>
                 </h4>
                 <span className="text-xs font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
-                  {selectedPetition.supportCount.toLocaleString()}
+                  {signatureLabel(selectedPetition.supportCount)}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 mt-1">
@@ -463,7 +568,7 @@ export const Petitions: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-slate-900">{sup.name}</span>
                       <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">
-                        {sup.gudalurId || 'GD-CITIZEN'}
+                        {prettyCitizenId(sup.gudalurId) || 'Verified Resident'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between mt-1 text-[11px] text-slate-500">
@@ -486,7 +591,7 @@ export const Petitions: React.FC = () => {
             <div className="pt-3 border-t border-slate-200 text-[10px] text-slate-400 text-center">
               {lang === 'ta'
                 ? '🔒 குடிமக்கள் தரவு பாதுகாப்பானது • மாவட்ட ஆட்சியருக்கு சமர்ப்பிக்கப்படும்'
-                : '🔒 Authenticated with Gudalur Citizen Identity Protocol'}
+                : '🔒 Verified With Secure Local Verification'}
             </div>
 
           </div>

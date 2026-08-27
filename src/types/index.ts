@@ -39,6 +39,10 @@ export interface Locality {
   memberCount?: number;
   alertStatus: 'NORMAL' | 'CAUTION' | 'ALERT';
   landmarks: string[];
+  // Computed stats (from Firestore queries)
+  openIssuesCount?: number;
+  resolvedIssuesCount?: number;
+  activeAlertsCount?: number;
 }
 
 export interface AdministrativeArea {
@@ -70,6 +74,11 @@ export interface UserProfile {
   lng?: number;
   createdAt: number;
   updatedAt: number;
+  // Stats for My ID dashboard
+  issuesReported: number;
+  issuesSupported: number;
+  representationsCreated: number;
+  alertsAcknowledged: number;
 }
 
 export type AlertCategory = 
@@ -104,6 +113,9 @@ export interface UrgentAlert {
   createdAt: number;
   expiresAt?: number;
   active?: boolean;
+  // Alert acknowledgment tracking
+  acknowledgedBy?: string[];
+  broadcasted?: boolean;
 }
 
 export type IssueCategory = 
@@ -167,6 +179,10 @@ export interface CivicIssue {
   upvotedBy?: string[];
   createdAt: number;
   updatedAt: number;
+  // Unified civic action model fields
+  evidenceIds?: string[];
+  supportCount?: number;
+  representationId?: string;
 }
 
 export type WildlifeAnimal = 
@@ -228,6 +244,8 @@ export interface WildlifeIncident {
   verifiedByForestDept: boolean;
   timestamp: number;
   distanceFromUserKm?: number; // Real-time client calculated
+  // Unified civic action model fields
+  evidenceIds?: string[];
 }
 
 export interface SupporterInfo {
@@ -289,6 +307,8 @@ export interface GovernmentChannel {
   submissionMethod: string;
   trackingMechanism: string;
   expectedWorkflow: string;
+  isEmergency?: boolean;
+  slaDays?: number;
 }
 
 export interface UserGrievanceRecord {
@@ -302,6 +322,7 @@ export interface UserGrievanceRecord {
   submissionDate: number;
   status: string;
   notes: string;
+  lastCheckedAt?: number;
 }
 
 export interface WeatherSnapshot {
@@ -327,6 +348,9 @@ export interface BusRoute {
   timings: string[];
   frequency: string;
   fareEstimate: string;
+  isActive?: boolean;
+  ghatRoute?: boolean;
+  nightBanApplies?: boolean;
 }
 
 export interface GudalurChapter {
@@ -347,7 +371,7 @@ export interface ServiceListing {
   id: string;
   name: string;
   nameTa?: string;
-  category: string;
+  category: 'Healthcare' | 'Emergency' | 'Transport' | 'Agriculture' | 'Civic' | 'Wildlife' | string;
   phone: string;
   localityId: string;
   localityName: string;
@@ -356,6 +380,21 @@ export interface ServiceListing {
   is24x7: boolean;
   isVerified: boolean;
   createdAt: number;
+}
+
+// ============================================
+// LIVE SAFETY & ALERTS
+// ============================================
+
+export interface GhatStatus {
+  name: string;
+  nameTa: string;
+  status: 'OPEN' | 'CLOSED' | 'RESTRICTED' | 'CAUTION';
+  lastUpdated: number;
+  details: string;
+  detailsTa?: string;
+  nightBanActive: boolean;
+  nightBanHours: { start: string; end: string };
 }
 
 export interface Comment {
@@ -450,3 +489,131 @@ export interface Volunteer {
   skills: string[];
 }
 export type ReportCategory = string;
+
+// ============================================
+// UNIFIED CIVIC ACTION MODEL
+// Issue → Evidence → Support → Representation
+// ============================================
+
+/** Evidence - Media, GPS, witness statements attached to an issue */
+export interface Evidence {
+  id: string;
+  issueId: string;
+  type: 'PHOTO' | 'VIDEO' | 'AUDIO' | 'DOCUMENT' | 'GPS' | 'WITNESS';
+  url: string;
+  thumbnailUrl?: string;
+  metadata: {
+    lat?: number;
+    lng?: number;
+    timestamp: number;
+    deviceInfo?: string;
+    fileSize?: number;
+    mimeType?: string;
+  };
+  submittedBy: string;
+  submittedByGudalurId: string;
+  verified: boolean;
+  verifiedBy?: string;
+  verifiedAt?: number;
+  createdAt: number;
+}
+
+/** Support - Community endorsement (upvotes, signatures, endorsements) */
+export interface Support {
+  id: string;
+  issueId: string;
+  userId: string;
+  userGudalurId: string;
+  userName: string;
+  type: 'UPVOTE' | 'ENDORSEMENT' | 'SIGNATURE' | 'WITNESS';
+  comment?: string;
+  isVerifiedResident: boolean;
+  createdAt: number;
+}
+
+/** Representation - Official escalation to authorities (petition, grievance, letter) */
+export interface Representation {
+  id: string;
+  issueId: string;
+  type: 'PETITION' | 'GRIEVANCE' | 'OFFICIAL_LETTER' | 'EMAIL_CAMPAIGN' | 'RTI';
+  title: string;
+  titleTa?: string;
+  targetAuthority: string;
+  targetAuthorityTa?: string;
+  authorityContact: {
+    email?: string;
+    phone?: string;
+    portalUrl?: string;
+    address?: string;
+  };
+  evidenceSummary: string;
+  evidenceSummaryTa?: string;
+  demands: string;
+  demandsTa?: string;
+  status: PetitionStatus; // Uses existing: OPEN | SUBMITTED_TO_GOVT | IN_GOVT_REVIEW | ACTION_TAKEN | RESOLVED | CLOSED
+  supportCount: number;
+  targetCount: number;
+  officialResponse?: string;
+  officialResponseDate?: number;
+  deliveredDate?: number;
+  legislativeReference?: string;
+  pdfUrl?: string;
+  emailThreadId?: string;
+  createdAt: number;
+  updatedAt: number;
+  createdBy: string;
+  createdByName: string;
+  createdByGudalurId: string;
+}
+
+// ============================================
+// LIVE SAFETY & ALERTS
+// ============================================
+
+export interface GhatStatus {
+  name: string;
+  nameTa: string;
+  status: 'OPEN' | 'CLOSED' | 'RESTRICTED' | 'CAUTION';
+  lastUpdated: number;
+  details: string;
+  detailsTa?: string;
+  nightBanActive: boolean;
+  nightBanHours: { start: string; end: string };
+}
+
+// ============================================
+// WILDLIFE
+// ============================================
+
+export interface WildlifeCorridor {
+  id: string;
+  name: string;
+  nameTa: string;
+  description: string;
+  descriptionTa: string;
+  startPoint: { lat: number; lng: number; name: string };
+  endPoint: { lat: number; lng: number; name: string };
+  keySpecies: WildlifeAnimal[];
+  threatLevel: ThreatLevel;
+  isActive: boolean;
+  lastSightingAt?: number;
+  sightingsCount: number;
+  fencingStatus: 'INTACT' | 'BREACHED' | 'UNDER_REPAIR' | 'NONE';
+  forestDeptContact: string;
+}
+
+// ============================================
+// DASHBOARD STATS
+// ============================================
+
+export interface PlatformStats {
+  totalResidents: number;
+  verifiedResidents: number;
+  totalLocalities: number;
+  activeIssues: number;
+  resolvedIssues: number;
+  activePetitions: number;
+  totalSignatures: number;
+  activeAlerts: number;
+  lastUpdated: number;
+}

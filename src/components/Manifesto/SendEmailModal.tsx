@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { EMAIL_RECIPIENTS, EMAIL_PETITION_DATA, EmailRecipient } from '../../data/emailPetitionData';
 import { useLanguage, type Language } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
+import { db } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { cn } from '../../lib/utils';
 
@@ -24,12 +25,15 @@ interface SendEmailModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialLang?: Language;
+  /** Called with the recorded docket reference after a real official submission is confirmed. */
+  onSubmitted?: (ref: string) => void;
 }
 
 export const SendEmailModal: React.FC<SendEmailModalProps> = ({
   isOpen,
   onClose,
-  initialLang
+  initialLang,
+  onSubmitted
 }) => {
   const { lang: appLang } = useLanguage();
   const { profile } = useAuth();
@@ -40,19 +44,28 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedRecipients, setCopiedRecipients] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'recipients'>('preview');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const content = EMAIL_PETITION_DATA[selectedLang] || EMAIL_PETITION_DATA.en;
   
   const toEmails = EMAIL_RECIPIENTS.to.map(r => r.email).join(',');
   const ccEmails = EMAIL_RECIPIENTS.cc.map(r => r.email).join(',');
+  const toCsv = toEmails.split(',').map(encodeURIComponent).join(',');
+  const ccCsv = ccEmails.split(',').map(encodeURIComponent).join(',');
+
+  // Auto sender identity from the registered Citizen Card (Title / CC / Subject auto-filled).
+  const senderName = profile?.name?.trim() || '';
+  const senderLine = senderName
+    ? `\n\n=== CITIZEN SENDER (PETITION IS ADDRESSED FROM) ===\n\nFull Name: ${senderName}\nGudalur Resident ID: ${profile?.gudalurId || 'Unregistered'}\nLocality: ${profile?.localityName || 'Gudalur'}\nContact (kept private): ${profile?.phone || '-'}\n=== END OF SENDER DETAILS ===`
+    : '';
   
-  const fullBody = `${content.salutation}\n\n${content.body}\n\n${content.signoff}${profile?.name ? `\n\n[Endorsed by Citizen: ${profile.name}, Locality: ${profile.locality || 'Gudalur'}]` : ''}`;
+  const fullBody = `${content.salutation}\n\n${content.body}\n\n${content.signoff}${senderLine}`;
 
-  // Generate mailto URL safely
-  const mailtoUrl = `mailto:${toEmails}?cc=${encodeURIComponent(ccEmails)}&subject=${encodeURIComponent(content.subject)}&body=${encodeURIComponent(fullBody)}`;
+  // mailto: To/CC keep real commas so every recipient expands in the mail app.
+  const mailtoUrl = `mailto:${toEmails}?cc=${ccEmails}&subject=${encodeURIComponent(content.subject)}&body=${encodeURIComponent(fullBody)}`;
 
-  // Generate Gmail Web Compose URL
-  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(toEmails)}&cc=${encodeURIComponent(ccEmails)}&su=${encodeURIComponent(content.subject)}&body=${encodeURIComponent(fullBody)}`;
+  // Gmail Web Compose: recipients encoded per-address (commas preserved).
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${toCsv}&cc=${ccCsv}&su=${encodeURIComponent(content.subject)}&body=${encodeURIComponent(fullBody)}`;
 
   const handleCopy = async (text: string, type: 'subject' | 'body' | 'all' | 'recipients') => {
     try {
@@ -77,10 +90,51 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
   };
 
   const handleDirectSend = () => {
-    window.location.href = mailtoUrl;
-    toast.success('Opening default email app with pre-filled representation...', {
-      icon: '✉️'
-    });
+    // Anchor-click is the most reliable cross-browser way to hand off to the OS mail handler.
+    try {
+      const a = document.createElement('a');
+      a.href = mailtoUrl;
+      a.rel = 'noopener';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
+      window.location.href = mailtoUrl;
+    }
+    toast.success('Opening your default email app - To, CC, Subject and sender are pre-filled. If nothing opens, use Copy All Text + Gmail Web.', { icon: '\u2709\uFE0F' });
+  };
+// Records REAL proof only after the user confirms they emailed the authorities, then unlocks the signed PDF.
+  const handleConfirmSubmitted = async () => {
+    if (isSubmitting) return;
+    if (!profile?.phone || !profile?.gudalurId) {
+      toast.error('Please register your Gudalur Resident Card first — a real submission needs your verified identity.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const { ref, error } = await db.addManifestoSubmission({
+        senderName: senderName || profile.name,
+        senderPhone: profile.phone,
+        gudalurId: profile.gudalurId,
+        locality: profile.localityName,
+        toEmails,
+        ccEmails,
+        subject: content.subject,
+        lang: selectedLang,
+      });
+      if (error || !ref) {
+        toast.error('Could not record your submission. Please verify your connection and try again.');
+        return;
+      }
+      toast.success(`Official submission recorded (${ref}). Downloading your signed PDF now.`, { icon: '📄' });
+      onSubmitted?.(ref);
+    } catch (err) {
+      console.error('Submission error:', err);
+      toast.error('Could not record your submission. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleOpenGmail = () => {
@@ -316,36 +370,50 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="bg-slate-50 border-t border-slate-200 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-          
+        <div className="bg-slate-50 border-t border-slate-200 p-4 sm:p-5 flex flex-col gap-3 shrink-0">
+
           <button
             onClick={() => handleCopy(`Subject: ${content.subject}\n\nTo: ${toEmails}\nCC: ${ccEmails}\n\n${fullBody}`, 'all')}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition"
+            className="w-full px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition"
           >
             {copiedAll ? <CheckCircle2 size={16} className="text-emerald-600" /> : <Copy size={16} />}
             <span>{copiedAll ? 'Copied Full Email & Headers' : 'Copy All Text'}</span>
           </button>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            {/* Open in Gmail Web */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full items-stretch">
             <button
               onClick={handleOpenGmail}
-              className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition"
+              className="px-4 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition"
             >
               <ExternalLink size={14} />
               <span>Gmail Web</span>
             </button>
 
-            {/* Direct Send Mailto */}
             <button
               onClick={handleDirectSend}
-              className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-900/20 transition transform hover:-translate-y-0.5"
+              className="px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-900/20 transition"
             >
               <Send size={15} />
-              <span>Launch Default Email App</span>
+              <span>Launch Email App</span>
+            </button>
+
+            <button
+              onClick={handleConfirmSubmitted}
+              disabled={isSubmitting}
+              className="sm:col-span-2 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 transition"
+            >
+              {isSubmitting ? (
+                <span className="inline-block h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+              ) : (
+                <FileCheck size={15} />
+              )}
+              <span>{isSubmitting ? 'Recording your official submission...' : 'I have emailed the authorities - Record & unlock signed PDF'}</span>
             </button>
           </div>
 
+          <p className="text-center text-[10px] text-slate-500">
+            Your signed PDF unlocks only after a real submission is recorded to the OneGudalur ledger - no fake counts, no fake clicks.
+          </p>
         </div>
 
       </motion.div>

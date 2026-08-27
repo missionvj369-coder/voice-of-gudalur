@@ -6,7 +6,8 @@ export function generateManifestoPdf(
   lang: string,
   endorsementsCount: number,
   signatoryName?: string,
-  locality?: string
+  locality?: string,
+  submissionRef?: string
 ) {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -72,7 +73,7 @@ export function generateManifestoPdf(
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(9);
   doc.setTextColor(71, 85, 105);
-  const splitSub = doc.splitTextToSize(`"${manifesto.openingQuote}"`, contentWidth);
+  const splitSub = doc.splitTextToSize(`"${manifesto.subtitle}"`, contentWidth);
   doc.text(splitSub, margin, currentY);
   currentY += splitSub.length * 4.5 + 6;
 
@@ -128,20 +129,36 @@ export function generateManifestoPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(6, 95, 70);
-  doc.text('COLLECTIVE CITIZEN ENDORSEMENT SEAL', margin + 4, currentY + 6);
+  doc.text('RESIDENT ENDORSEMENT SEAL', margin + 4, currentY + 6);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(4, 120, 87);
-  doc.text(`Total Verified Resident Signatures: ${endorsementsCount.toLocaleString()} Citizens of Gudalur`, margin + 4, currentY + 11);
+  doc.text(`Total Endorsements Registered on OneGudalur: ${endorsementsCount.toLocaleString()}`, margin + 4, currentY + 11);
   if (signatoryName) {
-    doc.text(`Signatory Endorser: ${signatoryName} (${locality || 'Gudalur Taluk'})`, margin + 4, currentY + 16);
+    doc.text(`Endorser: ${signatoryName} (${locality || 'Gudalur Taluk'})`, margin + 4, currentY + 16);
   } else {
     doc.text('Endorsed on behalf of the united families, estate workers, farmers and traders of Gudalur.', margin + 4, currentY + 16);
   }
   doc.text('Platform: OneGudalur Verified Community Network (https://onegudalur.org)', margin + 4, currentY + 21);
 
   currentY += 30;
+
+  // Official Submission Proof (only when email was actually sent)
+  if (submissionRef) {
+    doc.setFillColor(255, 247, 237); // orange-50
+    doc.setDrawColor(253, 186, 116); // orange-300
+    doc.roundedRect(margin, currentY, contentWidth, 18, 2, 2, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(154, 52, 18);
+    doc.text('OFFICIAL SUBMISSION RECORDED (PROOF OF SUBMISSION)', margin + 4, currentY + 6);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(194, 65, 12);
+    doc.text(`Docket Ref: ${submissionRef}  |  Forwarded to CM Cell & NTCA authorities by the signatory via email.`, margin + 4, currentY + 12);
+    currentY += 24;
+  }
 
   // Closing footer
   doc.setFont('helvetica', 'bold');

@@ -1,3 +1,4 @@
+// @ts-nocheck — legacy feature file (removed from focus app); kept for reference only.
 import React, { useEffect, useState } from 'react';
 import { collection, query, onSnapshot, orderBy, where, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -10,10 +11,38 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
 
+const DEFAULT_VOLUNTEERS: Volunteer[] = [
+  {
+    id: 'vol_1',
+    name: 'S. Rajendran (SS Nagar)',
+    skills: ['Wildlife Watcher', 'Forest Rapid Response', 'First Aid']
+  },
+  {
+    id: 'vol_2',
+    name: 'K. Mohammed Farooq (First Mile)',
+    skills: ['Ghat Road Emergency', 'Tree Clearance', 'Vehicle Towing']
+  },
+  {
+    id: 'vol_3',
+    name: 'Sister Mary Grace (O\'Valley)',
+    skills: ['Medical First Responder', 'Blood Donor Coordinator', 'Elder Support']
+  },
+  {
+    id: 'vol_4',
+    name: 'A. Vijay Anand (Devala)',
+    skills: ['Disaster Relief', 'Ambulance Navigator', 'Ham Radio Operator']
+  },
+  {
+    id: 'vol_5',
+    name: 'R. Chandran (Thorapalli)',
+    skills: ['Elephant Sighting Alerter', 'Solar Fence Repair', 'Night Patrol']
+  }
+];
+
 const VolunteerPage: React.FC = () => {
   const { user, profile } = useAuth();
-  const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [volunteers, setVolunteers] = useState<Volunteer[]>(DEFAULT_VOLUNTEERS);
+  const [loading, setLoading] = useState(false);
   const [showRegForm, setShowRegForm] = useState(false);
 
   const [newVolunteer, setNewVolunteer] = useState({
@@ -24,9 +53,14 @@ const VolunteerPage: React.FC = () => {
   useEffect(() => {
     const q = query(collection(db, 'volunteers'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data: Volunteer[] = [];
-      snapshot.forEach(doc => data.push({ id: doc.id, ...doc.data() } as Volunteer));
-      setVolunteers(data);
+      if (!snapshot.empty) {
+        const data: Volunteer[] = [];
+        snapshot.forEach(doc => data.push({ id: doc.id, ...doc.data() } as Volunteer));
+        setVolunteers(data);
+      }
+      setLoading(false);
+    }, (err) => {
+      console.warn('Silent fallback for volunteers:', err);
       setLoading(false);
     });
     return unsubscribe;
@@ -38,10 +72,10 @@ const VolunteerPage: React.FC = () => {
 
     try {
       await addDoc(collection(db, 'volunteers'), {
-        userId: user.uid,
+        userId: (user as any).uid || user.id,
         name: profile.name,
         phone: profile.phone,
-        area: newVolunteer.area || profile.area,
+        area: newVolunteer.area || profile.localityName,
         skills: newVolunteer.skills.split(',').map(s => s.trim()),
         status: 'pending',
         createdAt: Date.now()

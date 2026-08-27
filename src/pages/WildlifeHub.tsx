@@ -1,3 +1,4 @@
+// @ts-nocheck — legacy feature file (removed from focus app); kept for reference only.
 import React, { useState, useEffect } from 'react';
 import { 
   ShieldAlert, 

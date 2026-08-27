@@ -72,7 +72,7 @@ const NewReport: React.FC = () => {
           lng: formData.lng,
           address: formData.area
         },
-        reporterId: user.uid,
+        reporterId: (user as any).uid || user.id || 'anon_reporter',
         status: 'pending',
         createdAt: Date.now(),
         updatedAt: Date.now()

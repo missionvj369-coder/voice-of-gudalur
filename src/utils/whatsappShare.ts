@@ -112,6 +112,11 @@ ${bus.timings.slice(0, 8).join(' | ')}${bus.timings.length > 8 ? `\n+ ${bus.timi
 _Check full Nilgiris & interstate timetable on OneGudalur_`;
 };
 
+export const generateWhatsAppViralShare = (payload: { title: string; titleTa?: string; url: string }): string => {
+  const pageUrl = payload.url || `${window.location.origin}/act`;
+  const title = payload.title;
+  return `✊ I just signed the demand for* "${title}" *\nto protect our community in Gudalur. 🏡\n\nJoin me and add your name now:\n👇 ${pageUrl}\n\n_Every verified resident signature counts towards official representation._`;
+};
 export const shareToWhatsApp = (text: string) => {
   const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
   window.open(url, '_blank', 'noopener,noreferrer');

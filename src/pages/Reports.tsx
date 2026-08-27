@@ -24,7 +24,7 @@ const Reports: React.FC = () => {
     if (filter === 'my' && user) {
       q = query(
         collection(db, 'reports'),
-        where('reporterId', '==', user.uid),
+        where('reporterId', '==', (user as any).uid || user.id),
         orderBy('createdAt', 'desc')
       );
     }

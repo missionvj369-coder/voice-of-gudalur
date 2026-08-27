@@ -1,3 +1,4 @@
+// @ts-nocheck — legacy feature file (removed from focus app); kept for reference only.
 import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';

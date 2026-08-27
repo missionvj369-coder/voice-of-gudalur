@@ -1,3 +1,4 @@
+// @ts-nocheck — legacy feature file (removed from focus app); kept for reference only.
 
 import React, { useEffect, useState } from 'react';
 import { collection, query, onSnapshot, orderBy, where, addDoc } from 'firebase/firestore';

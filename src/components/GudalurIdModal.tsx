@@ -4,6 +4,7 @@ import { X, ShieldCheck, QrCode, MapPin, Phone, User, CheckCircle2, Share2, Copy
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { GUDALUR_LOCALITIES } from '../data/gudalurMasterData';
+import toast from 'react-hot-toast';
 
 interface GudalurIdModalProps {
   isOpen: boolean;
@@ -25,15 +26,27 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    await registerResident({
-      name: name.trim(),
-      phone: phone.trim(),
-      localityId,
-      customPlaceName: customPlaceName.trim() || undefined,
-      pincode: pincode.trim()
-    });
-    setIsRegistering(false);
+    if (!name.trim()) {
+      toast.error('Please enter your full name');
+      return;
+    }
+    if (phone.replace(/\D/g, '').length < 10) {
+      toast.error('Please provide a valid 10-digit mobile number');
+      return;
+    }
+    try {
+      await registerResident({
+        name: name.trim(),
+        phone: phone.trim(),
+        localityId,
+        customPlaceName: customPlaceName.trim() || undefined,
+        pincode: pincode.trim()
+      });
+      setIsRegistering(false);
+      toast.success('Your unique Gudalur ID has been generated!');
+    } catch (err: any) {
+      toast.error(err?.message || 'Registration failed. Please try again.');
+    }
   };
 
   const handleCopy = () => {

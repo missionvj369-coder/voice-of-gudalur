@@ -1,6 +1,7 @@
 export interface ManifestoSection {
   part: string;
-  title: string;
+  /** Optional — Part I intentionally has no title because the hero title already carries it (no repetition). */
+  title?: string;
   subtitle?: string;
   content: string[];
   highlights?: {
@@ -15,7 +16,7 @@ export interface ManifestoContent {
   title: string;
   subtitle: string;
   badge: string;
-  openingQuote: string;
+  /** One-line citizen proclamation (rendered once in the hero). */
   proclamation: string;
   sections: ManifestoSection[];
   callToAction: {
@@ -30,14 +31,11 @@ export const MANIFESTO_DATA: Record<'en' | 'ta' | 'ml' | 'kn', ManifestoContent>
     title: "The Silent Grief of Gudalur — Our Homes Have Become Open-Air Cages",
     subtitle: "We are not asking for favors. We are asking for the right to breathe, sleep, and walk on our own soil without fearing the dark.",
     badge: "Official Citizen Proclamation",
-    openingQuote: "We are not asking for favors. We are asking for the right to breathe, sleep, and walk on our own soil without fearing the dark.",
     proclamation: "To the world, Gudalur is a scenic paradise of mist and tea estates. To us, it is a landscape of perpetual fear.",
     sections: [
       {
         part: "Part I",
-        title: "The Silent Grief of Gudalur — Our Homes Have Become Open-Air Cages",
         content: [
-          "To the world, Gudalur is a scenic paradise of mist and tea estates. To us, it is a landscape of perpetual fear.",
           "Generations of our families have lived here, nurtured these hills, paid our taxes, and respected the law. Yet today, our doorsteps have turned into open-air containment zones. What used to be rare, distant wildlife sightings deep inside remote estates like Lauriston (O'Valley) and Cherambadi are now daily, heart-stopping encounters right where our children play.",
           "Every time a family member steps out for work or school, our hearts stop. We have buried mothers, fathers, and brothers not to natural causes, but to a man-made wildlife crisis. We refuse to be treated as silent collateral damage. Today, Gudalur speaks with One Voice."
         ]
@@ -118,14 +116,11 @@ export const MANIFESTO_DATA: Record<'en' | 'ta' | 'ml' | 'kn', ManifestoContent>
     title: "கூடலூரின் மௌனக் கதறல் — எங்கள் வீடுகள் திறந்தவெளி கூண்டுகளாக மாறிவிட்டன",
     subtitle: "நாங்கள் அரசிடம் சலுகை கேட்கவில்லை; இருளுக்கு அஞ்சாமல் எங்கள் சொந்த மண்ணில் சுவாசிக்க, தூங்க, நடக்கக்கூடிய உரிமையையே கேட்கிறோம்.",
     badge: "மக்களின் அதிகாரப்பூர்வ பிரகடனம்",
-    openingQuote: "நாங்கள் அரசிடம் சலுகை கேட்கவில்லை; இருளுக்கு அஞ்சாமல் எங்கள் சொந்த மண்ணில் சுவாசிக்க, தூங்க, நடக்கக்கூடிய உரிமையையே கேட்கிறோம்.",
     proclamation: "உலகிற்கு கூடலூர் என்பது பனிமூட்டமும் தேயிலைத் தோட்டங்களும் நிறைந்த எழில் சொர்க்கம். ஆனால் எங்களுக்கு, இது முடிவில்லா மரண பயத்தின் நிலப்பரப்பு.",
     sections: [
       {
         part: "பகுதி I",
-        title: "கூடலூரின் மௌனக் கதறல் — எங்கள் வீடுகள் திறந்தவெளி கூண்டுகளாக மாறிவிட்டன",
         content: [
-          "உலகிற்கு கூடலூர் என்பது பனிமூட்டமும் தேயிலைத் தோட்டங்களும் நிறைந்த எழில் சொர்க்கம். ஆனால் எங்களுக்கு, இது முடிவில்லா மரண பயத்தின் நிலப்பரப்பு.",
           "எங்கள் குடும்பங்களின் தலைமுறைகள் இங்கு வாழ்ந்து, இந்த மலைகளைப் பேணி, வரி செலுத்தி, சட்டத்தை மதித்து வந்துள்ளன. ஆனால் இன்று, எங்கள் வீட்டு வாசல்கள் திறந்தவெளி தடுப்பு மண்டலங்களாக மாறிவிட்டன. ஒரு காலத்தில் லாரிஸ்டன் (ஓவேலி) மற்றும் சேரம்பாடி போன்ற அடர்ந்த தோட்டங்களுக்குள் மட்டுமே அரிதாகக் காணப்பட்ட வனவிலங்குகள், இன்று எங்கள் குழந்தைகள் விளையாடும் முற்றத்திலேயே நாள்தோறும் இதயத்தை அதிர வைக்கும் மரண பயமாக நிற்கின்றன.",
           "ஒவ்வொரு முறையும் ஒரு குடும்ப உறுப்பினர் வேலைக்கோ அல்லது பள்ளி பெற்றோருக்கோ வெளியே செல்லும்போது, எங்கள் நெஞ்சம் படபடக்கிறது. நாங்கள் எங்கள் தாய்மார்கள், தந்தையர், சகோதரர்களை இயற்கை காரணங்களுக்காக புதைக்கவில்லை; மனிதனால் உருவாக்கப்பட்ட இந்த வனவிலங்கு நெருக்கடியால் பலிகொடுத்து வருகிறோம். நாங்கள் இனி அமைதியான பலியாடுகளாக இருக்க மாட்டோம். இன்று, கூடலூர் ஒரே குரலில் பேசுகிறது."
         ]
@@ -206,14 +201,11 @@ export const MANIFESTO_DATA: Record<'en' | 'ta' | 'ml' | 'kn', ManifestoContent>
     title: "ഗൂഡലൂരിന്റെ നിശ്ശബ്ദ വിലാപം — നമ്മുടെ വീടുകൾ തുറന്ന ജയിലുകളായി മാറിയിരിക്കുന്നു",
     subtitle: "ഞങ്ങൾ ഔദാര്യം ചോദിക്കുകയല്ല. ഇരുട്ടിനെ ഭയപ്പെടാതെ ഞങ്ങളുടെ സ്വന്തം മണ്ണിൽ ശ്വസിക്കാനും ഉറങ്ങാനും നടക്കാനുമുള്ള അവകാശമാണ് ഞങ്ങൾ ചോദിക്കുന്നത്.",
     badge: "ഔദ്യോഗിക പൗര പ്രഖ്യാപനം",
-    openingQuote: "ഞങ്ങൾ ഔദാര്യം ചോദിക്കുകയല്ല. ഇരുട്ടിനെ ഭയപ്പെടാതെ ഞങ്ങളുടെ സ്വന്തം മണ്ണിൽ ശ്വസിക്കാനും ഉറങ്ങാനും നടക്കാനുമുള്ള അവകാശമാണ് ഞങ്ങൾ ചോദിക്കുന്നത്.",
     proclamation: "ലോകത്തിന് ഗൂഡലൂർ കോടമഞ്ഞും തേയിലത്തോട്ടങ്ങളും നിറഞ്ഞ മനോഹരമായ ഒരു പറുദീസയാണ്. എന്നാൽ ഞങ്ങൾക്ക് ഇത് നിരന്തരമായ മരണഭയത്തിന്റെ ഭൂമികയാണ്.",
     sections: [
       {
         part: "ഭാഗം I",
-        title: "ഗൂഡലൂരിന്റെ നിശ്ശബ്ദ വിലാപം — നമ്മുടെ വീടുകൾ തുറന്ന ജയിലുകളായി മാറിയിരിക്കുന്നു",
         content: [
-          "ലോകത്തിന് ഗൂഡലൂർ കോടമഞ്ഞും തേയിലത്തോട്ടങ്ങളും നിറഞ്ഞ മനോഹരമായ ഒരു പറുദീസയാണ്. എന്നാൽ ഞങ്ങൾക്ക് ഇത് നിരന്തരമായ മരണഭയത്തിന്റെ ഭൂമികയാണ്.",
           "തലമുറകളായി ഞങ്ങളുടെ കുടുംബങ്ങൾ ഇവിടെ ജീവിക്കുകയും ഈ മലകളെ സംരക്ഷിക്കുകയും നികുതി നൽകുകയും നിയമം പാലിക്കുകയും ചെയ്തുവരുന്നു. എന്നാൽ ഇന്ന് ഞങ്ങളുടെ വീട്ടുപടിക്കൽ തുറന്ന ജയിലുകളായി മാറിയിരിക്കുന്നു. ലാരിസ്റ്റൺ (ഓവേലി), ചേരമ്പാടി തുടങ്ങിയ ഉൾത്തോട്ടങ്ങളിൽ പണ്ട് വല്ലപ്പോഴും മാത്രം കണ്ടിരുന്ന വന്യമൃഗങ്ങൾ ഇന്ന് ഞങ്ങളുടെ കുഞ്ഞുങ്ങൾ കളിക്കുന്നിടത്ത് നിത്യേനയുള്ള ഭീതിയായി മാറിയിരിക്കുന്നു.",
           "ഓരോ തവണയും കുടുംബാംഗങ്ങൾ ജോലിക്കോ സ്കൂളിലോ പോകുമ്പോൾ ഞങ്ങളുടെ നെഞ്ചിടിക്കുന്നു. സ്വാഭാവിക കാരണങ്ങളാലല്ല, മറിച്ച് മനുഷ്യനിർമ്മിതമായ ഈ വന്യജീവി പ്രതിസന്ധിയിലാണ് ഞങ്ങൾ അമ്മമാരെയും അച്ഛന്മാരെയും സഹോദരങ്ങളെയും സംസ്കരിച്ചത്. നിശ്ശബ്ദരായ ഇരകളാകാൻ ഞങ്ങൾ വിസമ്മതിക്കുന്നു. ഇന്ന് ഗൂഡലൂർ ഒരൊറ്റ ശബ്ദത്തിൽ സംസാരിക്കുന്നു."
         ]
@@ -294,14 +286,11 @@ export const MANIFESTO_DATA: Record<'en' | 'ta' | 'ml' | 'kn', ManifestoContent>
     title: "ಗೂಡಲೂರಿನ ಮೂಕ ರೋದನ — ನಮ್ಮ ಮನೆಗಳು ತೆರೆದ ಜೈಲುಗಳಾಗಿ ಮಾರ್ಪಟ್ಟಿವೆ",
     subtitle: "ನಾವು ಯಾವುದೇ ಭಿಕ್ಷೆಯನ್ನು ಕೇಳುತ್ತಿಲ್ಲ. ಕತ್ತಲೆಗೆ ಹೆದರದೆ ನಮ್ಮದೇ ನೆಲದಲ್ಲಿ ಉಸಿರಾಡುವ, ಮಲಗುವ ಮತ್ತು ನಡೆಯುವ ಬದುಕುವ ಹಕ್ಕನ್ನು ಮಾತ್ರ ಕೇಳುತ್ತಿದ್ದೇವೆ.",
     badge: "ಅಧಿಕೃತ ನಾಗರಿಕ ಪ್ರಣಾಳಿಕೆ",
-    openingQuote: "ನಾವು ಯಾವುದೇ ಭಿಕ್ಷೆಯನ್ನು ಕೇಳುತ್ತಿಲ್ಲ. ಕತ್ತಲೆಗೆ ಹೆದರದೆ ನಮ್ಮದೇ ನೆಲದಲ್ಲಿ ಉಸಿರಾಡುವ, ಮಲಗುವ ಮತ್ತು ನಡೆಯುವ ಬದುಕುವ ಹಕ್ಕನ್ನು ಮಾತ್ರ ಕೇಳುತ್ತಿದ್ದೇವೆ.",
     proclamation: "ಜಗತ್ತಿಗೆ ಗೂಡಲೂರು ಮಂಜು ಮತ್ತು ಚಹಾ ತೋಟಗಳ ಸುಂದರ ಸ್ವರ್ಗ. ಆದರೆ ನಮಗೆ, ಇದು ಅಂತ್ಯವಿಲ್ಲದ ಸಾವಿನ ಭಯದ ಭೂಮಿ.",
     sections: [
       {
         part: "ಭಾಗ I",
-        title: "ಗೂಡಲೂರಿನ ಮೂಕ ರೋದನ — ನಮ್ಮ ಮನೆಗಳು ತೆರೆದ ಜೈಲುಗಳಾಗಿ ಮಾರ್ಪಟ್ಟಿವೆ",
         content: [
-          "ಜಗತ್ತಿಗೆ ಗೂಡಲೂರು ಮಂಜು ಮತ್ತು ಚಹಾ ತೋಟಗಳ ಸುಂದರ ಸ್ವರ್ಗ. ಆದರೆ ನಮಗೆ, ಇದು ಅಂತ್ಯವಿಲ್ಲದ ಸಾವಿನ ಭಯದ ಭೂಮಿ.",
           "ನಮ್ಮ ಕುಟುಂಬಗಳ ತಲೆಮಾರುಗಳು ಇಲ್ಲಿ ವಾಸಿಸಿವೆ, ಈ ಬೆಟ್ಟಗಳನ್ನು ಪೋಷಿಸಿವೆ, ತೆರಿಗೆ ಪಾವತಿಸಿವೆ ಮತ್ತು ಕಾನೂನನ್ನು ಗೌರವಿಸಿವೆ. ಆದರೆ ಇಂದು ನಮ್ಮ ಮನೆ ಬಾಗಿಲುಗಳೇ ತೆರೆದ ಬಂಧನ ವಲಯಗಳಾಗಿ ಬದಲಾಗಿವೆ. ಹಿಂದೆ ಲಾರಿಸ್ಟನ್ (ಓವೆಲಿ) ಮತ್ತು ಚೆಂಬಾಡಿಯಂತಹ ದೂರದ ತೋಟಗಳ ಒಳಗೆ ಮಾತ್ರ ಅಪರೂಪಕ್ಕೆ ಕಾಣುತ್ತಿದ್ದ ವನ್ಯಜೀವಿಗಳು, ಇಂದು ನಮ್ಮ ಮಕ್ಕಳು ಆಟವಾಡುವ ಸ್ಥಳಗಳಲ್ಲೇ ನಿತ್ಯವೂ ಎದೆಬಡಿತ ನಿಲ್ಲಿಸುವ ಅಪಾಯವಾಗಿ ನಿಂತಿವೆ.",
           "ಕುಟುಂಬದ ಸದಸ್ಯರು ಕೆಲಸಕ್ಕೆ ಅಥವಾ ಶಾಲೆಗೆ ಹೊರಟಾಗಲೆಲ್ಲಾ ನಮ್ಮ ಹೃದಯ ಬಡಿದುಕೊಳ್ಳುತ್ತದೆ. ನೈಸರ್ಗಿಕ ಕಾರಣಗಳಿಂದಲ್ಲ, ಮಾನವ ನಿರ್ಮಿತ ವನ್ಯಜೀವಿ ಬಿಕ್ಕಟ್ಟಿನಿಂದಾಗಿ ನಾವು ತಾಯಂದಿರು, ತಂದೆಯರು ಮತ್ತು ಸಹೋದರರನ್ನು ಕಳೆದುಕೊಂಡು ಮಣ್ಣು ಮಾಡಿದ್ದೇವೆ. ಮೂಕ ಬಲಿಪಶುಗಳಾಗಲು ನಾವು ಇನ್ನು ಒಪ್ಪುವುದಿಲ್ಲ. ಇಂದು ಗೂಡಲೂರು ಒಂದೇ ಧ್ವನಿಯಲ್ಲಿ ಮಾತನಾಡುತ್ತದೆ."
         ]

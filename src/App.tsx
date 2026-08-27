@@ -5,22 +5,10 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import Shell from './components/Layout/Shell';
 
-// Pages
+// Core Focused Pages
 import Manifesto from './pages/Manifesto';
-import Home from './pages/Home';
-import Places from './pages/Places';
-import Localities from './pages/Localities';
-import Live from './pages/Live';
-import Issues from './pages/Issues';
-import WildlifeHub from './pages/WildlifeHub';
 import Petitions from './pages/Petitions';
-import Government from './pages/Government';
-import GovtChannels from './pages/GovtChannels';
-import BusTimings from './pages/BusTimings';
-import Services from './pages/Services';
-import StoryOfGudalur from './pages/StoryOfGudalur';
-import History from './pages/History';
-import AIGuide from './pages/AIGuide';
+import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 
 const AppContent: React.FC = () => {
@@ -30,9 +18,9 @@ const AppContent: React.FC = () => {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-950 text-white">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
-          <p className="text-xs font-serif tracking-widest uppercase text-emerald-400 font-bold">
-            ONE GUDALUR
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-red-600 border-t-transparent"></div>
+          <p className="text-xs font-serif tracking-widest uppercase text-red-400 font-bold">
+            ONE GUDALUR • RIGHT TO LIFE
           </p>
         </div>
       </div>
@@ -42,31 +30,22 @@ const AppContent: React.FC = () => {
   return (
     <Shell>
       <Routes>
+        {/* 1. Right to Life Manifesto */}
         <Route path="/" element={<Manifesto />} />
         <Route path="/manifesto" element={<Manifesto />} />
-        <Route path="/hub" element={<Home />} />
-        <Route path="/home" element={<Navigate to="/hub" replace />} />
-        <Route path="/places" element={<Places />} />
-        <Route path="/localities" element={<Localities />} />
-        <Route path="/live" element={<Live />} />
-        <Route path="/issues" element={<Issues />} />
-        <Route path="/wildlife" element={<WildlifeHub />} />
+
+        {/* 2. Act for Gudalur (Petitions, Demands & Solutions) */}
         <Route path="/act" element={<Petitions />} />
-        <Route path="/government" element={<Government />} />
-        <Route path="/govt-channels" element={<GovtChannels />} />
-        <Route path="/bus-timings" element={<BusTimings />} />
-        <Route path="/services" element={<Services />} />
-        <Route path="/story" element={<StoryOfGudalur />} />
-        <Route path="/history" element={<History />} />
-        <Route path="/ai-guide" element={<AIGuide />} />
+        <Route path="/petitions" element={<Petitions />} />
+
+        {/* 3. Resident Citizen Card & Profile */}
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/id" element={<Profile />} />
+
+        {/* 4. Admin (Moderation) */}
         <Route path="/admin" element={<Admin />} />
-        
-        {/* Fallback & Legacy Redirects */}
-        <Route path="/reports" element={<Navigate to="/issues" replace />} />
-        <Route path="/directory" element={<Navigate to="/services" replace />} />
-        <Route path="/community" element={<Navigate to="/places" replace />} />
-        <Route path="/market" element={<Navigate to="/services" replace />} />
-        <Route path="/knowledge-hub" element={<Navigate to="/story" replace />} />
+
+        {/* Fallback to Manifesto */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Shell>
