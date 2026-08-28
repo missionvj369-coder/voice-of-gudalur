@@ -1,484 +1,285 @@
-import React, { useState, useEffect } from 'react';
+// ============================================================================
+// HOME — the first screen must immediately communicate purpose.
+// Hierarchy: Hero → Safety Now → Verified situation → Report/Alerts/Emergency
+// → Map preview → Gudalur 365 → Right to Life → Priorities → Local nodes
+// → Evidence → Action tracker → Join/Resident ID.
+// ============================================================================
+
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  ShieldCheck, 
-  MapPin, 
-  AlertTriangle, 
-  CheckSquare, 
-  Compass, 
-  HeartHandshake, 
-  Landmark, 
-  PhoneCall, 
-  ArrowRight, 
-  Users, 
-  Sparkles, 
-  ThumbsUp, 
-  Clock, 
-  Building2,
-  Share2,
-  CheckCircle2,
-  Flame
-} from 'lucide-react';
-import { motion } from 'motion/react';
-import { useAuth } from '../context/AuthContext';
+import { ShieldAlert, Siren, PhoneCall, MapPin, ArrowRight, Radio, AlertTriangle, ScrollText, FileText, Users } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { GUDALUR_LOCALITIES, INITIAL_URGENT_ALERTS, INITIAL_PETITIONS } from '../data/gudalurMasterData';
-import { LocalityMap } from '../components/Map/LocalityMap';
-import { GudalurIdModal } from '../components/GudalurIdModal';
-import { ReportIssueModal } from '../components/ReportIssueModal';
-import { CivicIssue } from '../types';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { Section, Card, Btn, DataUnavailable, Loading, ErrorNote } from '../components/ui/Primitives';
+import { EmergencyBar } from '../components/ui/EmergencyBar';
+import { VerifiedSituation } from '../components/home/VerifiedSituation';
+import { api } from '../lib/api';
+import { GUDALUR_365, SAFETY_PRIORITIES, EMERGENCY_CONTACTS } from '../data/safetyContent';
+import { LOCALITIES } from '../data/localities';
+import { useAuth } from '../context/AuthContext';
 
-export const Home: React.FC = () => {
-  const { profile, user } = useAuth();
-  const { lang, t } = useLanguage();
-
-  const [idModalOpen, setIdModalOpen] = useState(false);
-  const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [selectedLocality, setSelectedLocality] = useState(GUDALUR_LOCALITIES[0]);
-
-  // Load issues from local state / firestore
-  const [issues, setIssues] = useState<CivicIssue[]>(() => {
-    const saved = localStorage.getItem('onegudalur_local_issues');
-    if (saved) {
-      try { 
-        const parsed = JSON.parse(saved);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (e) { 
-        return []; 
-      }
-    }
-    return [];
-  });
+const Home: React.FC = () => {
+  const { t } = useLanguage();
+  const { profile } = useAuth();
+  const [stats, setStats] = useState<Awaited<ReturnType<typeof api.getPlatformStats>>>(null);
 
   useEffect(() => {
-    const q = query(collection(db, 'civic_issues'), orderBy('createdAt', 'desc'), limit(10));
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const remoteList: CivicIssue[] = [];
-        snapshot.forEach((docSnap) => {
-          remoteList.push({ ...docSnap.data(), id: docSnap.id } as CivicIssue);
-        });
-
-        // Merge with local storage fallback
-        const local = JSON.parse(localStorage.getItem('onegudalur_local_issues') || '[]');
-        const merged = [...remoteList];
-        local.forEach((locItem: CivicIssue) => {
-          if (!merged.some(m => m.id === locItem.id)) {
-            merged.push(locItem);
-          }
-        });
-        merged.sort((a, b) => b.createdAt - a.createdAt);
-        setIssues(merged);
-      },
-      (error) => {
-        console.warn('Firestore issues sync warning on home:', error);
-      }
-    );
-
-    return () => unsubscribe();
+    let alive = true;
+    api.getPlatformStats().then((s) => alive && setStats(s)).catch(() => undefined);
+    return () => { alive = false; };
   }, []);
 
-  const handleUpvote = (issueId: string) => {
-    setIssues(prev => prev.map(issue => {
-      if (issue.id === issueId) {
-        return { ...issue, upvotesCount: issue.upvotesCount + 1 };
-      }
-      return issue;
-    }));
-  };
-
   return (
-    <div className="space-y-8">
-      
-      {/* Top Banner: The Right to Life Proclamation */}
-      <div className="rounded-2xl bg-gradient-to-r from-rose-950 via-slate-900 to-rose-950 text-white p-4 sm:p-5 border border-rose-800/60 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-rose-600/30 text-rose-300 border border-rose-500/40 flex items-center justify-center shrink-0">
-            <Flame size={22} className="text-rose-400" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                Official Citizen Proclamation
-              </span>
-              <span className="text-xs text-rose-200/80 font-medium hidden md:inline">14,800+ Citizen Signatures</span>
-            </div>
-            <h3 className="font-serif font-bold text-sm sm:text-base text-white mt-0.5">
-              {lang === 'ta' ? 'உரிமைக்குரல்: கூடலூர் மனித-வனவிலங்கு நெருக்கடி பிரகடனம்' : lang === 'kn' ? 'ಬದುಕುವ ಹಕ್ಕು: ಗೂಡಲೂರಿನ ನಾಗರಿಕ ಪ್ರಣಾಳಿಕೆ' : 'The Right to Life: Ending the Human Crisis on the Frontlines of Gudalur'}
-            </h3>
-          </div>
-        </div>
-        <Link
-          to="/"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition shrink-0"
-        >
-          <span>{lang === 'ta' ? 'முழு பிரகடனத்தை வாசிக்க' : lang === 'kn' ? 'ಪ್ರಣಾಳಿಕೆ ಓದಿ' : 'Read & Sign Proclamation'}</span>
-          <ArrowRight size={14} />
-        </Link>
-      </div>
-
-      {/* 1. Hero Civic Section */}
-      <section className="relative rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 text-white p-6 sm:p-10 shadow-xl border border-slate-700/80 overflow-hidden">
-        {/* Subtle Ambient Glow */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 max-w-3xl space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold tracking-wide">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            {t('hero.badge')}
-          </div>
-
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold tracking-tight text-white leading-tight">
-            {lang === 'ta' ? 'ஒரே கூடலூர். ஒருமித்த மக்கள்.' : 'Gudalur United.'}
+    <div>
+      {/* ============================== HERO ============================== */}
+      <section className="bg-slate-900 text-white">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-emerald-400">{t('hero.eyebrow')}</p>
+          <h1 className="mt-4 max-w-3xl text-3xl font-bold leading-tight tracking-tight sm:text-5xl sm:leading-tight">
+            {t('hero.headline')}
           </h1>
-
-          <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl font-normal">
-            {t('hero.subheadline')}
+          <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+            {t('hero.sub')}
           </p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <Btn href="/report" className="bg-emerald-600 text-white hover:bg-emerald-500">
+              <AlertTriangle size={16} aria-hidden="true" /> {t('hero.cta.report')}
+            </Btn>
+            <Btn href="/alerts" variant="secondary" className="border-slate-600 bg-slate-800 text-white hover:bg-slate-700">
+              <Siren size={16} aria-hidden="true" /> {t('hero.cta.alerts')}
+            </Btn>
+            <Btn href="/right-to-life" variant="ghost" className="text-slate-200 hover:bg-slate-800 hover:text-white">
+              <ScrollText size={16} aria-hidden="true" /> {t('hero.cta.rtl')}
+            </Btn>
+          </div>
 
-          <div className="flex flex-wrap items-center gap-3 pt-3">
-            <button
-              onClick={() => setIdModalOpen(true)}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition transform hover:-translate-y-0.5"
-            >
-              <ShieldCheck size={18} />
-              <span>{profile ? `My Gudalur ID: ${profile.gudalurId}` : t('hero.join_btn')}</span>
-            </button>
+          <div className="mt-10 grid max-w-2xl grid-cols-3 gap-3 border-t border-slate-800 pt-6 text-center">
+            <div>
+              <p className="text-xl font-bold text-emerald-400">{stats ? stats.localities : '—'}</p>
+              <p className="text-[11px] uppercase tracking-wider text-slate-400">Safety nodes</p>
+            </div>
+            <div>
+              <p className="text-xl font-bold text-emerald-400">{stats ? stats.active_alerts : '—'}</p>
+              <p className="text-[11px] uppercase tracking-wider text-slate-400">Active alerts</p>
+            </div>
+            <div>
+              <p className="text-xl font-bold text-emerald-400">{stats ? stats.verified_incidents_30d : '—'}</p>
+              <p className="text-[11px] uppercase tracking-wider text-slate-400">Verified · 30 days</p>
+            </div>
+            <p className="col-span-3 text-[10px] text-slate-500">
+              {stats ? `Source: platform records · Last updated ${new Date(stats.last_updated).toLocaleString()}` : 'Source: platform records · Data not yet available'}
+            </p>
+          </div>
+        </div>
+      </section>
 
-            <button
-              onClick={() => setReportModalOpen(true)}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/15 backdrop-blur-sm transition"
-            >
-              <CheckSquare size={18} className="text-rose-400" />
-              <span>{t('places.report_issue')}</span>
-            </button>
-
-            <Link
-              to="/act"
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 font-bold text-sm border border-slate-700 transition"
-            >
-              <HeartHandshake size={18} className="text-amber-400" />
-              <span>{t('act.title')}</span>
+      {/* ============================ SAFETY NOW ========================== */}
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">{t('safety.title')}</p>
+          <p className="mt-3 max-w-3xl text-lg font-semibold leading-relaxed text-slate-900">
+            {t('safety.message')}
+          </p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <Link to="/report" className="group rounded-2xl border border-slate-200 bg-slate-50 p-5 transition-colors hover:border-emerald-300 hover:bg-emerald-50">
+              <Radio size={20} className="text-emerald-700" aria-hidden="true" />
+              <p className="mt-3 font-bold text-slate-900">{t('safety.report')}</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">Report elephant, tiger or wildlife movement you personally observe.</p>
             </Link>
+            <Link to="/alerts" className="group rounded-2xl border border-slate-200 bg-slate-50 p-5 transition-colors hover:border-emerald-300 hover:bg-emerald-50">
+              <Siren size={20} className="text-rose-700" aria-hidden="true" />
+              <p className="mt-3 font-bold text-slate-900">{t('safety.alerts')}</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">See verified, current safety warnings — never rumours, never fake urgency.</p>
+            </Link>
+            <a href="/alerts#emergency" className="group rounded-2xl border border-slate-200 bg-slate-50 p-5 transition-colors hover:border-emerald-300 hover:bg-emerald-50">
+              <PhoneCall size={20} className="text-rose-700" aria-hidden="true" />
+              <p className="mt-3 font-bold text-slate-900">{t('safety.emergency')}</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">Official national emergency numbers and verified local resources.</p>
+            </a>
           </div>
-        </div>
-
-        {/* Hero Bottom Metric Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-6 border-t border-slate-700/60 text-xs">
-          <div>
-            <p className="text-2xl sm:text-3xl font-black font-mono text-emerald-400">16</p>
-            <p className="text-slate-400 mt-0.5 font-medium">{t('hero.verified_localities')}</p>
-          </div>
-          <div>
-            <p className="text-2xl sm:text-3xl font-black font-mono text-emerald-400">2</p>
-            <p className="text-slate-400 mt-0.5 font-medium">{lang === 'ta' ? 'வட்டங்கள் (கூடலூர், பந்தலூர்)' : 'Taluks (Gudalur & Pandalur)'}</p>
-          </div>
-          <div>
-            <p className="text-2xl sm:text-3xl font-black font-mono text-amber-400">6</p>
-            <p className="text-slate-400 mt-0.5 font-medium">{lang === 'ta' ? 'அரசு குறைதீர்ப்பு வழிகள்' : 'Govt Grievance Portals'}</p>
-          </div>
-          <div>
-            <p className="text-2xl sm:text-3xl font-black font-mono text-cyan-400">24/7</p>
-            <p className="text-slate-400 mt-0.5 font-medium">Forest RRT & CM 1100</p>
-          </div>
+          <div className="mt-6"><EmergencyBar /></div>
         </div>
       </section>
 
-      {/* 2. Emergency & Lifeline Quick-Dial Strip */}
-      <section className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <PhoneCall size={18} className="text-rose-600" />
-            <h3 className="font-bold text-sm text-slate-900">
-              {lang === 'ta' ? 'கூடலூர் அவசர உதவி எண்கள் (24/7)' : 'Gudalur 24x7 Emergency Lifelines'}
-            </h3>
-          </div>
-          <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">Direct Government & Emergency Desks</span>
+      <VerifiedSituation />
+
+      {/* =================== REPORT / ALERTS / EMERGENCY ==================== */}
+      <Section eyebrow="Take action" title="Report, alert, or get help" subtitle="Three tools, one rule: only share information you have personally observed — never approach wildlife to obtain photographs or video.">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="flex flex-col">
+            <Radio size={20} className="text-emerald-700" aria-hidden="true" />
+            <h3 className="mt-3 font-bold text-slate-900">Report a wildlife incident</h3>
+            <p className="mt-1 flex-1 text-sm leading-relaxed text-slate-600">Sightings, animals near home or on roads, property damage, livestock attacks — with locality, time and direction.</p>
+            <p className="mt-3 inline-flex w-fit text-[10px] font-bold uppercase tracking-wider text-amber-700">Community report · under review until verified</p>
+            <Btn href="/report" className="mt-4 w-full">Report now</Btn>
+          </Card>
+          <Card className="flex flex-col">
+            <Siren size={20} className="text-rose-700" aria-hidden="true" />
+            <h3 className="mt-3 font-bold text-slate-900">Choose your safety alerts</h3>
+            <p className="mt-1 flex-1 text-sm leading-relaxed text-slate-600">Select your locality and topics — elephant, tiger, emergency, civic. Labels say RECENT or VERIFIED; nothing is labelled LIVE unless a real source is connected.</p>
+            <Btn href="/alerts" variant="secondary" className="mt-4 w-full">Manage alerts</Btn>
+          </Card>
+          <Card className="flex flex-col">
+            <PhoneCall size={20} className="text-rose-700" aria-hidden="true" />
+            <h3 className="mt-3 font-bold text-slate-900">Emergency help</h3>
+            <ul className="mt-1 flex-1 space-y-1 text-sm text-slate-600">
+              {EMERGENCY_CONTACTS.slice(0, 3).map((c) => (
+                <li key={c.number} className="flex items-center gap-2">
+                  <span className="font-bold text-slate-900">{c.number}</span>
+                  <span className="text-slate-600">{c.name}</span>
+                </li>
+              ))}
+            </ul>
+            <Btn href="/alerts#emergency" variant="secondary" className="mt-4 w-full">All emergency numbers</Btn>
+          </Card>
         </div>
+      </Section>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <a
-            href="tel:18004256100"
-            className="flex flex-col p-3 rounded-2xl bg-amber-50 hover:bg-amber-100/80 border border-amber-200 transition group"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Elephant & Wildlife RRT</span>
-            <span className="text-sm font-bold text-slate-900 group-hover:text-amber-900 mt-1">1800 425 6100</span>
-            <span className="text-[10px] text-slate-500 mt-0.5">Gudalur Forest Div</span>
-          </a>
 
-          <a
-            href="tel:9498794987"
-            className="flex flex-col p-3 rounded-2xl bg-cyan-50 hover:bg-cyan-100/80 border border-cyan-200 transition group"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-800">TNEB Minnal Power</span>
-            <span className="text-sm font-bold text-slate-900 group-hover:text-cyan-900 mt-1">94987 94987</span>
-            <span className="text-[10px] text-slate-500 mt-0.5">24x7 EB Grievance</span>
-          </a>
-
-          <a
-            href="tel:1100"
-            className="flex flex-col p-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 transition group"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">CM Helpline 1100</span>
-            <span className="text-sm font-bold text-slate-900 group-hover:text-emerald-900 mt-1">1100 (Toll-Free)</span>
-            <span className="text-[10px] text-slate-500 mt-0.5">Mudhalvarin Mugavari</span>
-          </a>
-
-          <a
-            href="tel:04262261224"
-            className="flex flex-col p-3 rounded-2xl bg-rose-50 hover:bg-rose-100/80 border border-rose-200 transition group"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-800">Gudalur GH Hospital</span>
-            <span className="text-sm font-bold text-slate-900 group-hover:text-rose-900 mt-1">04262-261224</span>
-            <span className="text-[10px] text-slate-500 mt-0.5">Casualty & Anti-Venom</span>
-          </a>
-
-          <a
-            href="tel:04262261222"
-            className="flex flex-col p-3 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200 transition group"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Police & Highway</span>
-            <span className="text-sm font-bold text-slate-900 group-hover:text-slate-900 mt-1">04262-261222</span>
-            <span className="text-[10px] text-slate-500 mt-0.5">Gudalur Police Station</span>
-          </a>
-        </div>
-      </section>
-
-      {/* 3. Interactive Locality Map & Places Hub */}
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-serif font-bold text-slate-900">
-              {t('places.title')}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              {t('places.subtitle')}
-            </p>
-          </div>
-          <Link
-            to="/places"
-            className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 transition"
-          >
-            <span>View All 16 Localities</span>
-            <ArrowRight size={14} />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {/* Map */}
-          <div className="lg:col-span-2">
-            <LocalityMap
-              localities={GUDALUR_LOCALITIES}
-              selectedLocalityId={selectedLocality.id}
-              onSelectLocality={setSelectedLocality}
-              height="380px"
-            />
-          </div>
-
-          {/* Selected Locality Spotlight Card */}
-          <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  {selectedLocality.administrativeParent}
-                </span>
-                <h3 className="text-xl font-bold text-slate-900 mt-0.5">{selectedLocality.name}</h3>
-                <p className="text-xs text-emerald-700 font-semibold">{selectedLocality.nameTa}</p>
-              </div>
-              <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${
-                selectedLocality.alertStatus === 'ALERT' ? 'bg-rose-100 text-rose-800' :
-                selectedLocality.alertStatus === 'CAUTION' ? 'bg-amber-100 text-amber-800' :
-                'bg-emerald-100 text-emerald-800'
-              }`}>
-                {selectedLocality.alertStatus}
-              </span>
+      {/* ======================== SAFETY MAP PREVIEW ======================= */}
+      <Section eyebrow="Safety map" title="Understanding where risk is" subtitle="The map shows localities and verified activity at the level of place names and zones. Precise animal locations are never published to the public.">
+        <Link to="/safety-map" className="block rounded-2xl border border-slate-200 bg-white p-6 transition-colors hover:border-emerald-300">
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-bold text-slate-900">Gudalur Wildlife Safety Map</p>
+              <p className="mt-1 text-sm text-slate-600">Layers for incidents, active danger zones and safety nodes — with more layers for corridors, schools and hospitals as official data is verified.</p>
             </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed">
-              {lang === 'ta' ? selectedLocality.descriptionTa : selectedLocality.description}
-            </p>
-
-            <div className="space-y-2 text-xs border-t border-slate-100 pt-3">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Revenue Village:</span>
-                <span className="font-semibold text-slate-800">{selectedLocality.revenueVillage}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Taluk / Admin:</span>
-                <span className="font-semibold text-slate-800">{selectedLocality.administrativeParent}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">PIN Code:</span>
-                <span className="font-semibold font-mono text-slate-800">{selectedLocality.pincode}</span>
-              </div>
-            </div>
-
-            <div className="pt-2 flex flex-col gap-2">
-              <button
-                onClick={() => {
-                  setSelectedLocality(selectedLocality);
-                  setReportModalOpen(true);
-                }}
-                className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition flex items-center justify-center gap-1.5"
-              >
-                <CheckSquare size={14} />
-                <span>Report Issue in {selectedLocality.name}</span>
-              </button>
-            </div>
+            <span className="inline-flex items-center gap-1.5 text-sm font-bold text-emerald-800">
+              Open the map <ArrowRight size={15} aria-hidden="true" />
+            </span>
           </div>
-        </div>
-      </section>
-
-      {/* 4. Active Civic Petitions (Act For Gudalur) */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-serif font-bold text-slate-900">{t('act.title')}</h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{t('act.subtitle')}</p>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {LOCALITIES.filter((l) => l.refLat).slice(0, 8).map((l) => (
+              <span key={l.slug} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">{l.name}</span>
+            ))}
           </div>
-          <Link
-            to="/act"
-            className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
-          >
-            <span>All Demands</span>
-            <ArrowRight size={14} />
-          </Link>
-        </div>
+        </Link>
+      </Section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {INITIAL_PETITIONS.map((petition) => (
-            <div
-              key={petition.id}
-              className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4 hover:shadow-md transition flex flex-col justify-between"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    {petition.status.replace(/_/g, ' ')}
-                  </span>
-                  <span className="text-xs text-slate-400 font-medium">By {petition.createdByName}</span>
-                </div>
-
-                <h3 className="text-base font-bold text-slate-900 leading-snug">
-                  {lang === 'ta' ? petition.titleTa : petition.title}
-                </h3>
-
-                <p className="text-xs text-slate-600 line-clamp-3">
-                  {lang === 'ta' ? petition.problemTa : petition.problem}
-                </p>
-              </div>
-
-              {/* Verified Signatures CTA */}
-              <div className="space-y-3 pt-3 border-t border-slate-100">
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-emerald-700">{petition.supportCount.toLocaleString()} Verified Resident Signatures</span>
-                  <span className="text-slate-500 text-[11px]">{petition.status === 'IN_GOVT_REVIEW' ? 'Under Review' : 'Active Representation'}</span>
-                </div>
-                <Link
-                  to="/act"
-                  className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition text-center block"
-                >
-                  View Evidence & Sign Petition
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 5. Live Civic Issue Stream */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-serif font-bold text-slate-900">{t('issues.title')}</h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{t('issues.subtitle')}</p>
-          </div>
-          <Link
-            to="/issues"
-            className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
-          >
-            <span>All Issues Tracker</span>
-            <ArrowRight size={14} />
-          </Link>
-        </div>
-
-        {issues.length === 0 ? (
-          <div className="p-8 text-center rounded-3xl bg-white border border-slate-200 shadow-xs space-y-3">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 size={24} />
-            </div>
-            <div className="space-y-1 max-w-md mx-auto">
-              <h4 className="text-sm font-bold text-slate-900">
-                {lang === 'ta' ? 'தற்போது திறந்த புகார்கள் இல்லை' : 'No Open Civic Issues'}
-              </h4>
-              <p className="text-xs text-slate-500">
-                {lang === 'ta'
-                  ? 'உங்கள் பகுதியின் குடிநீர், சாலை, மின்சாரம் அல்லது பாதுகாப்பு புகார்களை இங்கு எளிதாக பதிவு செய்யலாம்.'
-                  : 'All civic issues are logged directly by verified local residents. Click below to log a real issue in your area.'}
-              </p>
-            </div>
-            <button
-              onClick={() => setReportModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition"
-            >
-              <CheckSquare size={14} />
-              <span>{t('places.report_issue')}</span>
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {issues.slice(0, 4).map((issue) => (
-              <div
-                key={issue.id}
-                className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-3 flex flex-col justify-between"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                      {issue.id}
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                      {issue.status}
-                    </span>
-                  </div>
-
-                  <h4 className="font-bold text-sm text-slate-900 leading-snug">{issue.title}</h4>
-                  <p className="text-xs text-slate-600 line-clamp-2">{issue.description}</p>
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                  <div className="flex items-center gap-1 text-slate-700 font-semibold">
-                    <MapPin size={13} className="text-emerald-600" />
-                    <span>{issue.localityName}</span>
-                  </div>
-
-                  <button
-                    onClick={() => handleUpvote(issue.id)}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 font-bold transition text-xs"
-                  >
-                    <ThumbsUp size={13} />
-                    <span>{issue.upvotesCount} Backed</span>
-                  </button>
-                </div>
+      {/* ============================ GUDALUR 365 ========================== */}
+      <section className="border-y border-slate-200 bg-slate-900 text-white">
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-400">Gudalur 365</p>
+          <h2 className="mt-3 text-2xl font-bold sm:text-3xl">Wildlife safety cannot begin after someone dies.</h2>
+          <p className="mt-3 max-w-3xl text-slate-300">A year-round model for a permanent, science-based safety system across Gudalur.</p>
+          <div className="mt-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-7">
+            {GUDALUR_365.map((p) => (
+              <div key={p.key} className="rounded-xl border border-slate-800 bg-slate-800/60 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-400">{p.key}</p>
+                <p className="mt-1 text-sm font-bold">{p.title}</p>
               </div>
             ))}
           </div>
-        )}
+          <Btn href="/gudalur-365" variant="ghost" className="mt-6 text-slate-200 hover:bg-slate-800 hover:text-white">
+            The year-round model <ArrowRight size={15} aria-hidden="true" />
+          </Btn>
+        </div>
       </section>
 
-      {/* Universal Modals */}
-      <GudalurIdModal isOpen={idModalOpen} onClose={() => setIdModalOpen(false)} />
-      <ReportIssueModal
-        isOpen={reportModalOpen}
-        onClose={() => setReportModalOpen(false)}
-        defaultLocalityId={selectedLocality.id}
-        onIssueCreated={(newIssue) => setIssues(prev => [newIssue, ...prev])}
-      />
+      {/* =========================== RIGHT TO LIFE ========================= */}
+      <Section eyebrow="The manifesto" title="The Gudalur Right to Life" subtitle="Seven sections — what is happening, why conflict occurs, what the law provides, what has failed, what is needed, what citizens can do, and our commitments.">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {['What is happening?', 'Why conflict occurs', 'What the law provides', 'What has failed'].map((s, i) => (
+            <Card key={s} className="bg-slate-50">
+              <p className="text-xs font-bold text-emerald-700">0{i + 1}</p>
+              <p className="mt-1 font-semibold text-slate-900">{s}</p>
+            </Card>
+          ))}
+        </div>
+        <Btn href="/right-to-life" variant="secondary" className="mt-5"><ScrollText size={16} aria-hidden="true" /> Read the full manifesto</Btn>
+      </Section>
 
+
+      {/* ======================== SAFETY PRIORITIES ======================== */}
+      <Section
+        eyebrow="Citizen priorities / policy recommendations"
+        title="Gudalur's safety priorities"
+        subtitle="Ten specific, measurable demands proposed by citizens. None are presented as existing government commitments — they are recommendations for the administration to adopt and the public to audit."
+      >
+        <ol className="grid gap-3 md:grid-cols-2">
+          {SAFETY_PRIORITIES.map((p) => (
+            <li key={p.n} className="flex gap-3 rounded-xl border border-slate-200 bg-white p-4">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-sm font-bold text-white" aria-hidden="true">{p.n}</span>
+              <div>
+                <p className="font-bold text-slate-900">{p.title}</p>
+                <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{p.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </Section>
+
+      {/* ========================= LOCAL SAFETY NODES ======================= */}
+      <Section eyebrow="Safety nodes" title="Local safety nodes" subtitle="Real Gudalur taluk localities. Local coordinators and contacts appear only when verified — never invented.">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+          {LOCALITIES.map((l) => (
+            <Link key={l.slug} to={`/localities/${l.slug}`} className="group rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-emerald-300 hover:bg-emerald-50">
+              <MapPin size={16} className="text-emerald-700" aria-hidden="true" />
+              <p className="mt-2 text-sm font-bold leading-snug text-slate-900 group-hover:text-emerald-900">{l.name}</p>
+              <p className="mt-0.5 text-xs text-slate-500">{l.revenueVillage} · {l.pincode}</p>
+            </Link>
+          ))}
+        </div>
+        <Btn href="/localities" variant="secondary" className="mt-5">All localities</Btn>
+      </Section>
+
+      {/* ============================= EVIDENCE ============================= */}
+      <Section eyebrow="Evidence room" title="Documents & verified records" subtitle="Government documents, forest department circulars, court orders, ESZ notifications, research, RTI replies and incident records — every item linked and dated.">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200 bg-white p-6">
+          <div className="flex items-center gap-3">
+            <FileText size={22} className="shrink-0 text-emerald-700" aria-hidden="true" />
+            <p className="text-sm text-slate-600">Browse the organised evidence behind every claim on this platform. No documents are fabricated; gaps are shown honestly.</p>
+          </div>
+          <Btn href="/evidence" variant="secondary">Open the Evidence Room</Btn>
+        </div>
+      </Section>
+
+      {/* ======================= GOVERNMENT ACTION TRACKER ==================== */}
+      <Section eyebrow="Accountability" title="Government action tracker" subtitle="Public questions and requests — with status, department and any official response — tracked openly from submission onwards.">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+            <ShieldAlert size={16} className="text-emerald-700" aria-hidden="true" />
+            Tracked records: {stats ? stats.tracked_actions : '—'}
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            Example: "What is the current status of elephant-proof trench maintenance in high-risk Gudalur areas?"
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wider">
+            {['Submitted', 'Acknowledged', 'Response received', 'Action reported', 'Follow-up required'].map((s) => (
+              <span key={s} className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-600">{s}</span>
+            ))}
+          </div>
+          <Btn href="/government-action" variant="secondary" className="mt-5">Open the tracker</Btn>
+        </div>
+      </Section>
+
+      {/* ====================== JOIN / RESIDENT ID ========================== */}
+      <section className="border-t border-slate-200 bg-slate-900 text-white">
+        <div className="mx-auto max-w-6xl px-4 py-12 text-center sm:px-6 sm:py-16">
+          <Users size={26} className="mx-auto text-emerald-400" aria-hidden="true" />
+          <h2 className="mt-3 text-2xl font-bold sm:text-3xl">Join as a Gudalur resident</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
+            A Gudalur Resident ID connects your locality, your safety alerts and your citizen submissions.
+            {profile
+              ? <span className="mt-2 block font-bold text-emerald-400">You are registered — {profile.name} · {profile.gudalurId}</span>
+              : <span className="mt-2 block text-slate-400">It is a community platform ID — it is not a government identity document.</span>}
+          </p>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('vg-open-id'))}
+            className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold uppercase tracking-wide text-white transition-colors hover:bg-emerald-500"
+          >
+            {profile ? 'View your Resident ID' : 'Get your Gudalur Resident ID'}
+          </button>
+        </div>
+      </section>
+
+      {/* =========================== EMERGENCY FOOT ========================== */}
+      <section className="bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+          <EmergencyBar />
+        </div>
+      </section>
     </div>
   );
 };
+
 export default Home;
