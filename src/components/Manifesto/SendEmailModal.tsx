@@ -10,14 +10,12 @@ import {
   ExternalLink, 
   X,
   AlertCircle,
-  FileCheck,
   CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { EMAIL_RECIPIENTS, EMAIL_PETITION_DATA, EmailRecipient } from '../../data/emailPetitionData';
 import { useLanguage, type Language } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
-import { db } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { cn } from '../../lib/utils';
 
@@ -25,15 +23,12 @@ interface SendEmailModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialLang?: Language;
-  /** Called with the recorded docket reference after a real official submission is confirmed. */
-  onSubmitted?: (ref: string) => void;
 }
 
 export const SendEmailModal: React.FC<SendEmailModalProps> = ({
   isOpen,
   onClose,
-  initialLang,
-  onSubmitted
+  initialLang
 }) => {
   const { lang: appLang } = useLanguage();
   const { profile } = useAuth();
@@ -44,7 +39,6 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedRecipients, setCopiedRecipients] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'recipients'>('preview');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const content = EMAIL_PETITION_DATA[selectedLang] || EMAIL_PETITION_DATA.en;
   
@@ -104,39 +98,6 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
     }
     toast.success('Opening your default email app - To, CC, Subject and sender are pre-filled. If nothing opens, use Copy All Text + Gmail Web.', { icon: '\u2709\uFE0F' });
   };
-// Records REAL proof only after the user confirms they emailed the authorities, then unlocks the signed PDF.
-  const handleConfirmSubmitted = async () => {
-    if (isSubmitting) return;
-    if (!profile?.phone || !profile?.gudalurId) {
-      toast.error('Please register your Gudalur Resident Card first — a real submission needs your verified identity.');
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      const { ref, error } = await db.addManifestoSubmission({
-        senderName: senderName || profile.name,
-        senderPhone: profile.phone,
-        gudalurId: profile.gudalurId,
-        locality: profile.localityName,
-        toEmails,
-        ccEmails,
-        subject: content.subject,
-        lang: selectedLang,
-      });
-      if (error || !ref) {
-        toast.error('Could not record your submission. Please verify your connection and try again.');
-        return;
-      }
-      toast.success(`Official submission recorded (${ref}). Downloading your signed PDF now.`, { icon: '📄' });
-      onSubmitted?.(ref);
-    } catch (err) {
-      console.error('Submission error:', err);
-      toast.error('Could not record your submission. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleOpenGmail = () => {
     window.open(gmailUrl, '_blank');
     toast.success('Opening Gmail Web composer...', {
@@ -152,7 +113,7 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
         initial={{ scale: 0.95, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 10 }}
-        className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]"
+        className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[95vh]"
       >
         {/* Header */}
         <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 text-white p-5 sm:p-6 flex items-center justify-between shrink-0 border-b border-emerald-900/50">
@@ -369,50 +330,39 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
 
         </div>
 
-        {/* Footer Actions */}
-        <div className="bg-slate-50 border-t border-slate-200 p-4 sm:p-5 flex flex-col gap-3 shrink-0">
-
-          <button
-            onClick={() => handleCopy(`Subject: ${content.subject}\n\nTo: ${toEmails}\nCC: ${ccEmails}\n\n${fullBody}`, 'all')}
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition"
-          >
-            {copiedAll ? <CheckCircle2 size={16} className="text-emerald-600" /> : <Copy size={16} />}
-            <span>{copiedAll ? 'Copied Full Email & Headers' : 'Copy All Text'}</span>
-          </button>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full items-stretch">
+        {/* Footer Actions — compact row pinned below the scrollable email content */}
+        <div className="bg-slate-50 border-t border-slate-200 px-3 py-2.5 flex flex-col gap-2 shrink-0">
+          <div className="flex items-stretch gap-2 w-full">
             <button
               onClick={handleOpenGmail}
-              className="px-4 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition"
+              title="Open this petition in the Gmail Web composer"
+              className="flex-1 px-2.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition"
             >
-              <ExternalLink size={14} />
+              <ExternalLink size={12} />
               <span>Gmail Web</span>
             </button>
 
             <button
               onClick={handleDirectSend}
-              className="px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-900/20 transition"
+              title="Open your default email app with everything pre-filled"
+              className="flex-1 px-2.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition"
             >
-              <Send size={15} />
+              <Send size={12} />
               <span>Launch Email App</span>
             </button>
 
             <button
-              onClick={handleConfirmSubmitted}
-              disabled={isSubmitting}
-              className="sm:col-span-2 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 transition"
+              onClick={() => handleCopy(`Subject: ${content.subject}\n\nTo: ${toEmails}\nCC: ${ccEmails}\n\n${fullBody}`, 'all')}
+              title="Copy the full email — subject, recipients and body"
+              className="flex-1 px-2.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-[11px] flex items-center justify-center gap-1.5 transition"
             >
-              {isSubmitting ? (
-                <span className="inline-block h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-              ) : (
-                <FileCheck size={15} />
-              )}
-              <span>{isSubmitting ? 'Recording your official submission...' : 'I have emailed the authorities - Record & unlock signed PDF'}</span>
+              {copiedAll ? <CheckCircle2 size={12} className="text-emerald-600" /> : <Copy size={12} />}
+              <span>{copiedAll ? 'Copied' : 'Copy All'}</span>
             </button>
           </div>
 
-          <p className="text-center text-[10px] text-slate-500">
-            Your signed PDF unlocks only after a real submission is recorded to the OneGudalur ledger - no fake counts, no fake clicks.
+          <p className="text-center text-[9px] text-slate-500">
+            To, CC, Subject and your registered sender details are pre-filled automatically — just review and press send.
           </p>
         </div>
 

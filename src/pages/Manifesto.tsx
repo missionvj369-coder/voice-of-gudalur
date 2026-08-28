@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useContext } from 'react';
 import {
   Flame,
   Mail,
@@ -19,6 +19,7 @@ import { useLanguage, type Language } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { MANIFESTO_DATA, ManifestoContent } from '../data/manifestoData';
 import { SendEmailModal } from '../components/Manifesto/SendEmailModal';
+import { IdModalContext } from '../components/Layout/Shell';
 import { generateManifestoPdf } from '../utils/manifestoPdfGenerator';
 import { db } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -27,8 +28,19 @@ import crisisImg from '../assets/images/gudalur_crisis_blood_1787476675818.jpg';
 export const Manifesto: React.FC = () => {
   const { lang } = useLanguage();
   const { profile } = useAuth();
+  const { openIdModal } = useContext(IdModalContext);
 
   const manifesto: ManifestoContent = MANIFESTO_DATA[lang] || MANIFESTO_DATA.en;
+
+  // Every civic action on this page requires a registered, verifiable Gudalur Resident ID
+  // so endorsements and submissions stay real, traceable records.
+  const isRegistered = !!(profile?.name && profile?.phone && profile?.gudalurId);
+  const requireRegistered = (action: string): boolean => {
+    if (isRegistered) return true;
+    openIdModal();
+    toast(`Please register your Gudalur Resident ID first to ${action}.`, { icon: '🪪' });
+    return false;
+  };
 
   // Real signatures from Supabase only — starts at 0.
   const [signaturesCount, setSignaturesCount] = useState<number>(0);
@@ -38,7 +50,6 @@ export const Manifesto: React.FC = () => {
   const [showSignModal, setShowSignModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailSelectedLang, setEmailSelectedLang] = useState<Language>(lang);
-  const [submissionRef, setSubmissionRef] = useState<string | null>(null);
   const [isSubmittingEndorse, setIsSubmittingEndorse] = useState(false);
 
   useEffect(() => { setEmailSelectedLang(lang); }, [lang]);
@@ -53,18 +64,20 @@ export const Manifesto: React.FC = () => {
 
   const handleEndorse = async (e: React.FormEvent) => {
     e.preventDefault();
-    const name = (endorserName.trim() || profile?.name || '').trim();
-    const loc = (endorserLocality.trim() || profile?.localityName || 'Local Gudalur').trim();
-    if (!name) { toast.error('Please enter your full name.'); return; }
-    if (!profile?.phone || !profile?.gudalurId) {
+    // Identity is auto-detected from the registered Gudalur Resident Card - no manual typing needed.
+    if (!profile?.name || !profile?.phone || !profile?.gudalurId) {
       setShowSignModal(false);
+      openIdModal();
       toast.error('Please register your Gudalur Resident Card first so your endorsement is a real, verifiable record.');
       return;
     }
     setIsSubmittingEndorse(true);
     try {
       const { error } = await db.addManifestoSignature({
-        name, locality: loc, contact: profile.phone, gudalur_id: profile.gudalurId,
+        name: profile.name,
+        locality: profile.localityName || 'Gudalur',
+        contact: profile.phone,
+        gudalur_id: profile.gudalurId,
       });
       if (error) { toast.error('Could not register your endorsement. Please check your connection and try again.'); return; }
       setSignaturesCount((c) => c + 1);
@@ -98,30 +111,12 @@ export const Manifesto: React.FC = () => {
   };
 
   const handleDownloadPdf = () => {
-    if (!submissionRef) {
-      setShowEmailModal(true);
-      toast('Send the official email to the authorities first — your signed PDF proof unlocks after submission.', { icon: '🔒' });
-      return;
-    }
     generateManifestoPdf(
       manifesto, lang, signaturesCount,
       profile?.name || (hasEndorsed ? endorserName : undefined),
-      profile?.localityName || endorserLocality,
-      submissionRef
+      profile?.localityName || endorserLocality
     );
-    toast.success('Downloaded your signed memorandum with official submission proof.');
-  };
-
-  const handleEmailSubmitted = (ref: string) => {
-    setSubmissionRef(ref);
-    setShowEmailModal(false);
-    generateManifestoPdf(
-      manifesto, lang, signaturesCount,
-      profile?.name || (hasEndorsed ? endorserName : undefined),
-      profile?.localityName || endorserLocality,
-      ref
-    );
-    toast.success(`Official submission recorded (${ref}). Your signed PDF is ready.`, { icon: '📄' });
+    toast.success('Downloaded your signed memorandum PDF.', { icon: '📄' });
   };
 
   return (
@@ -168,10 +163,10 @@ export const Manifesto: React.FC = () => {
         <div className="flex items-center gap-3 text-sm text-stone-200">
           <PhoneCall size={16} className="text-red-400 animate-bounce" />
           <span>Forest RRT:</span>
-          <span className="font-mono font-bold text-red-300">1800 425 6100</span>
+          <a href="tel:18004256100" title="Tap to call Gudalur Forest Rapid Response Team" className="font-mono font-bold text-red-300 hover:text-red-200 hover:underline">1800 425 6100</a>
           <span className="text-stone-500">/</span>
           <span>Medical:</span>
-          <span className="font-mono font-bold text-red-300">108</span>
+          <a href="tel:108" title="Tap to call Ambulance 108" className="font-mono font-bold text-red-300 hover:text-red-200 hover:underline">108</a>
         </div>
       </section>
 
@@ -293,13 +288,18 @@ export const Manifesto: React.FC = () => {
                 </p>
               </div>
               <form onSubmit={handleEndorse} className="space-y-4">
-                <div className="space-y-1 text-left">
-                  <label className="text-xs font-bold text-stone-300 uppercase tracking-wider">Full Name</label>
-                  <input type="text" required value={endorserName} onChange={(e) => setEndorserName(e.target.value)} placeholder="e.g. Ramesh Kumar / Smt. Fatima" className="w-full rounded-xl bg-stone-900 border border-stone-700 px-4 py-3 text-sm text-white placeholder:text-stone-500 focus:border-red-500 focus:outline-none" />
-                </div>
-                <div className="space-y-1 text-left">
-                  <label className="text-xs font-bold text-stone-300 uppercase tracking-wider">Locality / Village / Estate</label>
-                  <input type="text" required value={endorserLocality} onChange={(e) => setEndorserLocality(e.target.value)} placeholder="e.g. O'Valley, Cherambadi, Pandalur..." className="w-full rounded-xl bg-stone-900 border border-stone-700 px-4 py-3 text-sm text-white placeholder:text-stone-500 focus:border-red-500 focus:outline-none" />
+                {/* Auto-detected identity - pulled straight from the registered Gudalur Resident Card */}
+                <div className="rounded-2xl bg-emerald-950/40 border border-emerald-700/60 p-4 space-y-2 text-left">
+                  <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                    <CheckCircle2 size={12} />
+                    Auto-detected from your registered Resident Card
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-stone-200">
+                    <p><span className="text-stone-500">Name: </span><strong>{profile?.name}</strong></p>
+                    <p><span className="text-stone-500">Phone: </span><strong>{profile?.phone}</strong></p>
+                    <p><span className="text-stone-500">Resident ID: </span><strong className="font-mono text-emerald-300">{profile?.gudalurId}</strong></p>
+                    <p><span className="text-stone-500">Locality: </span><strong>{profile?.localityName}</strong></p>
+                  </div>
                 </div>
                 <div className="pt-2 flex items-center justify-end gap-3">
                   <button type="button" onClick={() => setShowSignModal(false)} className="px-4 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-stone-300 font-bold text-xs">Cancel</button>
@@ -320,62 +320,62 @@ export const Manifesto: React.FC = () => {
             isOpen={showEmailModal}
             onClose={() => setShowEmailModal(false)}
             initialLang={emailSelectedLang}
-            onSubmitted={handleEmailSubmitted}
           />
         )}
       </AnimatePresence>
 
-      {/* BOTTOM ACTION BAR — all four actions, sticky, bottom-only */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0B111E]/95 backdrop-blur-md border-t border-red-950/40">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          {/* Signature count — compact */}
-          <div className="text-center shrink-0">
-            <div className="text-xl font-black text-red-400 leadi">{signaturesCount.toLocaleString()}</div>
-            <div className="text-[9px] text-slate-400 mt-0.5">{signaturesCount >= 10 ? 'Resident Endorsements' : 'Be 1 of the first 100'}</div>
-          </div>
+      {/* BOTTOM ACTION BAR — four labelled tabs, floated slightly above the edge */}
+      <div className="fixed bottom-2 left-0 right-0 z-40 px-3">
+        <div className="max-w-5xl mx-auto bg-[#0B111E]/95 backdrop-blur-md border border-red-950/50 rounded-2xl shadow-2xl shadow-black/60">
+          <div className="px-3 py-2 flex items-center justify-between gap-3">
+            {/* Signature count — compact */}
+            <div className="text-center shrink-0 px-1">
+              <div className="text-xl font-black text-red-400 leading-none">{signaturesCount.toLocaleString()}</div>
+              <div className="text-[8px] text-slate-400 mt-1 uppercase tracking-wide">Resident Endorsements</div>
+            </div>
 
-          {/* Four action buttons */}
-          <div className="flex items-center gap-2">
-            {/* 1. Sign & Endorse */}
-            <button
-              onClick={() => setShowSignModal(true)}
-              title="Sign & Endorse"
-              className="w-11 h-11 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-600 text-white font-black shadow-xl shadow-red-950/50 transition flex items-center justify-center"
-            >
-              {hasEndorsed ? <CheckCircle2 size={18} className="text-emerald-400" /> : <Flame size={16} className="text-amber-300 animate-pulse" />}
-            </button>
+            {/* Four action tabs — icon + title so every user understands the action */}
+            <div className="flex items-center gap-1.5">
+              {/* 1. Sign & Endorse */}
+              <button
+                onClick={() => { if (requireRegistered('endorse the proclamation')) setShowSignModal(true); }}
+                title="Sign & Endorse the Proclamation"
+                className="w-16 h-14 rounded-xl bg-gradient-to-b from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white shadow-lg shadow-red-950/50 transition flex flex-col items-center justify-center gap-1"
+              >
+                {hasEndorsed ? <CheckCircle2 size={15} className="text-emerald-300" /> : <Flame size={15} className="text-amber-300" />}
+                <span className="text-[9px] font-bold uppercase tracking-wide leading-none">{hasEndorsed ? 'Endorsed' : 'Endorse'}</span>
+              </button>
 
-            {/* 2. Send Official Email */}
-            <button
-              onClick={() => setShowEmailModal(true)}
-              title="Send Official Email to CM & NTCA"
-              className="w-11 h-11 rounded-2xl bg-stone-800 hover:bg-stone-700 text-white font-bold shadow-md transition flex items-center justify-center border border-red-900/40"
-            >
-                            <Mail size={16} className="text-red-400" />
-            </button>
+              {/* 2. Send Official Email */}
+              <button
+                onClick={() => { if (requireRegistered('send the official email')) setShowEmailModal(true); }}
+                title="Send Official Email to CM & NTCA"
+                className="w-16 h-14 rounded-xl bg-stone-800 hover:bg-stone-700 text-white shadow-md transition flex flex-col items-center justify-center gap-1 border border-red-900/40"
+              >
+                <Mail size={15} className="text-red-400" />
+                <span className="text-[9px] font-bold uppercase tracking-wide leading-none text-stone-200">Email</span>
+              </button>
 
-            {/* 3. WhatsApp Share */}
-            <button
-              onClick={handleWhatsAppShare}
-              title="Share on WhatsApp"
-              className="w-11 h-11 rounded-2xl bg-emerald-700 hover:bg-emerald-600 text-white font-black shadow-md shadow-emerald-900/30 transition flex items-center justify-center"
-            >
-              <Share2 size={16} />
-            </button>
+              {/* 3. WhatsApp Share */}
+              <button
+                onClick={() => { if (requireRegistered('share the movement')) handleWhatsAppShare(); }}
+                title="Share on WhatsApp"
+                className="w-16 h-14 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white shadow-md shadow-emerald-900/30 transition flex flex-col items-center justify-center gap-1"
+              >
+                <Share2 size={15} />
+                <span className="text-[9px] font-bold uppercase tracking-wide leading-none">Share</span>
+              </button>
 
-            {/* 4. Download PDF — locked until email sent */}
-            <button
-              onClick={handleDownloadPdf}
-              title={submissionRef ? 'Download Signed PDF' : 'Send email first to unlock'}
-              className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black shadow-md transition ${
-                submissionRef
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white'
-                  : 'bg-stone-800 border border-slate-700 text-slate-500 cursor-not-allowed'
-              }`}
-              disabled={!submissionRef}
-            >
-              {submissionRef ? <Download size={16} /> : <span className="text-[10px]">🔒</span>}
-            </button>
+              {/* 4. Download Signed PDF */}
+              <button
+                onClick={() => { if (requireRegistered('download the signed PDF')) handleDownloadPdf(); }}
+                title="Download the signed memorandum PDF"
+                className="w-16 h-14 rounded-xl bg-gradient-to-b from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white shadow-md transition flex flex-col items-center justify-center gap-1"
+              >
+                <Download size={15} />
+                <span className="text-[9px] font-bold uppercase tracking-wide leading-none">PDF</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
