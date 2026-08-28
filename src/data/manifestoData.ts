@@ -30,7 +30,7 @@ export const MANIFESTO_DATA: Record<'en' | 'ta' | 'ml' | 'kn', ManifestoContent>
   en: {
     title: "The Silent Grief of Gudalur — Our Homes Have Become Open-Air Cages",
     subtitle: "We are not asking for favors. We are asking for the right to breathe, sleep, and walk on our own soil without fearing the dark.",
-    badge: "Official Citizen Proclamation",
+        badge: "Right to Life",
     proclamation: "To the world, Gudalur is a scenic paradise of mist and tea estates. To us, it is a landscape of perpetual fear.",
     sections: [
       {
@@ -115,7 +115,7 @@ export const MANIFESTO_DATA: Record<'en' | 'ta' | 'ml' | 'kn', ManifestoContent>
   ta: {
     title: "கூடலூரின் மௌனக் கதறல் — எங்கள் வீடுகள் திறந்தவெளி கூண்டுகளாக மாறிவிட்டன",
     subtitle: "நாங்கள் அரசிடம் சலுகை கேட்கவில்லை; இருளுக்கு அஞ்சாமல் எங்கள் சொந்த மண்ணில் சுவாசிக்க, தூங்க, நடக்கக்கூடிய உரிமையையே கேட்கிறோம்.",
-    badge: "மக்களின் அதிகாரப்பூர்வ பிரகடனம்",
+        badge: "வாழ்க்கையின் உரிமை",
     proclamation: "உலகிற்கு கூடலூர் என்பது பனிமூட்டமும் தேயிலைத் தோட்டங்களும் நிறைந்த எழில் சொர்க்கம். ஆனால் எங்களுக்கு, இது முடிவில்லா மரண பயத்தின் நிலப்பரப்பு.",
     sections: [
       {
@@ -200,7 +200,7 @@ export const MANIFESTO_DATA: Record<'en' | 'ta' | 'ml' | 'kn', ManifestoContent>
   ml: {
     title: "ഗൂഡലൂരിന്റെ നിശ്ശബ്ദ വിലാപം — നമ്മുടെ വീടുകൾ തുറന്ന ജയിലുകളായി മാറിയിരിക്കുന്നു",
     subtitle: "ഞങ്ങൾ ഔദാര്യം ചോദിക്കുകയല്ല. ഇരുട്ടിനെ ഭയപ്പെടാതെ ഞങ്ങളുടെ സ്വന്തം മണ്ണിൽ ശ്വസിക്കാനും ഉറങ്ങാനും നടക്കാനുമുള്ള അവകാശമാണ് ഞങ്ങൾ ചോദിക്കുന്നത്.",
-    badge: "ഔദ്യോഗിക പൗര പ്രഖ്യാപനം",
+        badge: "ജീവനാധികാരം",
     proclamation: "ലോകത്തിന് ഗൂഡലൂർ കോടമഞ്ഞും തേയിലത്തോട്ടങ്ങളും നിറഞ്ഞ മനോഹരമായ ഒരു പറുദീസയാണ്. എന്നാൽ ഞങ്ങൾക്ക് ഇത് നിരന്തരമായ മരണഭയത്തിന്റെ ഭൂമികയാണ്.",
     sections: [
       {
@@ -285,7 +285,7 @@ export const MANIFESTO_DATA: Record<'en' | 'ta' | 'ml' | 'kn', ManifestoContent>
   kn: {
     title: "ಗೂಡಲೂರಿನ ಮೂಕ ರೋದನ — ನಮ್ಮ ಮನೆಗಳು ತೆರೆದ ಜೈಲುಗಳಾಗಿ ಮಾರ್ಪಟ್ಟಿವೆ",
     subtitle: "ನಾವು ಯಾವುದೇ ಭಿಕ್ಷೆಯನ್ನು ಕೇಳುತ್ತಿಲ್ಲ. ಕತ್ತಲೆಗೆ ಹೆದರದೆ ನಮ್ಮದೇ ನೆಲದಲ್ಲಿ ಉಸಿರಾಡುವ, ಮಲಗುವ ಮತ್ತು ನಡೆಯುವ ಬದುಕುವ ಹಕ್ಕನ್ನು ಮಾತ್ರ ಕೇಳುತ್ತಿದ್ದೇವೆ.",
-    badge: "ಅಧಿಕೃತ ನಾಗರಿಕ ಪ್ರಣಾಳಿಕೆ",
+        badge: "ಜೀವನ ಹಕ್ಕು",
     proclamation: "ಜಗತ್ತಿಗೆ ಗೂಡಲೂರು ಮಂಜು ಮತ್ತು ಚಹಾ ತೋಟಗಳ ಸುಂದರ ಸ್ವರ್ಗ. ಆದರೆ ನಮಗೆ, ಇದು ಅಂತ್ಯವಿಲ್ಲದ ಸಾವಿನ ಭಯದ ಭೂಮಿ.",
     sections: [
       {
