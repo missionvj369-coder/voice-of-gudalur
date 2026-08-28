@@ -3,6 +3,7 @@ import { User } from '@supabase/supabase-js';
 import { UserProfile, Role, VerificationLevel } from '../types';
 import { GUDALUR_LOCALITIES } from '../data/gudalurMasterData';
 import { supabase, db, generateGudalurId, normalizePhone, isSupabaseConfigured } from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -276,6 +277,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw duplicateError();
         }
         console.warn('Could not save to Supabase, saving locally:', error);
+        // NEVER fail silently — the resident must know this ID is not yet in the public ledger
+        // and that Phone + Gudalur ID login will not work on other devices until cloud save succeeds.
+        toast.error('Cloud ledger unreachable — your ID is saved on this device only. Please try registering again later.', { duration: 6000 });
         persistProfile(newProfile);
         return newProfile;
       }
