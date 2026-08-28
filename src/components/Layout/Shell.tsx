@@ -6,8 +6,13 @@ import { GudalurIdModal } from '../GudalurIdModal';
 import { OfflineIndicator } from '../OfflineIndicator';
 
 /** Lets any page inside the Shell request a registered Gudalur Resident ID / open the ID card. */
-export const IdModalContext = createContext<{ openIdModal: () => void }>({
+export const IdModalContext = createContext<{
+  openIdModal: () => void;
+  /** Runs `fn` immediately if registered; otherwise opens registration and auto-runs `fn` once the ID is issued. */
+  whenRegistered: (fn: () => void) => void;
+}>({
   openIdModal: () => {},
+  whenRegistered: () => {},
 });
 
 const LANGUAGES: { code: Language; short: string; label: string }[] = [
@@ -21,11 +26,29 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const { lang, setLang } = useLanguage();
   const { profile } = useAuth();
   const [idModalOpen, setIdModalOpen] = useState(false);
+  // Civic actions requested before registration — they run automatically the moment the ID exists.
+  const [readyQueue, setReadyQueue] = useState<{ id: number; fn: () => void }[]>([]);
 
   const openIdModal = () => setIdModalOpen(true);
 
+  React.useEffect(() => {
+    if (!profile?.gudalurId || readyQueue.length === 0) return;
+    const items = readyQueue;
+    setReadyQueue([]);
+    items.forEach((it) => it.fn());
+  }, [profile, readyQueue]);
+
+  const whenRegistered = React.useCallback(
+    (fn: () => void) => {
+      if (profile?.gudalurId) { fn(); return; }
+      setReadyQueue((q) => [...q, { id: Date.now(), fn }]);
+      setIdModalOpen(true);
+    },
+    [profile]
+  );
+
   return (
-    <IdModalContext.Provider value={{ openIdModal }}>
+    <IdModalContext.Provider value={{ openIdModal, whenRegistered }}>
       <div className="min-h-screen bg-[#090D16] text-slate-100 font-sans antialiased overflow-x-hidden flex flex-col">
         {/* — Fixed Header: constant, never drags — */}
         <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-[#0B111E]/95 backdrop-blur-sm border-b border-red-950/30 flex items-center">
@@ -64,21 +87,35 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
               <button
                 type="button"
                 onClick={() => setIdModalOpen(true)}
-                className="h-7 w-7 rounded-full bg-red-600/30 flex items-center justify-center text-[9px] font-black text-red-300 border border-red-500/40 hover:bg-red-600/40 transition shrink-0"
+                title={profile ? `${profile.name} — ${profile.gudalurId} — tap for ID card` : 'Register / Login'}
+                className="flex items-center gap-1.5 rounded-full bg-red-600/20 border border-red-500/40 hover:bg-red-600/30 transition pl-0.5 pr-1 py-0.5 shrink-0"
               >
-                <User size={12} />
+                {profile ? (
+                  <>
+                    <span className="h-6 w-6 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-[10px] font-black text-white">
+                      {profile.name.trim().charAt(0).toUpperCase()}
+                    </span>
+                    <span className="hidden sm:inline font-mono text-[9px] font-bold text-emerald-300 tracking-wide">
+                      {profile.gudalurId}
+                    </span>
+                  </>
+                ) : (
+                  <span className="h-6 w-6 rounded-full bg-red-600/40 flex items-center justify-center text-red-200">
+                    <User size={12} />
+                  </span>
+                )}
               </button>
             </div>
           </div>
         </header>
 
-        {/* Content area: pad top for header, bottom for the sticky action bar */}
-        <main className="pt-14 pb-28 flex-1">
+        {/* Content area: pad top for header */}
+        <main className="pt-14 pb-6 flex-1">
           {children}
         </main>
 
         {/* Footer — Universal Guard Trust initiative */}
-        <footer className="relative z-10 border-t border-red-950/40 bg-[#0B111E] px-4 pt-8 pb-24">
+        <footer className="relative z-10 border-t border-red-950/40 bg-[#0B111E] px-4 pt-8 pb-8">
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
             <div>
               <div className="font-black text-sm text-white tracking-wider">VOICE OF GUDALUR</div>

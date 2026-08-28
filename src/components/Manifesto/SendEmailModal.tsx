@@ -84,7 +84,13 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
   };
 
   const handleDirectSend = () => {
-    // Anchor-click is the most reliable cross-browser way to hand off to the OS mail handler.
+    // 1) Safety net FIRST: mobile Gmail/WebView often drops long pre-filled bodies,
+    //    so the complete email always lands on the clipboard before hand-off.
+    const fullEmail = `To: ${toEmails}\nCC: ${ccEmails}\nSubject: ${content.subject}\n\n${fullBody}`;
+    try { navigator.clipboard?.writeText(fullEmail); } catch { /* clipboard is best-effort */ }
+
+    // 2) Hand off to the OS mail route — Android/iOS open Gmail/Mail directly with
+    //    To, CC, Subject and body already filled in. No typing needed.
     try {
       const a = document.createElement('a');
       a.href = mailtoUrl;
@@ -96,11 +102,23 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
     } catch {
       window.location.href = mailtoUrl;
     }
-    toast.success('Opening your default email app - To, CC, Subject and sender are pre-filled. If nothing opens, use Copy All Text + Gmail Web.', { icon: '\u2709\uFE0F' });
+
+    // 3) If a locked-down in-app browser blocked the hand-off, point to the one-tap
+    //    backup ("Gmail Web") — the clipboard already holds the full petition.
+    window.setTimeout(() => {
+      if (document.visibilityState === 'visible') {
+        toast('Email app not opened? Tap "Gmail Web" below — the full petition is already copied to your clipboard.', { icon: '📋', duration: 6000 });
+      }
+    }, 1500);
+    toast.success('Opening your email app — To, CC, Subject and sender are pre-filled.', { icon: '✉️' });
   };
   const handleOpenGmail = () => {
-    window.open(gmailUrl, '_blank');
-    toast.success('Opening Gmail Web composer...', {
+    // Gmail Web works even where the OS mail route is blocked; keep the full email
+    // on the clipboard so nothing is lost if the composer opens half-empty.
+    const fullEmail = `To: ${toEmails}\nCC: ${ccEmails}\nSubject: ${content.subject}\n\n${fullBody}`;
+    try { navigator.clipboard?.writeText(fullEmail); } catch { /* best-effort */ }
+    window.open(gmailUrl, '_blank', 'noopener');
+    toast.success('Opening Gmail Web composer — a full backup copy is on your clipboard.', {
       icon: '✉️'
     });
   };

@@ -12,7 +12,7 @@ interface GudalurIdModalProps {
 }
 
 export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose }) => {
-  const { profile, registerResident, userCoords, acquireLiveLocation } = useAuth();
+  const { profile, registerResident, loginResident, userCoords, acquireLiveLocation } = useAuth();
   const { lang, t } = useLanguage();
   
   const [name, setName] = useState(profile?.name || '');
@@ -21,8 +21,26 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
   const [customPlaceName, setCustomPlaceName] = useState(profile?.customPlaceName || '');
   const [pincode, setPincode] = useState(profile?.pincode || '643211');
   const [copied, setCopied] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(!profile);
+  // The ID card is always shown first to registered residents — never the registration form again.
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginPhone, setLoginPhone] = useState('');
+  const [loginId, setLoginId] = useState('');
   const [isLocating, setIsLocating] = useState(false);
+
+  // Android back button closes the ID modal instead of leaving the page.
+  React.useEffect(() => {
+    if (!isOpen) return;
+    let backClosed = false;
+    window.history.pushState({ gudalurIdModal: true }, '');
+    const onPop = () => { backClosed = true; onClose(); };
+    window.addEventListener('popstate', onPop);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      if (!backClosed && window.history.state?.gudalurIdModal) window.history.back();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,8 +62,31 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
       });
       setIsRegistering(false);
       toast.success('Your unique Gudalur ID has been generated!');
+      // Reveal the new card briefly, then hand over to the civic action the user first tapped.
+      setTimeout(() => onClose(), 1800);
     } catch (err: any) {
       toast.error(err?.message || 'Registration failed. Please try again.');
+    }
+  };
+
+  // Returning residents: phone + Gudalur ID, no password — works on any device.
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loginPhone.replace(/\D/g, '').length < 10) {
+      toast.error('Enter your registered 10-digit mobile number');
+      return;
+    }
+    if (!loginId.trim()) {
+      toast.error('Enter your Gudalur ID (e.g. GD-2026-0001)');
+      return;
+    }
+    try {
+      await loginResident(loginPhone.trim(), loginId.trim().toUpperCase());
+      setIsLoggingIn(false);
+      toast.success('Welcome back! Your Gudalur ID is active.');
+      setTimeout(() => onClose(), 1200);
+    } catch (err: any) {
+      toast.error(err?.message || 'Login failed. Check your mobile number and Gudalur ID.');
     }
   };
 
@@ -100,7 +141,7 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
             </div>
 
             <div className="p-6 space-y-6">
-              {profile && !isRegistering ? (
+              {profile && !isRegistering && !isLoggingIn ? (
                 /* The Digital ID Card */
                 <div className="space-y-4">
                   <div className="relative rounded-3xl p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 text-white shadow-xl border border-slate-700/80 overflow-hidden">
@@ -182,6 +223,56 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
                     <span>{t('id.privacy_notice')}</span>
                   </div>
                 </div>
+              ) : isLoggingIn ? (
+                /* Login Form — returning residents, any device, no password */
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Registered Mobile Number <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Phone size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
+                      <input
+                        type="tel"
+                        required
+                        value={loginPhone}
+                        onChange={(e) => setLoginPhone(e.target.value)}
+                        placeholder="9488210421"
+                        maxLength={12}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-slate-900 bg-white"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Your Gudalur ID <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <ShieldCheck size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        required
+                        value={loginId}
+                        onChange={(e) => setLoginId(e.target.value)}
+                        placeholder="GD-2026-0001"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-mono text-slate-900 bg-white"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-700/20 transition flex items-center justify-center gap-2 mt-2"
+                  >
+                    <CheckCircle2 size={18} />
+                    <span>Login to My Gudalur ID</span>
+                  </button>
+                  <p className="text-center text-xs text-slate-500">
+                    New resident?{' '}
+                    <button type="button" onClick={() => setIsLoggingIn(false)} className="font-bold text-emerald-700 underline">
+                      Register instead
+                    </button>
+                  </p>
+                </form>
               ) : (
                 /* Registration / Edit Form */
                 <form onSubmit={handleSave} className="space-y-4">
@@ -197,7 +288,7 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g. S. Murugan / Ananya Nair"
-                        className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-slate-900 bg-white"
                       />
                     </div>
                   </div>
@@ -215,7 +306,7 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="9488210421"
                         maxLength={12}
-                        className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-slate-900 bg-white"
                       />
                     </div>
                   </div>
@@ -232,7 +323,7 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
                           const sel = GUDALUR_LOCALITIES.find(l => l.id === e.target.value);
                           if (sel) setPincode(sel.pincode);
                         }}
-                        className="w-full px-3 py-2.5 rounded-2xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs bg-white"
+                        className="w-full px-3 py-2.5 rounded-2xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs text-slate-900 bg-white"
                       >
                         {GUDALUR_LOCALITIES.map((loc) => (
                           <option key={loc.id} value={loc.id}>
@@ -253,7 +344,7 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
                         onChange={(e) => setPincode(e.target.value)}
                         placeholder="643211"
                         maxLength={6}
-                        className="w-full px-3 py-2.5 rounded-2xl border border-slate-300 text-xs font-mono outline-none"
+                        className="w-full px-3 py-2.5 rounded-2xl border border-slate-300 text-xs font-mono text-slate-900 bg-white outline-none"
                       />
                     </div>
                   </div>
@@ -267,7 +358,7 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
                       value={customPlaceName}
                       onChange={(e) => setCustomPlaceName(e.target.value)}
                       placeholder="e.g. Glenrock Division 2"
-                      className="w-full px-4 py-2.5 rounded-2xl border border-slate-300 text-xs outline-none"
+                      className="w-full px-4 py-2.5 rounded-2xl border border-slate-300 text-xs text-slate-900 bg-white outline-none"
                     />
                   </div>
 
@@ -278,6 +369,12 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
                     <CheckCircle2 size={18} />
                     <span>Generate My Gudalur ID</span>
                   </button>
+                  <p className="text-center text-xs text-slate-500">
+                    Already registered?{' '}
+                    <button type="button" onClick={() => setIsLoggingIn(true)} className="font-bold text-emerald-700 underline">
+                      Login here
+                    </button>
+                  </p>
                 </form>
               )}
             </div>
