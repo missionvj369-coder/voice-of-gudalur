@@ -26,3 +26,25 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ============================================================
+   MOBILE CLARITY FIXES
+   1. iOS Safari auto-zooms when an input's font is < 16px —
+      force 16px inputs on phones so typing never zooms the page.
+   2. Kill double-tap zoom lag and the grey tap flash for a
+      calm, app-like feel.
+   ============================================================ */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+body {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+}

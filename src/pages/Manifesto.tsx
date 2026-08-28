@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   Flame,
   Mail,
@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage, type Language } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { MANIFESTO_DATA, ManifestoContent } from '../data/manifestoData';
+import { MANIFESTO_UI } from '../data/manifestoUi';
 import { SendEmailModal } from '../components/Manifesto/SendEmailModal';
 import { IdModalContext } from '../components/Layout/Shell';
 import { generateManifestoPdf } from '../utils/manifestoPdfGenerator';
@@ -31,6 +32,7 @@ export const Manifesto: React.FC = () => {
   const { whenRegistered, openIdModal } = useContext(IdModalContext);
 
   const manifesto: ManifestoContent = MANIFESTO_DATA[lang] || MANIFESTO_DATA.en;
+  const ui = MANIFESTO_UI[lang] || MANIFESTO_UI.en;
 
   // Every civic action on this page requires a registered, verifiable Gudalur Resident ID
   // so endorsements and submissions stay real, traceable records.
@@ -244,10 +246,10 @@ export const Manifesto: React.FC = () => {
       <section className="bg-stone-950 rounded-3xl p-6 sm:p-10 border border-red-900/60 shadow-xl">
         <blockquote className="text-center text-stone-100">
           <p className="text-base sm:text-lg font-serif italic leading-relaxed max-w-2xl mx-auto">
-            "We live in constant fear during evening hours. Our children cannot walk home safely after school without thermal detection and early warning."
+            "{ui.quote}"
           </p>
           <footer className="text-slate-400 text-sm mt-3 font-medium">
-            — Local Estate Resident, O'Valley
+            {ui.quoteBy}
           </footer>
         </blockquote>
       </section>
@@ -256,17 +258,28 @@ export const Manifesto: React.FC = () => {
       <section className="bg-stone-950 text-white rounded-3xl p-6 sm:p-12 border border-red-600 shadow-xl text-center">
         <div className="max-w-3xl mx-auto space-y-6">
           <h3 className="text-2xl sm:text-3xl font-serif font-black text-white tracking-tight">
-            We Have Wept in Silence for Too Long.
+            {ui.weptTitle}
           </h3>
           <p className="text-stone-300 text-sm sm:text-base max-w-2xl mx-auto">
-            No more empty promises, no more post-tragedy compensation memos, and no more funerals.
+            {ui.weptSub}
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
-            {manifesto.callToAction.slogans.map((slogan, idx) => (
-              <div key={idx} className="p-4 rounded-2xl bg-black/80 border border-red-800/80">
-                <p className="font-serif font-black text-red-300 text-sm">{slogan}</p>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3">
+            <button type="button" onClick={() => requireRegistered(() => setShowSignModal(true))} className="h-24 rounded-2xl bg-black/80 hover:bg-red-950/60 border border-red-700 hover:border-red-500 transition flex flex-col items-center justify-center gap-2">
+              {hasEndorsed ? <CheckCircle2 size={24} className="text-emerald-400" /> : <Flame size={24} className="text-amber-400" />}
+              <span className="font-black text-red-200 text-sm leading-none">{hasEndorsed ? ui.tabs.endorsed : ui.tabs.endorse}</span>
+            </button>
+            <button type="button" onClick={() => requireRegistered(() => setShowEmailModal(true))} className="h-24 rounded-2xl bg-black/80 hover:bg-red-950/60 border border-red-700 hover:border-red-500 transition flex flex-col items-center justify-center gap-2">
+              <Mail size={24} className="text-red-400" />
+              <span className="font-black text-red-200 text-sm leading-none">{ui.tabs.email}</span>
+            </button>
+            <button type="button" onClick={() => requireRegistered(shareOnWhatsApp)} className="h-24 rounded-2xl bg-black/80 hover:bg-emerald-950/60 border border-emerald-700 hover:border-emerald-500 transition flex flex-col items-center justify-center gap-2">
+              <Share2 size={24} className="text-emerald-400" />
+              <span className="font-black text-emerald-200 text-sm leading-none">{ui.tabs.share}</span>
+            </button>
+            <button type="button" onClick={() => requireRegistered(handleDownloadPdf)} className="h-24 rounded-2xl bg-black/80 hover:bg-teal-950/60 border border-teal-700 hover:border-teal-500 transition flex flex-col items-center justify-center gap-2">
+              <Download size={24} className="text-teal-400" />
+              <span className="font-black text-teal-200 text-sm leading-none">{ui.tabs.pdf}</span>
+            </button>
           </div>
           <p className="font-serif font-black text-amber-400 text-lg pt-3">{manifesto.callToAction.closing}</p>
         </div>
@@ -287,10 +300,10 @@ export const Manifesto: React.FC = () => {
                   <Flame size={24} className="animate-pulse" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-serif font-black text-white">
-                  Endorse the Gudalur Right to Life Proclamation
+                  {ui.signTitle}
                 </h3>
                 <p className="text-xs sm:text-sm text-stone-300">
-                  Your endorsement is a real, verifiable record submitted to the authorities.
+                  {ui.signSub}
                 </p>
               </div>
               <form onSubmit={handleEndorse} className="space-y-4">
@@ -298,19 +311,19 @@ export const Manifesto: React.FC = () => {
                 <div className="rounded-2xl bg-emerald-950/40 border border-emerald-700/60 p-4 space-y-2 text-left">
                   <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-400">
                     <CheckCircle2 size={12} />
-                    Auto-detected from your registered Resident Card
+                    {ui.autoDetected}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-stone-200">
-                    <p><span className="text-stone-500">Name: </span><strong>{profile?.name}</strong></p>
-                    <p><span className="text-stone-500">Phone: </span><strong>{profile?.phone}</strong></p>
-                    <p><span className="text-stone-500">Resident ID: </span><strong className="font-mono text-emerald-300">{profile?.gudalurId}</strong></p>
-                    <p><span className="text-stone-500">Locality: </span><strong>{profile?.localityName}</strong></p>
+                    <p><span className="text-stone-500">{ui.nameLabel} </span><strong>{profile?.name}</strong></p>
+                    <p><span className="text-stone-500">{ui.phoneLabel} </span><strong>{profile?.phone}</strong></p>
+                    <p><span className="text-stone-500">{ui.idLabel} </span><strong className="font-mono text-emerald-300">{profile?.gudalurId}</strong></p>
+                    <p><span className="text-stone-500">{ui.localityLabel} </span><strong>{profile?.localityName}</strong></p>
                   </div>
                 </div>
                 <div className="pt-2 flex items-center justify-end gap-3">
-                  <button type="button" onClick={() => setShowSignModal(false)} className="px-4 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-stone-300 font-bold text-xs">Cancel</button>
+                  <button type="button" onClick={() => setShowSignModal(false)} className="px-4 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-stone-300 font-bold text-xs">{ui.cancelBtn}</button>
                   <button type="submit" disabled={isSubmittingEndorse} className="px-6 py-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-xs shadow-lg shadow-red-950 border border-red-400">
-                    {isSubmittingEndorse ? 'Recording...' : 'Confirm Endorsement'}
+                    {isSubmittingEndorse ? 'Recording...' : ui.confirmBtn}
                   </button>
                 </div>
               </form>
@@ -335,10 +348,10 @@ export const Manifesto: React.FC = () => {
       <section className="bg-stone-900 rounded-3xl p-4 sm:p-5 flex flex-row items-center justify-between gap-3 shadow-xl">
         <div className="flex items-center gap-3 text-sm text-stone-200">
           <PhoneCall size={16} className="text-red-400 animate-bounce" />
-          <span>Forest RRT:</span>
+          <span>{ui.forestRrt}</span>
           <a href="tel:18004256100" title="Tap to call Gudalur Forest Rapid Response Team" className="font-mono font-bold text-red-300 hover:text-red-200 hover:underline">1800 425 6100</a>
           <span className="text-stone-500">/</span>
-          <span>Medical:</span>
+          <span>{ui.medical}</span>
           <a href="tel:108" title="Tap to call Ambulance 108" className="font-mono font-bold text-red-300 hover:text-red-200 hover:underline">108</a>
         </div>
       </section>
@@ -346,47 +359,47 @@ export const Manifesto: React.FC = () => {
       {/* TAKE ACTION — one clear row at the natural end of the read */}
       <section className="pt-2 pb-4">
         <div className="rounded-3xl bg-stone-900 border border-red-900/50 shadow-xl px-4 py-4">
-          <div className="flex items-center justify-center gap-4">
-            <div className="text-center shrink-0 pr-4 border-r border-stone-700/70">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4">
+            <div className="flex items-center justify-center gap-2 sm:block sm:text-center sm:pr-4 sm:border-r border-stone-700/70 shrink-0">
               <div className="text-2xl font-black text-red-400 leading-none">{signaturesCount.toLocaleString()}</div>
-              <div className="text-[8px] text-slate-400 mt-1 uppercase tracking-wide">Endorsements</div>
+              <div className="text-[9px] text-slate-400 uppercase tracking-wide">{ui.endorsements}</div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="grid grid-cols-4 gap-2 w-full sm:w-auto sm:flex sm:items-center sm:gap-2">
               <button
                 onClick={() => requireRegistered(() => setShowSignModal(true))}
                 title="Sign & Endorse the Proclamation"
-                className="w-16 h-16 rounded-2xl bg-gradient-to-b from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white shadow-lg shadow-red-950/40 transition flex flex-col items-center justify-center gap-1.5"
+                className="w-full sm:w-16 h-16 rounded-2xl bg-gradient-to-b from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white shadow-lg shadow-red-950/40 transition flex flex-col items-center justify-center gap-1.5"
               >
                 {hasEndorsed ? <CheckCircle2 size={18} className="text-emerald-300" /> : <Flame size={18} className="text-amber-300" />}
-                <span className="text-[9px] font-bold uppercase tracking-wide leading-none">{hasEndorsed ? 'Endorsed' : 'Endorse'}</span>
+                <span className="text-[9px] font-bold uppercase tracking-wide leading-none">{hasEndorsed ? ui.tabs.endorsed : ui.tabs.endorse}</span>
               </button>
 
               <button
                 onClick={() => requireRegistered(() => setShowEmailModal(true))}
                 title="Send Official Email to CM & NTCA"
-                className="w-16 h-16 rounded-2xl bg-stone-800 hover:bg-stone-700 text-white shadow-md transition flex flex-col items-center justify-center gap-1.5 border border-red-900/40"
+                className="w-full sm:w-16 h-16 rounded-2xl bg-stone-800 hover:bg-stone-700 text-white shadow-md transition flex flex-col items-center justify-center gap-1.5 border border-red-900/40"
               >
                 <Mail size={18} className="text-red-400" />
-                <span className="text-[9px] font-bold uppercase tracking-wide leading-none text-stone-200">Email</span>
+                <span className="text-[9px] font-bold uppercase tracking-wide leading-none text-stone-200">{ui.tabs.email}</span>
               </button>
 
               <button
                 onClick={() => requireRegistered(shareOnWhatsApp)}
                 title="Share on WhatsApp"
-                className="w-16 h-16 rounded-2xl bg-emerald-700 hover:bg-emerald-600 text-white shadow-md shadow-emerald-900/30 transition flex flex-col items-center justify-center gap-1.5"
+                className="w-full sm:w-16 h-16 rounded-2xl bg-emerald-700 hover:bg-emerald-600 text-white shadow-md shadow-emerald-900/30 transition flex flex-col items-center justify-center gap-1.5"
               >
                 <Share2 size={18} />
-                <span className="text-[9px] font-bold uppercase tracking-wide leading-none">Share</span>
+                <span className="text-[9px] font-bold uppercase tracking-wide leading-none">{ui.tabs.share}</span>
               </button>
 
               <button
                 onClick={() => requireRegistered(handleDownloadPdf)}
                 title="Download the signed memorandum PDF"
-                className="w-16 h-16 rounded-2xl bg-gradient-to-b from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white shadow-md transition flex flex-col items-center justify-center gap-1.5"
+                className="w-full sm:w-16 h-16 rounded-2xl bg-gradient-to-b from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white shadow-md transition flex flex-col items-center justify-center gap-1.5"
               >
                 <Download size={18} />
-                <span className="text-[9px] font-bold uppercase tracking-wide leading-none">PDF</span>
+                <span className="text-[9px] font-bold uppercase tracking-wide leading-none">{ui.tabs.pdf}</span>
               </button>
             </div>
           </div>

@@ -109,13 +109,13 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           </div>
         </header>
 
-        {/* Content area: pad top for header */}
-        <main className="pt-14 pb-6 flex-1">
+        {/* Content area: pad top for header (extra room so nothing sits under it) */}
+        <main className="pt-16 pb-6 flex-1">
           {children}
         </main>
 
         {/* Footer — Universal Guard Trust initiative */}
-        <footer className="relative z-10 border-t border-red-950/40 bg-[#0B111E] px-4 pt-8 pb-8">
+        <footer className="relative z-10 border-t border-red-950/40 bg-[#0B111E] px-4 pt-16 pb-10">
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
             <div>
               <div className="font-black text-sm text-white tracking-wider">VOICE OF GUDALUR</div>
