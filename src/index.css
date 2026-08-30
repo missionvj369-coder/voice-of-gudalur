@@ -1,0 +1,205 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Cormorant+Garamond:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cormorant+Garamond", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-[#150608] text-[#e7e5e4] antialiased;
+  }
+  #root {
+    min-height: 100vh;
+  }
+}
+
+/* ============================================================
+   VOICE OF GUDALUR — BLOOD-ON-THE-FLOOR AMBIENCE
+   Flat black backgrounds become deep blood-black, with a slow
+   crimson "pool" flowing across the floor of the app. Component
+   colors and text contrast are untouched.
+   ============================================================ */
+@theme {
+  --color-stone-950: #150608;  /* near-black with a blood tint */
+  --color-stone-900: #1e0a0d;
+  --color-black: #0d0405;
+}
+
+@keyframes bloodFlow {
+  0%   { background-position: 0% 100%, 40% 120%, 75% 90%; opacity: .88; }
+  25%  { background-position: 8% 96%,  55% 110%, 90% 100%; opacity: .97; }
+  50%  { background-position: 0% 104%, 45% 95%,  70% 115%; opacity: .9; }
+  75%  { background-position: -6% 98%, 35% 115%, 80% 92%;  opacity: 1; }
+  100% { background-position: 0% 100%, 40% 120%, 75% 90%;  opacity: .88; }
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60vw 32vh at 20% 104%, rgba(122, 10, 18, 0.55), rgba(122, 10, 18, 0) 70%),
+    radial-gradient(70vw 36vh at 60% 112%, rgba(158, 14, 24, 0.42), rgba(158, 14, 24, 0) 72%),
+    radial-gradient(55vw 30vh at 88% 102%, rgba(90, 6, 14, 0.5), rgba(90, 6, 14, 0) 70%),
+    linear-gradient(180deg, #0b0405 0%, #150608 55%, #2a0a0e 100%);
+  background-size: 200% 200%, 200% 200%, 200% 200%, 100% 100%;
+  animation: bloodFlow 26s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ============================================================
+   MOBILE CLARITY FIXES
+   1. iOS Safari auto-zooms when an input's font is < 16px —
+      force 16px inputs on phones so typing never zooms the page.
+   2. Kill double-tap zoom lag and the grey tap flash for a
+      calm, app-like feel.
+   ============================================================ */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+body {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Locality combobox: kill the browser's datalist dropdown arrow for a clean text field */
+input[list]::-webkit-calendar-picker-indicator {
+  display: none !important;
+  -webkit-appearance: none;
+}
+
+/* ==========================================================================
+   WILDLIFE COEXISTENCE RAILS — elephant · human · tiger, each in its own
+   territory. Pure-CSS ambient silhouettes on the non-text edges of the app.
+   ========================================================================== */
+.wildlife-rails {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.wildlife-rails .rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: clamp(60px, 9vw, 130px);
+  opacity: 0.85;
+}
+.wildlife-rails .rail-left { left: 0; }
+.wildlife-rails .rail-right { right: 0; transform: scaleX(-1); }
+/* Territory gradient: forest (elephant) → grassland (human) → mangrove (tiger) */
+.wildlife-rails .rail::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgba(6, 46, 33, 0.85) 0%,
+    rgba(10, 61, 38, 0.55) 34%,
+    rgba(23, 58, 30, 0.45) 62%,
+    rgba(12, 40, 34, 0.85) 100%);
+}
+.wildlife-rails .rail::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(0deg,
+    rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 26px);
+}
+.wl-figure {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  will-change: transform, opacity;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45));
+}
+.wl-elephant { top: 12%; width: 64%; color: #0d3325; animation: wl-drift 26s ease-in-out infinite; }
+.wl-human    { top: 46%; width: 34%; color: #234d2c; animation: wl-drift 34s ease-in-out infinite reverse; }
+.wl-tiger    { top: 74%; width: 58%; color: #3f2d12; animation: wl-drift 22s ease-in-out infinite; }
+.wl-elephant svg, .wl-human svg, .wl-tiger svg { width: 100%; height: auto; display: block; }
+/* Breath line — a soft firefly pulse traveling down each rail */
+.wl-spark {
+  position: absolute;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  background: #ffd166;
+  box-shadow: 0 0 8px 2px rgba(255, 209, 102, 0.55);
+  animation: wl-spark-fall 9s linear infinite;
+}
+.wildlife-rails .rail-right .wl-spark { animation-delay: -4.5s; }
+@keyframes wl-drift {
+  0%, 100% { transform: translateX(-58%); }
+  50%      { transform: translateX(-42%); }
+}
+@keyframes wl-spark-fall {
+  0%   { top: -2%; opacity: 0; }
+  12%  { opacity: 0.9; }
+  88%  { opacity: 0.6; }
+  100% { top: 102%; opacity: 0; }
+}
+/* Real photography inside the rails — soft-masked so they melt into the night,
+   never competing with the citizen's text. Falls back to the band gradient. */
+.wildlife-rails .wl-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+  opacity: 0.9;
+  filter: saturate(1.05) brightness(0.9);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 86%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 86%, transparent 100%);
+}
+.wildlife-rails .wl-figure { overflow: hidden; }
+/* Keep reading content clear of the rails on wide screens only;
+   rails tuck behind content on narrow screens. */
+@media (max-width: 640px) {
+  .wildlife-rails .rail { opacity: 0.45; width: 44px; }
+}
+
+/* Remove the browser dropdown ARROW on the locality combobox (datalist input) —
+   the field is type-to-filter with its own styled hint, no native chrome. */
+input[list]::-webkit-calendar-picker-indicator {
+  display: none !important;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-appearance: none;
+}
+input[list]::-ms-expand,
+select::-ms-expand {
+  display: none;
+}
+input[list] {
+  -webkit-appearance: none;
+  appearance: none;
+}
