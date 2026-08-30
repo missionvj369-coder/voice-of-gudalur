@@ -6,7 +6,6 @@ import { GudalurIdModal } from '../GudalurIdModal';
 import { OfflineIndicator } from '../OfflineIndicator';
 import { LoginResidentModal } from '../Auth/LoginResidentModal';
 import { RegisterResidentModal } from '../Auth/RegisterResidentModal';
-import { WildlifeRails } from '../Visuals/WildlifeRails';
 
 /** Lets any page inside the Shell request a registered Gudalur Resident ID / open the ID card. */
 export const IdModalContext = createContext<{
@@ -53,9 +52,14 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   return (
     <IdModalContext.Provider value={{ openIdModal, whenRegistered }}>
       <div className="min-h-screen bg-transparent text-slate-100 font-sans antialiased overflow-x-hidden flex flex-col">
-        {/* Emotional coexistence ambience — elephant, human & tiger in their own territories */}
-        <WildlifeRails />
-                <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-transparent border-b border-red-950/30 flex items-center">
+        {/* Ambient attention layer — forest mist, rising embers, reading pulse (no boxes, no cartoons) */}
+        <div className="og-ambient" aria-hidden="true">
+          <div className="mist mist-1" /><div className="mist mist-2" /><div className="mist mist-3" />
+          <div className="ember" /><div className="ember" /><div className="ember" /><div className="ember" />
+          <div className="ember" /><div className="ember" /><div className="ember" />
+        </div>
+        <div className="og-readbar" aria-hidden="true" />
+        <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-transparent border-b border-red-950/30 flex items-center">
           <div className="max-w-5xl mx-auto w-full px-4 flex items-center justify-between">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIdModalOpen(true)}>
               <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shrink-0">

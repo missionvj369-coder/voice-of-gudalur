@@ -13,7 +13,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { EMAIL_RECIPIENTS, EMAIL_PETITION_DATA, EmailRecipient } from '../../data/emailPetitionData';
+import { EMAIL_RECIPIENTS, EMAIL_PETITION_DATA, CAMPAIGN_SLOGAN, EmailRecipient } from '../../data/emailPetitionData';
 import { useLanguage, type Language } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { db, isSupabaseConfigured, generateEmailRef } from '../../lib/supabase';
@@ -80,7 +80,7 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
     ? `\n\nRespectfully submitted,\n${senderName}\nGudalur Resident ID: ${profile?.gudalurId || '—'}\n${profile?.localityName || 'Gudalur'}, The Nilgiris${profile?.pincode ? ` — PIN ${profile.pincode}` : ''}\nMobile: ${profile?.phone || '—'}`
     : '';
   
-  const fullBody = `${content.salutation}\n\n${content.body}\n\n${content.signoff}${senderLine}`;
+  const fullBody = `${content.salutation}\n\n${content.body}\n\n${content.signoff}${senderLine}\n\n${CAMPAIGN_SLOGAN}`;
 
   // The complete, clipboard-ready copy of the petition email (used as a safety net and rescue).
   const fullEmail = `To: ${toEmails}\nCC: ${ccEmails}\nSubject: ${content.subject}\n\n${fullBody}`;

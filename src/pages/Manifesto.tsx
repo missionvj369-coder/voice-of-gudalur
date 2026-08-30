@@ -8,13 +8,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   PhoneCall,
-  Footprints,
-  Crosshair,
-  Scale,
-  Cpu,
-  Radio,
-  TreePine,
   ChevronRight,
+  Instagram,
+  Facebook,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage, type Language } from '../context/LanguageContext';
@@ -247,7 +243,7 @@ export const Manifesto: React.FC = () => {
       key: 'sign',
       title: hasSigned ? ui.tabs.endorsed : ui.tabs.endorse,
       sub: hasSigned ? ui.actionSubs.signed : ui.actionSubs.endorse,
-      icon: <Flame size={20} className={hasSigned ? 'text-emerald-300' : 'text-red-200'} />,
+      icon: <Flame size={20} className="text-white" />,
       onClick: () => {
         if (hasSigned) {
           toast.success('You have already signed — one signature per resident, permanently recorded in the ledger.');
@@ -256,37 +252,37 @@ export const Manifesto: React.FC = () => {
         requireRegistered(() => setShowSignModal(true));
       },
       titleAttr: hasSigned ? 'You have already signed this petition' : 'Sign the petition and show your support',
-      border: hasSigned ? 'border-emerald-700/70 bg-emerald-950/50' : 'border-rose-500/80 bg-gradient-to-br from-red-800/80 via-red-900/70 to-red-950/70',
-      iconBox: hasSigned ? 'bg-emerald-600/30' : 'bg-gradient-to-br from-rose-500/40 to-red-600/40',
-      iconColor: hasSigned ? 'text-emerald-300' : 'text-rose-100',
+      border: hasSigned ? 'border-emerald-600 bg-emerald-600 hover:bg-emerald-500' : 'border-[#FF2C2C] bg-[#FF2C2C] hover:bg-[#e02222]',
+      iconBox: 'bg-white/15',
+      iconColor: 'text-white',
     },
     {
       key: 'email',
       title: ui.tabs.email,
       sub: ui.actionSubs.email,
-      icon: <Mail size={20} className="text-indigo-200" />,
+      icon: <Mail size={20} className="text-white" />,
       onClick: () => requireRegistered(() => setShowEmailModal(true)),
       titleAttr: 'Send the official petition email straight to the Chief Minister and all related departments',
-      border: 'border-violet-500/60 bg-gradient-to-br from-violet-900/60 to-indigo-950/60',
-      iconBox: 'bg-gradient-to-br from-violet-500/35 to-indigo-600/35',
-      iconColor: 'text-violet-200',
+      border: 'border-[#D1001F] bg-[#D1001F] hover:bg-[#b30018]',
+      iconBox: 'bg-white/15',
+      iconColor: 'text-white',
     },
     {
       key: 'share',
       title: ui.tabs.share,
       sub: ui.actionSubs.share,
-      icon: <Share2 size={20} className="text-green-300" />,
+      icon: <Share2 size={20} className="text-white" />,
       onClick: () => requireRegistered(shareOnWhatsApp),
       titleAttr: 'Spread the petition on WhatsApp and social media',
-      border: 'border-emerald-500/60 bg-gradient-to-br from-emerald-900/60 to-green-950/60',
-      iconBox: 'bg-gradient-to-br from-emerald-500/35 to-green-600/35',
-      iconColor: 'text-emerald-200',
+      border: 'border-[#25D366] bg-[#25D366] hover:bg-[#1eb85a]',
+      iconBox: 'bg-white/15',
+      iconColor: 'text-white',
     },
     {
       key: 'pdf',
       title: ui.tabs.pdf,
       sub: emailSubmissionRef ? ui.actionSubs.pdf : ui.actionSubs.pdfLocked,
-      icon: emailSubmissionRef ? <Download size={20} className="text-amber-300" /> : <Lock size={20} className="text-slate-400" />,
+      icon: emailSubmissionRef ? <Download size={20} className="text-white" /> : <Lock size={20} className="text-slate-400" />,
       onClick: () => {
         if (!isRegistered) { requireRegistered(() => setShowEmailModal(true)); return; }
         if (!emailSubmissionRef) {
@@ -298,135 +294,131 @@ export const Manifesto: React.FC = () => {
         handleDownloadPdf();
       },
       titleAttr: emailSubmissionRef ? 'Download the petition copy to print and submit' : 'Available after your official email is sent',
-      border: emailSubmissionRef ? 'border-amber-400/70 bg-gradient-to-br from-amber-800/60 to-amber-950/60' : 'border-slate-800/60 bg-slate-900/50',
-      iconBox: emailSubmissionRef ? 'bg-gradient-to-br from-amber-400/35 to-amber-600/35' : 'bg-slate-700/40',
-      iconColor: emailSubmissionRef ? 'text-amber-200' : 'text-slate-400',
+      border: emailSubmissionRef ? 'border-[#F01E2C] bg-[#F01E2C] hover:bg-[#d01824]' : 'border-slate-700 bg-slate-800',
+      iconBox: emailSubmissionRef ? 'bg-white/15' : 'bg-slate-700/40',
+      iconColor: emailSubmissionRef ? 'text-white' : 'text-slate-400',
     },
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5 pb-6 relative">
+    <div className="max-w-4xl mx-auto pb-6 relative">
 
-      {/* Page identity — who we are, in one calm line */}
-      <section className="pt-4 pb-1 text-center">
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-red-500">Initiative by Universal Guard Trust</p>
-        <h1 className="mt-1 text-xl sm:text-2xl font-serif font-black tracking-tight text-white">Voice of Gudalur</h1>
-        <p className="mt-1 text-xs text-stone-400 font-medium">One community. One voice. One unwavering demand: the Right to Life.</p>
+      {/* Masthead — borderless editorial opener */}
+      <section className="pt-10 pb-2 text-center px-2">
+        <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-500">Initiative by Universal Guard Trust</p>
+        <h1 className="mt-3 text-4xl sm:text-6xl font-serif font-black tracking-tight leading-none text-white">
+          Voice of <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-red-500 to-rose-600">Gudalur</span>
+        </h1>
+        <p className="mt-4 text-[10px] sm:text-xs uppercase tracking-[0.25em] text-stone-400 font-bold">One community · One voice · The Right to Life</p>
       </section>
 
-      {/* HERO — clear and focused */}
-      <section className="relative rounded-3xl overflow-hidden shadow-xl border border-red-900/60 text-white">
+      {/* HERO — cinematic full-bleed image, pure typography, no boxes */}
+      <section className="relative overflow-hidden text-white">
         <div className="absolute inset-0 z-0">
           <img
             src={crisisImg}
             alt=""
-            className="w-full h-full object-cover object-center brightness-[0.5]"
+            className="w-full h-full object-cover object-center brightness-[0.45]"
             loading="eager"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-red-950/75 to-black/85" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-[#150608]" />
         </div>
-        <div className="relative z-10 p-6 sm:p-10 max-w-3xl mx-auto text-center">
-          <h1 className="text-2xl sm:text-3xl font-serif font-black tracking-tight leading-tight text-white">
+        <div className="relative z-10 px-5 py-16 sm:py-24 max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl sm:text-5xl font-serif font-black tracking-tight leading-[1.05] text-white">
             {manifesto.title}
-          </h1>
-          <p className="mt-4 text-sm sm:text-base text-red-200/95 font-serif italic leading-relaxed">
+          </h2>
+          <p className="mt-6 text-base sm:text-xl text-red-200/95 font-serif italic leading-relaxed">
             "{manifesto.subtitle}"
           </p>
-
-          <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-black/80 border border-red-900/60 shadow-lg">
-            <p className="text-sm sm:text-base font-serif font-medium text-stone-100 leading-relaxed">
-              {manifesto.proclamation}
-            </p>
-          </div>
+          <p className="mt-10 text-sm sm:text-base font-serif text-stone-100 leading-relaxed text-left max-w-2xl mx-auto first-letter:float-left first-letter:text-5xl first-letter:leading-[0.85] first-letter:font-black first-letter:text-red-500 first-letter:mr-2 first-letter:mt-1">
+            {manifesto.proclamation}
+          </p>
         </div>
       </section>
 
-            {/* Part I — Content without badges */}
-      <section className="bg-stone-950 text-white rounded-3xl p-6 sm:p-10 border border-red-900/60 shadow-xl space-y-6">
-        <div className="flex items-center gap-3 border-b border-red-900/40 pb-4">
-          <h2 className="text-lg sm:text-xl font-serif font-black text-white">{manifesto.sections[0].title}</h2>
-        </div>
-        <div className="text-stone-300 text-sm sm:text-base leading-relaxed space-y-4 font-sans">
+      {/* Part I — borderless editorial flow */}
+      <section className="px-2 sm:px-6 pt-16 pb-4 text-white space-y-6">
+        <h2 className="text-2xl sm:text-4xl font-serif font-black tracking-tight leading-tight max-w-3xl">
+          {manifesto.sections[0].title}
+        </h2>
+        <div className="text-stone-300 text-base sm:text-lg leading-relaxed space-y-5 font-sans max-w-3xl">
           {manifesto.sections[0].content.map((paragraph, idx) => (
             <p key={idx}>{paragraph}</p>
           ))}
         </div>
-
-        {/* Frontline Conflict Zones — no Act-for-Gudalur link */}
-        <div className="p-4 rounded-2xl bg-red-950/40 border border-red-800/60 flex items-center gap-3 text-xs">
-          <AlertTriangle size={14} className="text-red-400 shrink-0" />
-          <span>
-            <strong className="text-red-400">Documented Frontline Conflict Zones:</strong> Lauriston (O'Valley), Cherambadi, Seaforth, Glenrock, Mayfield, Pandalur fringe tea estates.
-          </span>
-        </div>
+        <p className="text-xs sm:text-sm max-w-3xl leading-relaxed">
+          <AlertTriangle size={13} className="text-red-500 inline -mt-0.5 mr-1.5" />
+          <strong className="text-red-500 uppercase tracking-wide">Documented frontline conflict zones:</strong>{' '}
+          <span className="text-stone-300">Lauriston (O'Valley), Cherambadi, Seaforth, Glenrock, Mayfield, Pandalur fringe tea estates.</span>
+        </p>
       </section>
 
-      {/* Part II — The Hard Truth */}
-      <section className="bg-stone-950 text-white rounded-3xl p-6 sm:p-10 border border-red-900/60 shadow-xl space-y-6">
-        <div className="flex items-center gap-3 border-b border-red-900/40 pb-4">
-          <h2 className="text-lg sm:text-xl font-serif font-black text-white">{manifesto.sections[1].title}</h2>
-        </div>
-        <p className="text-stone-300 text-sm font-medium">{manifesto.sections[1].content[0]}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+      {/* Part II — The Hard Truth, big-number editorial */}
+      <section className="px-2 sm:px-6 pt-14 pb-4 text-white space-y-8">
+        <h2 className="text-2xl sm:text-4xl font-serif font-black tracking-tight leading-tight max-w-3xl">
+          {manifesto.sections[1].title}
+        </h2>
+        <p className="text-stone-300 text-base sm:text-lg font-medium max-w-3xl">{manifesto.sections[1].content[0]}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-10">
           {manifesto.sections[1].highlights?.map((item, idx) => (
-            <div key={idx} className="p-6 rounded-2xl bg-black/70 hover:bg-red-950/40 border border-red-900/50 transition-all space-y-3 flex flex-col justify-between">
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-black uppercase px-2.5 py-1 rounded-lg bg-red-950 text-red-300 border border-red-700">{item.badge}</span>
-                  {idx === 0 ? <Footprints size={20} className="text-red-400" /> : idx === 1 ? <Crosshair size={20} className="text-amber-400" /> : <Scale size={20} className="text-rose-400" />}
-                </div>
-                <h3 className="font-serif font-bold text-lg text-white">{item.heading}</h3>
-                <p className="text-xs text-stone-300 leading-relaxed">{item.description}</p>
+            <div key={idx} className="space-y-3">
+              <div className="flex items-baseline gap-3">
+                <span className="text-4xl sm:text-5xl font-serif font-black text-transparent bg-clip-text bg-gradient-to-b from-red-400 to-red-800 leading-none">
+                  {String(idx + 1).padStart(2, '0')}
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-500">{item.badge}</span>
               </div>
+              <h3 className="font-serif font-bold text-lg text-white leading-snug">{item.heading}</h3>
+              <p className="text-sm text-stone-300 leading-relaxed">{item.description}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Part III — Non-Negotiable Demands */}
-      <section className="bg-stone-950 text-white rounded-3xl p-6 sm:p-10 border border-red-600/70 shadow-xl space-y-6">
-        <div className="flex items-center gap-3 border-b border-red-800/40 pb-4">
-          <h2 className="text-lg sm:text-xl font-serif font-black text-white">{manifesto.sections[2].title}</h2>
-        </div>
-        <p className="text-stone-300 text-sm font-medium">{manifesto.sections[2].content[0]}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      {/* Part III — Non-Negotiable Demands, crimson statement band */}
+      <section className="mt-10 bg-gradient-to-b from-red-950/50 via-[#1a0709] to-transparent px-5 sm:px-10 py-14 text-white space-y-8">
+        <h2 className="text-2xl sm:text-4xl font-serif font-black tracking-tight leading-tight max-w-3xl">
+          {manifesto.sections[2].title}
+        </h2>
+        <p className="text-stone-300 text-base sm:text-lg font-medium max-w-3xl">{manifesto.sections[2].content[0]}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
           {manifesto.sections[2].highlights?.map((item, idx) => (
-            <div key={idx} className="p-6 rounded-2xl bg-black/70 border border-red-900/70 hover:border-red-500 transition-all space-y-3 shadow-lg">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase px-2.5 py-1 rounded-lg bg-red-950 text-red-300 border border-red-700">{item.badge}</span>
-                {idx === 0 ? <TreePine size={22} className="text-emerald-400" /> : idx === 1 ? <Cpu size={22} className="text-cyan-400" /> : idx === 2 ? <Radio size={22} className="text-red-400" /> : <TreePine size={22} className="text-amber-400" />}
+            <div key={idx} className="space-y-2.5">
+              <div className="flex items-center gap-2.5">
+                <span className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)] shrink-0" />
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-red-400">{item.badge}</span>
               </div>
-              <h3 className="font-serif font-bold text-lg text-white">{item.heading}</h3>
-              <p className="text-xs text-stone-300 leading-relaxed">{item.description}</p>
+              <h3 className="font-serif font-bold text-xl text-white leading-snug">{item.heading}</h3>
+              <p className="text-sm text-stone-300 leading-relaxed">{item.description}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Ground Reality Testimonial */}
-      <section className="bg-stone-950 rounded-3xl p-6 sm:p-10 border border-red-900/60 shadow-xl">
-        <blockquote className="text-center text-stone-100">
-          <p className="text-base sm:text-lg font-serif italic leading-relaxed max-w-2xl mx-auto">
+      {/* Ground Reality — testimonial in pure typography */}
+      <section className="px-2 sm:px-6 pt-16 pb-2">
+        <blockquote className="text-center">
+          <p className="text-xl sm:text-3xl font-serif italic leading-relaxed max-w-3xl mx-auto text-white">
             "{ui.quote}"
           </p>
-          <footer className="text-slate-400 text-sm mt-3 font-medium">
+          <footer className="text-stone-500 text-xs mt-5 font-bold uppercase tracking-[0.2em]">
             {ui.quoteBy}
           </footer>
         </blockquote>
       </section>
 
-      {/* Call to Action */}
-      <section className="bg-stone-950 text-white rounded-3xl p-6 sm:p-12 border border-red-600 shadow-xl text-center">
-        <div className="max-w-3xl mx-auto space-y-6">
-          <h3 className="text-2xl sm:text-3xl font-serif font-black text-white tracking-tight">
+      {/* Call to Action — full-bleed crimson band, borderless */}
+      <section className="mt-12 bg-gradient-to-b from-red-900/70 via-red-950/80 to-[#150608] px-5 sm:px-10 py-14 text-white text-center">
+        <div className="max-w-3xl mx-auto space-y-7">
+          <h3 className="text-3xl sm:text-5xl font-serif font-black tracking-tight leading-[1.05]">
             {ui.weptTitle}
           </h3>
-          <p className="text-stone-300 text-sm sm:text-base max-w-2xl mx-auto">
+          <p className="text-red-100/90 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
             {ui.weptSub}
           </p>
-          <div className="space-y-2.5 pt-4 text-left">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400 text-center">
+          <div className="space-y-3 pt-6 text-left">
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-red-300 text-center">
               Take all four steps — one after another
             </p>
             {ctaActions.map((a) => (
@@ -435,22 +427,46 @@ export const Manifesto: React.FC = () => {
                 type="button"
                 onClick={a.onClick}
                 title={a.titleAttr}
-                className={`w-full py-3.5 px-4 rounded-2xl border-2 transition flex items-center justify-between gap-3 ${a.border} hover:brightness-125`}
+                className={`w-full py-4 px-5 rounded-2xl border transition-all duration-200 flex items-center justify-between gap-3 backdrop-blur-sm ${a.border} hover:brightness-125 hover:scale-[1.01] active:scale-[0.99]`}
               >
-                <span className="flex items-center gap-3 min-w-0">
-                  <span className={`h-10 w-10 shrink-0 rounded-xl flex items-center justify-center ${a.iconBox}`}>
+                <span className="flex items-center gap-3.5 min-w-0">
+                  <span className={`h-11 w-11 shrink-0 rounded-xl flex items-center justify-center ${a.iconBox}`}>
                     {a.icon}
                   </span>
                   <span className="text-left min-w-0">
-                    <span className={`block font-black text-sm leading-tight text-white ${a.iconColor}`}>{a.title}</span>
-                    <span className="block text-[10px] text-slate-400 leading-snug">{a.sub}</span>
+                    <span className={`block font-black text-sm sm:text-base leading-tight text-white ${a.iconColor}`}>{a.title}</span>
+                    <span className="block text-[11px] text-white/60 leading-snug">{a.sub}</span>
                   </span>
                 </span>
-                <ChevronRight size={16} className="text-slate-500 shrink-0" />
+                <ChevronRight size={18} className="text-white/50 shrink-0" />
               </button>
             ))}
           </div>
-          <p className="font-serif font-black text-amber-400 text-lg pt-3">{manifesto.callToAction.closing}</p>
+          <p className="font-serif font-black text-amber-300 text-xl sm:text-2xl pt-4 tracking-tight">{manifesto.callToAction.closing}</p>
+        </div>
+      </section>
+
+      {/* Follow the movement — official channels */}
+      <section className="pt-1 pb-4">
+        <p className="text-center text-[10px] font-black uppercase tracking-[0.25em] text-red-500">Follow the movement</p>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2.5">
+          {([
+            { icon: <Instagram size={15} />, label: 'Voice of India', href: 'https://www.instagram.com/voice_of_india_voi?igsi=bGg4aXA0MjRueHp2&utm_source=qr' },
+            { icon: <Instagram size={15} />, label: 'Voice for Gudalur', href: 'https://www.instagram.com/voice_for_gudalur?igsi=MXU2ajg4cjF6emt5Zg%3D%3D&utm_source=qr' },
+            { icon: <Instagram size={15} />, label: 'Universal Guard Trust', href: 'https://www.instagram.com/universalguardtrust?igsi=ZXo3am9idm9kcWll&utm_source=qr' },
+            { icon: <Facebook size={15} />, label: 'Facebook', href: 'https://www.facebook.com/share/198eCSR3p3/?mibextid=wwXIfr' },
+          ]).map((s) => (
+            <a
+              key={s.label}
+              href={s.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-xs font-semibold text-stone-200 transition hover:bg-[#FF2C2C]/25 hover:text-white"
+            >
+              {s.icon}
+              {s.label}
+            </a>
+          ))}
         </div>
       </section>
 

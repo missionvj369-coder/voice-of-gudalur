@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import { ManifestoContent } from '../data/manifestoData';
-import { EMAIL_RECIPIENTS, EMAIL_PETITION_DATA } from '../data/emailPetitionData';
+import { EMAIL_RECIPIENTS, EMAIL_PETITION_DATA, CAMPAIGN_SLOGAN } from '../data/emailPetitionData';
 
 export interface ManifestoPdfResident {
   name: string;
@@ -124,9 +124,11 @@ export function generateManifestoPdf(options: ManifestoPdfOptions) {
     currentY += 4.6;
   });
 
-  /* ============ PAGE 2 — official recipients ============ */
-  doc.addPage();
-  currentY = 20;
+  /* ============ OFFICIAL RECIPIENTS — flows right after the body (no forced page break,
+     so content that used to be stranded alone on page 3 now merges into page 2) ============ */
+  const rowH = 5.4;
+  const tableH = allRecipients.length * rowH + 8;
+  ensureSpace(tableH + 18);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(15, 23, 42);
@@ -137,9 +139,6 @@ export function generateManifestoPdf(options: ManifestoPdfOptions) {
   doc.setTextColor(120, 113, 108);
   doc.text(`All ${allRecipients.length} authorities below were emailed this petition on ${dispatchedAt} from the signatory's email app.`, margin, currentY);
   currentY += 5;
-
-  const rowH = 5.4;
-  const tableH = allRecipients.length * rowH + 8;
   doc.setFillColor(248, 250, 252);
   doc.setDrawColor(226, 232, 240);
   doc.roundedRect(margin, currentY, contentWidth, tableH, 2, 2, 'FD');
@@ -157,6 +156,7 @@ export function generateManifestoPdf(options: ManifestoPdfOptions) {
   currentY += tableH + 6;
 
   /* ============ SIGNATURE & SEAL ============ */
+  ensureSpace(40);
   doc.setFillColor(236, 253, 245);
   doc.setDrawColor(167, 243, 208);
   doc.roundedRect(margin, currentY, contentWidth, 32, 2, 2, 'FD');
@@ -198,6 +198,7 @@ export function generateManifestoPdf(options: ManifestoPdfOptions) {
 
   /* ============ OFFICIAL SUBMISSION PROOF ============ */
   if (submissionRef) {
+    ensureSpace(28);
     doc.setFillColor(255, 247, 237);
     doc.setDrawColor(253, 186, 116);
     doc.roundedRect(margin, currentY, contentWidth, 20, 2, 2, 'FD');
@@ -213,11 +214,16 @@ export function generateManifestoPdf(options: ManifestoPdfOptions) {
   }
 
   /* ============ Closing ============ */
-  ensureSpace(12);
+  ensureSpace(18);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(15, 23, 42);
   doc.text(manifesto.callToAction.closing, margin, currentY);
+  currentY += 9;
+  ensureSpace(12);
+  doc.setFontSize(11.5);
+  doc.setTextColor(153, 27, 27);
+  doc.text(CAMPAIGN_SLOGAN, pageWidth / 2, currentY, { align: 'center' });
 
   /* ============ Footers on every page ============ */
   const totalPages = doc.getNumberOfPages();

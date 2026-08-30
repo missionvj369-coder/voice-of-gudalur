@@ -2,7 +2,7 @@ export interface EmailRecipient {
   name: string;
   email: string;
   role: string;
-  category: 'primary' | 'cc_state' | 'cc_national' | 'cc_global';
+  category: 'primary' | 'cc_state' | 'cc_national' | 'cc_rights' | 'cc_wwf' | 'cc_global';
 }
 
 export interface EmailPetitionContent {
@@ -15,19 +15,24 @@ export interface EmailPetitionContent {
 export const EMAIL_RECIPIENTS = {
   to: [
     { name: "Chief Minister's Special Cell, Tamil Nadu", email: "cmcell@tn.gov.in", role: "Chief Minister's Grievance Cell", category: "primary" },
-    { name: "Chief Minister's Office, Tamil Nadu", email: "cmo@tn.gov.in", role: "CM Executive Office", category: "primary" }
+    { name: "National Tiger Conservation Authority — Project Tiger HQ", email: "ntcapt-hq@gov.in", role: "NTCA Project Tiger Headquarters, Government of India", category: "primary" },
+    { name: "Inspector General of Forests, NTCA", email: "ig-ntca@nic.in", role: "NTCA Regional Oversight", category: "primary" },
+    { name: "Assistant Inspector General, NTCA", email: "aig4-ntca@nic.in", role: "NTCA Headquarters Desk-IV", category: "primary" },
+    { name: "District Collector, The Nilgiris", email: "collrnlg@nic.in", role: "District Magistrate & Executive Authority", category: "primary" },
+    { name: "TN Forest Wildlife Crime Control Board", email: "tnfwccb@gmail.com", role: "State Wildlife Enforcement", category: "primary" }
   ] as EmailRecipient[],
   cc: [
-    { name: "National Tiger Conservation Authority (Member Secretary)", email: "ms-ntca@nic.in", role: "NTCA Headquarters - New Delhi", category: "cc_national" },
-    { name: "Inspector General of Forests, NTCA", email: "ig-ntca@nic.in", role: "NTCA Regional Oversight", category: "cc_national" },
-    { name: "District Collector, The Nilgiris", email: "collrnlg@tn.nic.in", role: "District Magistrate & Executive Authority", category: "cc_state" },
-    { name: "Member of Legislative Assembly (MLA), Gudalur", email: "mlagudalur@tn.gov.in", role: "Elected Peoples Representative", category: "cc_state" },
-    { name: "TN Forest Wildlife Crime Control Board", email: "tnfwccb@gmail.com", role: "State Wildlife Enforcement", category: "cc_state" },
-    { name: "International Union for Conservation of Nature (IUCN)", email: "info@iucn.org", role: "Global Habitat & Species Protection", category: "cc_global" },
-    { name: "United Nations Environment Programme (UNEP)", email: "unep-news@un.org", role: "UN Environmental Body", category: "cc_global" },
-    { name: "UN High Commissioner for Human Rights (OHCHR)", email: "ohchr-info@un.org", role: "Global Human Rights Body", category: "cc_global" }
+    { name: "National Human Rights Commission — Complaints Cell", email: "complaint.nhrc@nic.in", role: "NHRC India, New Delhi", category: "cc_rights" },
+    { name: "Tamil Nadu State Human Rights Commission", email: "shrc@tn.gov.in", role: "State Human Rights Watchdog", category: "cc_rights" },
+    { name: "WWF India — National Office", email: "contact@wwfindia.net", role: "Conservation Organisation Partner", category: "cc_wwf" },
+    { name: "L. Natarajan, WWF India", email: "lnatarajan@wwfindia.net", role: "WWF India Programme Desk", category: "cc_wwf" },
+    { name: "S. Saravanan, WWF India", email: "ssaravanan@wwfindia.net", role: "WWF India Programme Desk", category: "cc_wwf" },
+    { name: "UN Human Rights Council — Special Procedures Division (OHCHR)", email: "SPDInfo@ohchr.org", role: "United Nations Special Procedures", category: "cc_global" }
   ] as EmailRecipient[]
 };
+
+/** The one line every dispatch ends with — the movement in six words. */
+export const CAMPAIGN_SLOGAN = 'PROTECT PEOPLE. PROTECT WILDLIFE. PROTECT GUDALUR.';
 
 export const EMAIL_PETITION_DATA: Record<'en' | 'ta' | 'ml' | 'kn', EmailPetitionContent> = {
   en: {
