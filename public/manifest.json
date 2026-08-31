@@ -1,11 +1,11 @@
-﻿{
+{
   "name": "VOICE OF GUDALUR",
   "short_name": "VoiceOfGudalur",
-  "description": "Right to Life Manifesto, Act for Gudalur citizen demands, and verified Gudalur ID resident card. Phone-only sign-in — no passwords.",
+  "description": "Right to Life Manifesto, Act for Gudalur citizen demands, and verified Gudalur ID resident card. Phone-only sign-in, no passwords.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#059669",
+  "background_color": "#0D1310",
+  "theme_color": "#1B241E",
   "orientation": "portrait-primary",
   "icons": [
     { "src": "/favicon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable any" }

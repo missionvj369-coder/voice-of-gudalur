@@ -142,7 +142,7 @@ export const Live: React.FC = () => {
             </div>
             <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
               isNightBanActive 
-                ? 'bg-rose-950 text-rose-300 border-rose-800 animate-pulse' 
+                ? 'bg-amber-950 text-amber-300 border-amber-800 animate-pulse' 
                 : 'bg-emerald-950 text-emerald-300 border-emerald-800'
             }`}>
               {isNightBanActive ? 'CLOSED (9PM - 6AM)' : 'OPEN FOR TRAVEL'}

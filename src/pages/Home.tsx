@@ -94,17 +94,17 @@ export const Home: React.FC = () => {
     <div className="space-y-8">
       
       {/* Top Banner: The Right to Life Proclamation */}
-      <div className="rounded-2xl bg-gradient-to-r from-rose-950 via-slate-900 to-rose-950 text-white p-4 sm:p-5 border border-rose-800/60 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-4 sm:p-5 border border-slate-700/60 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-rose-600/30 text-rose-300 border border-rose-500/40 flex items-center justify-center shrink-0">
-            <Flame size={22} className="text-rose-400" />
+          <div className="h-10 w-10 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center justify-center shrink-0">
+            <Flame size={22} className="text-amber-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
                 Official Citizen Proclamation
               </span>
-              <span className="text-xs text-rose-200/80 font-medium hidden md:inline">14,800+ Citizen Signatures</span>
+              <span className="text-xs text-amber-200/80 font-medium hidden md:inline">14,800+ Citizen Signatures</span>
             </div>
             <h3 className="font-serif font-bold text-sm sm:text-base text-white mt-0.5">
               {lang === 'ta' ? 'உரிமைக்குரல்: கூடலூர் மனித-வனவிலங்கு நெருக்கடி பிரகடனம்' : lang === 'kn' ? 'ಬದುಕುವ ಹಕ್ಕು: ಗೂಡಲೂರಿನ ನಾಗರಿಕ ಪ್ರಣಾಳಿಕೆ' : 'The Right to Life: Ending the Human Crisis on the Frontlines of Gudalur'}
@@ -113,7 +113,7 @@ export const Home: React.FC = () => {
         </div>
         <Link
           to="/"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition shrink-0"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs shadow-md transition shrink-0"
         >
           <span>{lang === 'ta' ? 'முழு பிரகடனத்தை வாசிக்க' : lang === 'kn' ? 'ಪ್ರಣಾಳಿಕೆ ಓದಿ' : 'Read & Sign Proclamation'}</span>
           <ArrowRight size={14} />
@@ -152,7 +152,7 @@ export const Home: React.FC = () => {
               onClick={() => setReportModalOpen(true)}
               className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/15 backdrop-blur-sm transition"
             >
-              <CheckSquare size={18} className="text-rose-400" />
+              <CheckSquare size={18} className="text-amber-400" />
               <span>{t('places.report_issue')}</span>
             </button>
 
@@ -191,7 +191,7 @@ export const Home: React.FC = () => {
       <section className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200">
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">
-            <PhoneCall size={18} className="text-rose-600" />
+            <PhoneCall size={18} className="text-amber-600" />
             <h3 className="font-bold text-sm text-slate-900">
               {lang === 'ta' ? 'கூடலூர் அவசர உதவி எண்கள் (24/7)' : 'Gudalur 24x7 Emergency Lifelines'}
             </h3>
@@ -229,10 +229,10 @@ export const Home: React.FC = () => {
 
           <a
             href="tel:04262261224"
-            className="flex flex-col p-3 rounded-2xl bg-rose-50 hover:bg-rose-100/80 border border-rose-200 transition group"
+            className="flex flex-col p-3 rounded-2xl bg-amber-50 hover:bg-amber-100/80 border border-amber-200 transition group"
           >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-800">Gudalur GH Hospital</span>
-            <span className="text-sm font-bold text-slate-900 group-hover:text-rose-900 mt-1">04262-261224</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Gudalur GH Hospital</span>
+            <span className="text-sm font-bold text-slate-900 group-hover:text-amber-900 mt-1">04262-261224</span>
             <span className="text-[10px] text-slate-500 mt-0.5">Casualty & Anti-Venom</span>
           </a>
 
@@ -289,7 +289,7 @@ export const Home: React.FC = () => {
                 <p className="text-xs text-emerald-700 font-semibold">{selectedLocality.nameTa}</p>
               </div>
               <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${
-                selectedLocality.alertStatus === 'ALERT' ? 'bg-rose-100 text-rose-800' :
+                selectedLocality.alertStatus === 'ALERT' ? 'bg-amber-100 text-amber-800' :
                 selectedLocality.alertStatus === 'CAUTION' ? 'bg-amber-100 text-amber-800' :
                 'bg-emerald-100 text-emerald-800'
               }`}>

@@ -9,7 +9,7 @@
 
 @layer base {
   body {
-    @apply bg-[#150608] text-[#e7e5e4] antialiased;
+    @apply bg-[#0D1310] text-[#E7E4DC] antialiased;
   }
   #root {
     min-height: 100vh;
@@ -17,23 +17,21 @@
 }
 
 /* ============================================================
-   VOICE OF GUDALUR — BLOOD-ON-THE-FLOOR AMBIENCE
-   Flat black backgrounds become deep blood-black, with a slow
-   crimson "pool" flowing across the floor of the app. Component
-   colors and text contrast are untouched.
+   VOICE OF GUDALUR — NILGIRI EARTH PRESENTATION
+   Deep Forest Obsidian (#0D1310) → Charcoal Pine (#121614)
+   → Pine Mist (#1B241E). Warm Ivory (#F4F1EA) headlines,
+   Earthy Gold (#D4AF37) accents, Alert Amber (#E67E22) for
+   crisis focus. Reflects the high-altitude Gudalur landscape
+   with calm, dignified authority for the official submission
+   to the Chief Minister of Tamil Nadu.
    ============================================================ */
 @theme {
-  --color-stone-950: #150608;  /* near-black with a blood tint */
-  --color-stone-900: #1e0a0d;
-  --color-black: #0d0405;
-}
-
-@keyframes bloodFlow {
-  0%   { background-position: 0% 100%, 40% 120%, 75% 90%; opacity: .88; }
-  25%  { background-position: 8% 96%,  55% 110%, 90% 100%; opacity: .97; }
-  50%  { background-position: 0% 104%, 45% 95%,  70% 115%; opacity: .9; }
-  75%  { background-position: -6% 98%, 35% 115%, 80% 92%;  opacity: 1; }
-  100% { background-position: 0% 100%, 40% 120%, 75% 90%;  opacity: .88; }
+  --color-stone-950: #0D1310;
+  --color-stone-900: #121614;
+  --color-black: #0A0E0C;
+  --color-ivory: #F4F1EA;
+  --color-earth-gold: #D4AF37;
+  --color-alert-amber: #E67E22;
 }
 
 body::before {
@@ -43,22 +41,42 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(60vw 32vh at 20% 104%, rgba(122, 10, 18, 0.55), rgba(122, 10, 18, 0) 70%),
-    radial-gradient(70vw 36vh at 60% 112%, rgba(158, 14, 24, 0.42), rgba(158, 14, 24, 0) 72%),
-    radial-gradient(55vw 30vh at 88% 102%, rgba(90, 6, 14, 0.5), rgba(90, 6, 14, 0) 70%),
-    linear-gradient(180deg, #0b0405 0%, #150608 55%, #2a0a0e 100%);
-  background-size: 200% 200%, 200% 200%, 200% 200%, 100% 100%;
-  animation: bloodFlow 26s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body::before { animation: none; }
+    radial-gradient(80vw 40vh at 50% -10%, rgba(212, 175, 55, 0.05), rgba(212, 175, 55, 0) 70%),
+    radial-gradient(60vw 30vh at 100% 100%, rgba(27, 36, 30, 0.9), rgba(27, 36, 30, 0) 70%),
+    radial-gradient(50vw 25vh at 0% 100%, rgba(13, 19, 16, 0.85), rgba(13, 19, 16, 0) 70%),
+    linear-gradient(180deg, #0D1310 0%, #121614 45%, #1B241E 100%);
 }
 
 @layer components {
   .glass-card {
     @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
   }
+  /* Warm Ivory editorial headline — no harsh halation on long reads */
+  .headline-ivory {
+    color: #F4F1EA;
+  }
+  /* Subtle narrative → facts → action section separation */
+  .section-divider {
+    height: 1px;
+    margin: 0 auto;
+    max-width: 56rem;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09) 20%, rgba(255, 255, 255, 0.09) 80%, transparent);
+  }
+  /* Pull-quote card: translucent, Alert Amber left-border focus */
+  .quote-card {
+    background: rgba(255, 255, 255, 0.04);
+    border-left: 4px solid #E67E22;
+    border-radius: 0.75rem;
+    padding: 1.75rem 1.5rem;
+  }
+}
+
+/* ============================================================
+   PERFORMANCE — skip render work on long off-screen sections
+   ============================================================ */
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
 }
 
 .no-scrollbar::-webkit-scrollbar {

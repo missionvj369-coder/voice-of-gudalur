@@ -283,7 +283,7 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
         <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 text-white p-5 sm:p-6 flex items-center justify-between shrink-0 border-b border-emerald-900/50">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-md bg-rose-600/30 text-rose-300 border border-rose-500/40 text-[10px] font-bold uppercase tracking-wider">
+              <span className="px-2.5 py-0.5 rounded-md bg-amber-600/30 text-amber-300 border border-amber-500/40 text-[10px] font-bold uppercase tracking-wider">
                 Official Citizen Representation
               </span>
               <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-medium hidden sm:inline">
@@ -507,7 +507,7 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
               <button
                 onClick={handleDirectSend}
                 title="Opens the Gmail composer with every recipient, the subject and the full petition pre-filled"
-                className="w-full px-3 py-2.5 rounded-xl bg-gradient-to-r from-red-700 to-red-900 hover:from-red-600 hover:to-red-800 text-white font-bold text-sm flex items-center justify-center gap-2 transition shadow-lg"
+                className="w-full px-3 py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-600 hover:to-amber-800 text-white font-bold text-sm flex items-center justify-center gap-2 transition shadow-lg"
               >
                 <Send size={14} />
                 <span>{sendInitiated ? 'Open the Email Composer Again' : 'Open Email Composer — Petition Pre-filled'}</span>

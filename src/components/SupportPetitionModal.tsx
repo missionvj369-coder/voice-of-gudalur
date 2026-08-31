@@ -109,7 +109,7 @@ export const SupportPetitionModal: React.FC<SupportPetitionModalProps> = ({
                     <>
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">
-                          Your Full Name <span className="text-rose-500">*</span>
+                          Your Full Name <span className="text-amber-600">*</span>
                         </label>
                         <input
                           type="text"
@@ -123,7 +123,7 @@ export const SupportPetitionModal: React.FC<SupportPetitionModalProps> = ({
 
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">
-                          Your Locality <span className="text-rose-500">*</span>
+                          Your Locality <span className="text-amber-600">*</span>
                         </label>
                         <select
                           value={localityId}

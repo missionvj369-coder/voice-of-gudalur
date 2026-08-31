@@ -59,17 +59,17 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           <div className="ember" /><div className="ember" /><div className="ember" />
         </div>
         <div className="og-readbar" aria-hidden="true" />
-        <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-transparent border-b border-red-950/30 flex items-center">
+        <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-transparent border-b border-slate-700/50 flex items-center">
           <div className="max-w-5xl mx-auto w-full px-4 flex items-center justify-between">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIdModalOpen(true)}>
-              <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shrink-0">
+              <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0">
                 <Flame size={12} className="text-amber-300" />
               </div>
               <span className="font-black text-xs text-white tracking-wider whitespace-nowrap">VOICE OF GUDALUR</span>
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-0.5 rounded-lg bg-slate-900/60 border border-red-900/40 p-0.5">
+              <div className="flex items-center gap-0.5 rounded-lg bg-slate-900/60 border border-slate-700/50 p-0.5">
                 {LANGUAGES.map((l) => (
                   <button
                     key={l.code}
@@ -78,8 +78,8 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     title={l.label}
                     className={`px-1.5 sm:px-2 py-1 rounded-md text-[9px] sm:text-[10px] font-black uppercase transition-all ${
                       lang === l.code
-                        ? 'bg-red-600 text-white shadow'
-                        : 'text-red-300/80 hover:text-white hover:bg-red-900/40'
+                        ? 'bg-amber-500 text-slate-900 shadow'
+                        : 'text-slate-300/80 hover:text-white hover:bg-slate-700/40'
                     }`}
                   >
                     <span className="hidden sm:inline">{l.label}</span>
@@ -91,7 +91,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 type="button"
                 onClick={() => setIdModalOpen(true)}
                 title={profile ? `${profile.name} — ${profile.gudalurId} — tap for ID card` : 'Register / Login'}
-                className="flex items-center gap-1.5 rounded-full bg-red-600/20 border border-red-500/40 hover:bg-red-600/30 transition pl-0.5 pr-1 py-0.5 shrink-0"
+                className="flex items-center gap-1.5 rounded-full bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 transition pl-0.5 pr-1 py-0.5 shrink-0"
               >
                 {profile ? (
                   <>
@@ -103,7 +103,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     </span>
                   </>
                 ) : (
-                  <span className="h-6 w-6 rounded-full bg-red-600/40 flex items-center justify-center text-red-200">
+                  <span className="h-6 w-6 rounded-full bg-amber-500/40 flex items-center justify-center text-amber-100">
                     <User size={12} />
                   </span>
                 )}
@@ -136,13 +136,13 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           {children}
         </main>
 
-                <footer className="relative z-10 border-t border-red-950/40 bg-transparent px-4 pt-16 pb-10">
+                <footer className="relative z-10 border-t border-slate-800/60 bg-transparent px-4 pt-16 pb-10">
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
             <div>
               <div className="font-black text-sm text-white tracking-wider">VOICE OF GUDALUR</div>
               <p className="text-xs text-slate-400 mt-1">
                 A citizen initiative by{' '}
-                <a href="https://ugtindia.space" target="_blank" rel="noopener noreferrer" className="font-bold text-red-400 hover:underline">
+                <a href="https://ugtindia.space" target="_blank" rel="noopener noreferrer" className="font-bold text-amber-400 hover:underline">
                   Universal Guard Trust
                 </a>
               </p>

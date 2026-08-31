@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import {
   Flame,
+  Mic,
+  FileBarChart2,
   Mail,
   Download,
   Lock,
@@ -20,10 +22,15 @@ import { MANIFESTO_UI } from '../data/manifestoUi';
 import { SendEmailModal } from '../components/Manifesto/SendEmailModal';
 import { IdModalContext } from '../components/Layout/Shell';
 import { generateManifestoPdf } from '../utils/manifestoPdfGenerator';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { db, isSupabaseConfigured, savePendingSignature, getPendingLedgerCount } from '../lib/supabase';
+import { sanitizeText, checkRateLimit } from '../lib/security';
+import { CAMPAIGN_GOAL, VOG_WHATSAPP_NUMBER } from '../constants';
 import toast from 'react-hot-toast';
 import crisisImg from '../assets/images/gudalur_crisis_blood_1787476675818.jpg';
+import { LiveCounterBar } from '../components/Manifesto/LiveCounterBar';
+import { CorridorMap } from '../components/Map/CorridorMap';
+import { generatePolicyBriefPdf } from '../utils/policyBriefGenerator';
 
 export const Manifesto: React.FC = () => {
   const { lang } = useLanguage();
@@ -51,6 +58,12 @@ export const Manifesto: React.FC = () => {
   const [isSubmittingEndorse, setIsSubmittingEndorse] = useState(false);
   // Official submission docket returned from Supabase when the citizen confirms the email was sent.
   const [emailSubmissionRef, setEmailSubmissionRef] = useState<string | null>(null);
+
+  // WhatsApp Voice reporting — reserved for verified residents who completed the full civic
+  // journey (registered + signed + official email docket). Enforced again on the intake
+  // receiver, which only accepts media from these registered numbers.
+  const voiceEligible = isRegistered && hasSigned && !!emailSubmissionRef;
+  const whatsappProvisioned = /^91[6-9]\d{8}$/.test(VOG_WHATSAPP_NUMBER);
 
   // Android back button closes the email composer instead of leaving the page.
   useEffect(() => {
@@ -122,6 +135,12 @@ export const Manifesto: React.FC = () => {
       toast.success('You have already signed this petition — your support is on record.');
       return;
     }
+    // Client-side rate limit: max 3 attempts / 60s to prevent spam bursts.
+    const rl = checkRateLimit('manifesto-sign', 3, 60_000);
+    if (!rl.allowed) {
+      toast.error(`Too many attempts — please wait ${Math.ceil(rl.retryInMs / 1000)}s before trying again.`);
+      return;
+    }
     // Identity is auto-detected from the registered Gudalur Resident Card - no manual typing needed.
     if (!profile?.name || !profile?.phone || !profile?.gudalurId) {
       setShowSignModal(false);
@@ -135,8 +154,8 @@ export const Manifesto: React.FC = () => {
         // Cloud ledger not yet live — record the intent locally so it is
         // never lost.  A banner in the header shows how many are pending.
         const saved = savePendingSignature({
-          name: profile!.name,
-          locality: profile!.localityName || 'Gudalur',
+          name: sanitizeText(profile!.name, 120),
+          locality: sanitizeText(profile!.localityName || 'Gudalur', 120),
           contact: profile!.phone,
           gudalur_id: profile!.gudalurId,
           signed_at: Date.now(),
@@ -154,8 +173,8 @@ export const Manifesto: React.FC = () => {
         return;
       }
       const { error, alreadySigned } = await db.addManifestoSignature({
-        name: profile.name,
-        locality: profile.localityName || 'Gudalur',
+        name: sanitizeText(profile.name, 120),
+        locality: sanitizeText(profile.localityName || 'Gudalur', 120),
         contact: profile.phone,
         gudalur_id: profile.gudalurId,
       });
@@ -226,6 +245,32 @@ export const Manifesto: React.FC = () => {
     toast.success('Your signed petition PDF is downloading — use Print in the new tab too.', { icon: '📄' });
   };
 
+  // Official briefing document for the authorities — zero-server, generated in-browser.
+  const handlePolicyBrief = async () => {
+    const rl = checkRateLimit('policy-brief', 3, 60_000);
+    if (!rl.allowed) {
+      toast.error(`Please wait ${Math.ceil(rl.retryInMs / 1000)}s before generating again.`);
+      return;
+    }
+    let dockets: number | null = null;
+    if (isSupabaseConfigured()) {
+      const { count } = await db.getManifestoSubmissionCount();
+      dockets = count;
+    }
+    const doc = generatePolicyBriefPdf({
+      signaturesCount,
+      docketCount: dockets,
+      generatedBy: profile?.gudalurId || undefined,
+    });
+    try {
+      const blobUrl = doc.output('bloburl') as unknown as string;
+      window.open(blobUrl, '_blank', 'noopener');
+    } catch {
+      /* the download is already in progress */
+    }
+    toast.success('Gudalur Human-Wildlife Conflict — Situation Report generated.', { icon: '📊' });
+  };
+
   // One shared, stacked action list — used at the end of the read and in the hero CTA.
   // Kept as a single source of truth so the two sections never drift.
   const ctaActions: {
@@ -252,7 +297,7 @@ export const Manifesto: React.FC = () => {
         requireRegistered(() => setShowSignModal(true));
       },
       titleAttr: hasSigned ? 'You have already signed this petition' : 'Sign the petition and show your support',
-      border: hasSigned ? 'border-emerald-600 bg-emerald-600 hover:bg-emerald-500' : 'border-[#FF2C2C] bg-[#FF2C2C] hover:bg-[#e02222]',
+      border: hasSigned ? 'border-emerald-600 bg-emerald-600 hover:bg-emerald-500' : 'border-amber-600 bg-amber-600 hover:bg-amber-500',
       iconBox: 'bg-white/15',
       iconColor: 'text-white',
     },
@@ -263,7 +308,7 @@ export const Manifesto: React.FC = () => {
       icon: <Mail size={20} className="text-white" />,
       onClick: () => requireRegistered(() => setShowEmailModal(true)),
       titleAttr: 'Send the official petition email straight to the Chief Minister and all related departments',
-      border: 'border-[#D1001F] bg-[#D1001F] hover:bg-[#b30018]',
+      border: 'border-blue-600 bg-blue-600 hover:bg-blue-500',
       iconBox: 'bg-white/15',
       iconColor: 'text-white',
     },
@@ -294,26 +339,40 @@ export const Manifesto: React.FC = () => {
         handleDownloadPdf();
       },
       titleAttr: emailSubmissionRef ? 'Download the petition copy to print and submit' : 'Available after your official email is sent',
-      border: emailSubmissionRef ? 'border-[#F01E2C] bg-[#F01E2C] hover:bg-[#d01824]' : 'border-slate-700 bg-slate-800',
+      border: emailSubmissionRef ? 'border-indigo-600 bg-indigo-600 hover:bg-indigo-500' : 'border-slate-700 bg-slate-800',
       iconBox: emailSubmissionRef ? 'bg-white/15' : 'bg-slate-700/40',
       iconColor: emailSubmissionRef ? 'text-white' : 'text-slate-400',
+    },
+    {
+      key: 'brief',
+      title: 'Policy Brief — Situation Report',
+      sub: 'Gudalur human-wildlife conflict report for authorities — print-ready',
+      icon: <FileBarChart2 size={20} className="text-white" />,
+      onClick: () => { handlePolicyBrief(); },
+      titleAttr: 'Generate the official Gudalur conflict situation report (PDF)',
+      border: 'border-[#1B241E] bg-[#22302A] hover:bg-[#2A3A32]',
+      iconBox: 'bg-white/15',
+      iconColor: 'text-white',
     },
   ];
 
   return (
     <div className="max-w-4xl mx-auto pb-6 relative">
 
+      {/* Live movement metrics — realtime Supabase ledger over WebSocket */}
+      <LiveCounterBar />
+
       {/* Masthead — borderless editorial opener */}
       <section className="pt-10 pb-2 text-center px-2">
-        <p className="text-[10px] font-black uppercase tracking-[0.35em] text-red-500">Initiative by Universal Guard Trust</p>
-        <h1 className="mt-3 text-4xl sm:text-6xl font-serif font-black tracking-tight leading-none text-white">
-          Voice of <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-red-500 to-rose-600">Gudalur</span>
+        <p className="text-[10px] font-black uppercase tracking-[0.35em] text-amber-500">Initiative by Universal Guard Trust</p>
+        <h1 className="mt-3 text-4xl sm:text-6xl font-serif font-black tracking-tight leading-none headline-ivory">
+          Voice of <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] via-[#E67E22] to-[#D4AF37]">Gudalur</span>
         </h1>
-        <p className="mt-4 text-[10px] sm:text-xs uppercase tracking-[0.25em] text-stone-400 font-bold">One community · One voice · The Right to Life</p>
+        <p className="mt-4 text-[10px] sm:text-xs uppercase tracking-[0.25em] text-slate-400 font-bold">One community · One voice · The Right to Life</p>
       </section>
 
       {/* HERO — cinematic full-bleed image, pure typography, no boxes */}
-      <section className="relative overflow-hidden text-white">
+      <section className="relative overflow-hidden text-[#F4F1EA]">
         <div className="absolute inset-0 z-0">
           <img
             src={crisisImg}
@@ -322,23 +381,23 @@ export const Manifesto: React.FC = () => {
             loading="eager"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-[#150608]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0A0E0C]/85 via-[#0D1310]/55 to-[#0D1310]" />
         </div>
         <div className="relative z-10 px-5 py-16 sm:py-24 max-w-3xl mx-auto text-center">
           <h2 className="text-3xl sm:text-5xl font-serif font-black tracking-tight leading-[1.05] text-white">
             {manifesto.title}
           </h2>
-          <p className="mt-6 text-base sm:text-xl text-red-200/95 font-serif italic leading-relaxed">
+          <p className="mt-6 text-base sm:text-xl text-slate-300 font-serif italic leading-relaxed">
             "{manifesto.subtitle}"
           </p>
-          <p className="mt-10 text-sm sm:text-base font-serif text-stone-100 leading-relaxed text-left max-w-2xl mx-auto first-letter:float-left first-letter:text-5xl first-letter:leading-[0.85] first-letter:font-black first-letter:text-red-500 first-letter:mr-2 first-letter:mt-1">
+          <p className="mt-10 text-sm sm:text-base font-serif text-stone-100 leading-relaxed text-left max-w-2xl mx-auto first-letter:float-left first-letter:text-5xl first-letter:leading-[0.85] first-letter:font-black first-letter:text-[#D4AF37] first-letter:mr-2 first-letter:mt-1">
             {manifesto.proclamation}
           </p>
         </div>
       </section>
 
       {/* Part I — borderless editorial flow */}
-      <section className="px-2 sm:px-6 pt-16 pb-4 text-white space-y-6">
+      <section className="px-2 sm:px-6 pt-16 pb-4 text-[#F4F1EA] space-y-6 content-visibility-auto">
         <h2 className="text-2xl sm:text-4xl font-serif font-black tracking-tight leading-tight max-w-3xl">
           {manifesto.sections[0].title}
         </h2>
@@ -348,14 +407,24 @@ export const Manifesto: React.FC = () => {
           ))}
         </div>
         <p className="text-xs sm:text-sm max-w-3xl leading-relaxed">
-          <AlertTriangle size={13} className="text-red-500 inline -mt-0.5 mr-1.5" />
-          <strong className="text-red-500 uppercase tracking-wide">Documented frontline conflict zones:</strong>{' '}
+          <AlertTriangle size={13} className="text-amber-500 inline -mt-0.5 mr-1.5" />
+          <strong className="text-amber-500 uppercase tracking-wide">Documented frontline conflict zones:</strong>{' '}
           <span className="text-stone-300">Lauriston (O'Valley), Cherambadi, Seaforth, Glenrock, Mayfield, Pandalur fringe tea estates.</span>
         </p>
+
+        {/* Interactive GIS — the 11 blocked corridors + frontline hotspots */}
+        <div className="pt-6 max-w-3xl space-y-2.5">
+          <CorridorMap height="400px" />
+          <p className="text-[10px] text-stone-500 font-mono">
+            Interactive GIS · 11 blocked migratory corridors and documented conflict zones · tap any marker for the ground report
+          </p>
+        </div>
       </section>
 
+      <div className="section-divider" aria-hidden="true" />
+
       {/* Part II — The Hard Truth, big-number editorial */}
-      <section className="px-2 sm:px-6 pt-14 pb-4 text-white space-y-8">
+      <section className="px-2 sm:px-6 pt-14 pb-4 text-[#F4F1EA] space-y-8 content-visibility-auto">
         <h2 className="text-2xl sm:text-4xl font-serif font-black tracking-tight leading-tight max-w-3xl">
           {manifesto.sections[1].title}
         </h2>
@@ -364,7 +433,7 @@ export const Manifesto: React.FC = () => {
           {manifesto.sections[1].highlights?.map((item, idx) => (
             <div key={idx} className="space-y-3">
               <div className="flex items-baseline gap-3">
-                <span className="text-4xl sm:text-5xl font-serif font-black text-transparent bg-clip-text bg-gradient-to-b from-red-400 to-red-800 leading-none">
+                <span className="text-4xl sm:text-5xl font-serif font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-400 to-amber-800 leading-none">
                   {String(idx + 1).padStart(2, '0')}
                 </span>
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-500">{item.badge}</span>
@@ -376,8 +445,10 @@ export const Manifesto: React.FC = () => {
         </div>
       </section>
 
-      {/* Part III — Non-Negotiable Demands, crimson statement band */}
-      <section className="mt-10 bg-gradient-to-b from-red-950/50 via-[#1a0709] to-transparent px-5 sm:px-10 py-14 text-white space-y-8">
+      <div className="section-divider" aria-hidden="true" />
+
+      {/* Part III — Non-Negotiable Demands, institutional statement band */}
+      <section className="mt-10 bg-gradient-to-b from-[#1B241E]/70 via-[#16201A] to-transparent px-5 sm:px-10 py-14 text-[#F4F1EA] space-y-8 content-visibility-auto">
         <h2 className="text-2xl sm:text-4xl font-serif font-black tracking-tight leading-tight max-w-3xl">
           {manifesto.sections[2].title}
         </h2>
@@ -386,8 +457,8 @@ export const Manifesto: React.FC = () => {
           {manifesto.sections[2].highlights?.map((item, idx) => (
             <div key={idx} className="space-y-2.5">
               <div className="flex items-center gap-2.5">
-                <span className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)] shrink-0" />
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-red-400">{item.badge}</span>
+                <span className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.6)] shrink-0" />
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-400">{item.badge}</span>
               </div>
               <h3 className="font-serif font-bold text-xl text-white leading-snug">{item.heading}</h3>
               <p className="text-sm text-stone-300 leading-relaxed">{item.description}</p>
@@ -398,27 +469,49 @@ export const Manifesto: React.FC = () => {
 
       {/* Ground Reality — testimonial in pure typography */}
       <section className="px-2 sm:px-6 pt-16 pb-2">
-        <blockquote className="text-center">
-          <p className="text-xl sm:text-3xl font-serif italic leading-relaxed max-w-3xl mx-auto text-white">
-            "{ui.quote}"
-          </p>
-          <footer className="text-stone-500 text-xs mt-5 font-bold uppercase tracking-[0.2em]">
-            {ui.quoteBy}
-          </footer>
-        </blockquote>
+        <div className="quote-card max-w-3xl mx-auto">
+          <blockquote>
+            <p className="text-xl sm:text-2xl font-serif italic leading-relaxed text-[#F4F1EA]">
+              &ldquo;{ui.quote}&rdquo;
+            </p>
+            <footer className="text-stone-500 text-xs mt-4 font-bold uppercase tracking-[0.2em]">
+              {ui.quoteBy}
+            </footer>
+          </blockquote>
+        </div>
       </section>
 
-      {/* Call to Action — full-bleed crimson band, borderless */}
-      <section className="mt-12 bg-gradient-to-b from-red-900/70 via-red-950/80 to-[#150608] px-5 sm:px-10 py-14 text-white text-center">
+      {/* Call to Action — full-bleed institutional band, borderless */}
+      <section className="mt-12 bg-gradient-to-b from-[#1B241E]/70 via-[#141B16]/85 to-[#0D1310] px-5 sm:px-10 py-14 text-[#F4F1EA] text-center content-visibility-auto">
         <div className="max-w-3xl mx-auto space-y-7">
-          <h3 className="text-3xl sm:text-5xl font-serif font-black tracking-tight leading-[1.05]">
+          <h3 className="text-3xl sm:text-5xl font-serif font-black tracking-tight leading-[1.05] headline-ivory">
             {ui.weptTitle}
           </h3>
-          <p className="text-red-100/90 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+          <p className="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
             {ui.weptSub}
           </p>
+          {/* Campaign momentum — live ledger count vs milestone goal */}
+          <div className="pt-2 text-left">
+            <div className="flex items-end justify-between mb-1.5">
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">Campaign momentum</span>
+              <span className="text-xs font-mono font-bold text-[#F4F1EA]">
+                {signaturesCount.toLocaleString('en-IN')} / {CAMPAIGN_GOAL.toLocaleString('en-IN')} signatures
+              </span>
+            </div>
+            <div className="h-2.5 rounded-full bg-white/[0.07] overflow-hidden border border-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[#D4AF37] to-[#E67E22] transition-[width] duration-700 ease-out"
+                style={{ width: `${Math.min(100, (signaturesCount / CAMPAIGN_GOAL) * 100)}%` }}
+                role="progressbar"
+                aria-valuenow={signaturesCount}
+                aria-valuemin={0}
+                aria-valuemax={CAMPAIGN_GOAL}
+                aria-label={`Petition signatures toward ${CAMPAIGN_GOAL.toLocaleString('en-IN')} goal`}
+              />
+            </div>
+          </div>
           <div className="space-y-3 pt-6 text-left">
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-red-300 text-center">
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-400 text-center">
               Take all four steps — one after another
             </p>
             {ctaActions.map((a) => (
@@ -441,6 +534,76 @@ export const Manifesto: React.FC = () => {
                 <ChevronRight size={18} className="text-white/50 shrink-0" />
               </button>
             ))}
+
+            {/* WhatsApp Voice Report — gated to verified residents (registered + signed + docket).
+                The desk number is provisioned in src/constants (VOG_WHATSAPP_NUMBER); until then
+                the card renders locked so the promise is visible without faking availability. */}
+            <div
+              className={`w-full py-4 px-5 rounded-2xl border flex items-center justify-between gap-3 backdrop-blur-sm transition ${
+                voiceEligible && whatsappProvisioned
+                  ? 'border-[#25D366]/60 bg-[#25D366]/10'
+                  : 'border-slate-700 bg-slate-800/60'
+              }`}
+            >
+              <span className="flex items-center gap-3.5 min-w-0">
+                <span
+                  className={`h-11 w-11 shrink-0 rounded-xl flex items-center justify-center ${
+                    voiceEligible && whatsappProvisioned ? 'bg-[#25D366]/25' : 'bg-slate-700/40'
+                  }`}
+                >
+                  {voiceEligible && whatsappProvisioned ? (
+                    <Mic size={20} className="text-white" />
+                  ) : (
+                    <Lock size={20} className="text-slate-400" />
+                  )}
+                </span>
+                <span className="text-left min-w-0">
+                  <span
+                    className={`block font-black text-sm sm:text-base leading-tight ${
+                      voiceEligible && whatsappProvisioned ? 'text-white' : 'text-slate-400'
+                    }`}
+                  >
+                    WhatsApp Voice Report
+                  </span>
+                  {!whatsappProvisioned ? (
+                    <span className="block text-[11px] text-white/60 leading-snug">
+                      Official voice desk being provisioned — arriving soon.
+                    </span>
+                  ) : voiceEligible ? (
+                    <span className="block text-[11px] text-white/60 leading-snug">
+                      Send a voice note to the movement's verified desk — in your own language.
+                    </span>
+                  ) : (
+                    <span className="block text-[11px] text-white/60 leading-snug">
+                      Exclusively for residents who registered, signed, AND sent the official email —{' '}
+                      <span className="text-white/85 font-bold">
+                        {isRegistered
+                          ? hasSigned
+                            ? '✓ Signed'
+                            : 'next: Sign the petition'
+                          : 'next: Register your Gudalur ID'}
+                        {!emailSubmissionRef && hasSigned ? ' → send the email' : ''}
+                      </span>
+                    </span>
+                  )}
+                </span>
+              </span>
+              {voiceEligible && whatsappProvisioned && (
+                <a
+                  href={`https://wa.me/${VOG_WHATSAPP_NUMBER}?text=${encodeURIComponent(
+                    `Voice report from ${profile?.name || 'a verified resident'}\nGudalur ID: ${
+                      profile?.gudalurId || ''
+                    }\nDocket: ${emailSubmissionRef || ''}\n\n(Attaching my voice note describing the sighting/issue with my location)`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open the movement's verified WhatsApp desk and attach your voice note"
+                  className="shrink-0 rounded-xl bg-[#25D366] hover:bg-[#1eb85a] text-white text-[11px] font-black uppercase tracking-wide px-3.5 py-2.5 min-h-[48px] flex items-center transition"
+                >
+                  Open chat
+                </a>
+              )}
+            </div>
           </div>
           <p className="font-serif font-black text-amber-300 text-xl sm:text-2xl pt-4 tracking-tight">{manifesto.callToAction.closing}</p>
         </div>
@@ -448,7 +611,7 @@ export const Manifesto: React.FC = () => {
 
       {/* Follow the movement — official channels */}
       <section className="pt-1 pb-4">
-        <p className="text-center text-[10px] font-black uppercase tracking-[0.25em] text-red-500">Follow the movement</p>
+        <p className="text-center text-[10px] font-black uppercase tracking-[0.25em] text-amber-500">Follow the movement</p>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2.5">
           {([
             { icon: <Instagram size={15} />, label: 'Voice of India', href: 'https://www.instagram.com/voice_of_india_voi?igsi=bGg4aXA0MjRueHp2&utm_source=qr' },
@@ -461,7 +624,7 @@ export const Manifesto: React.FC = () => {
               href={s.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-xs font-semibold text-stone-200 transition hover:bg-[#FF2C2C]/25 hover:text-white"
+              className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-xs font-semibold text-stone-200 transition hover:bg-amber-600/25 hover:text-white"
             >
               {s.icon}
               {s.label}
@@ -478,10 +641,10 @@ export const Manifesto: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg rounded-3xl bg-stone-950 border-2 border-red-600 text-white p-6 sm:p-8 shadow-2xl space-y-6"
+              className="relative w-full max-w-lg rounded-3xl bg-slate-900 border-2 border-amber-600 text-white p-6 sm:p-8 shadow-2xl space-y-6"
             >
               <div className="space-y-2 text-center">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-red-600/30 text-red-400 border border-red-500/50">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-600/30 text-amber-400 border border-amber-500/50">
                   <Flame size={24} className="animate-pulse" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-serif font-black text-white">
@@ -507,7 +670,7 @@ export const Manifesto: React.FC = () => {
                 </div>
                 <div className="pt-2 flex items-center justify-end gap-3">
                   <button type="button" onClick={() => setShowSignModal(false)} className="px-4 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-stone-300 font-bold text-xs">{ui.cancelBtn}</button>
-                  <button type="submit" disabled={isSubmittingEndorse} className="px-6 py-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-xs shadow-lg shadow-red-950 border border-red-400">
+                  <button type="submit" disabled={isSubmittingEndorse} className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-black text-xs shadow-lg shadow-amber-950 border border-amber-400">
                     {isSubmittingEndorse ? 'Recording...' : ui.confirmBtn}
                   </button>
                 </div>
@@ -531,15 +694,26 @@ export const Manifesto: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* Public docket verification — authenticity check for officials & citizens */}
+      <div className="flex items-center justify-center py-1">
+        <Link
+          to="/verify-docket"
+          className="text-[11px] font-mono font-bold text-[#D4AF37] hover:text-[#F4F1EA] underline underline-offset-4 decoration-[#D4AF37]/40 min-h-[48px] flex items-center"
+        >
+          Verify an official docket number →
+        </Link>
+      </div>
+
       {/* Emergency Hotlines */}
-      <section className="bg-stone-900 rounded-3xl p-4 sm:p-5 flex flex-row items-center justify-between gap-3 shadow-xl">
-        <div className="flex items-center gap-3 text-sm text-stone-200">
-          <PhoneCall size={16} className="text-red-400 animate-bounce" />
-          <span>{ui.forestRrt}</span>
-          <a href="tel:18004256100" title="Tap to call Gudalur Forest Rapid Response Team" className="font-mono font-bold text-red-300 hover:text-red-200 hover:underline">1800 425 6100</a>
-          <span className="text-stone-500">/</span>
-          <span>{ui.medical}</span>
-          <a href="tel:108" title="Tap to call Ambulance 108" className="font-mono font-bold text-red-300 hover:text-red-200 hover:underline">108</a>
+      <section className="bg-[#16201A] rounded-3xl p-4 sm:p-5 shadow-xl border border-white/[0.06]">
+        <div className="flex items-center gap-4 text-sm text-stone-200 overflow-x-auto no-scrollbar snap-x">
+          <span className="hidden sm:inline text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37] shrink-0">Emergency</span>
+          <PhoneCall size={16} className="text-[#E67E22] animate-bounce shrink-0" />
+          <span className="shrink-0 whitespace-nowrap">{ui.forestRrt}</span>
+          <a href="tel:18004256100" title="Tap to call Gudalur Forest Rapid Response Team" className="shrink-0 whitespace-nowrap min-h-[48px] flex items-center font-mono font-bold text-[#D4AF37] hover:text-[#F4F1EA] hover:underline">1800 425 6100</a>
+          <span className="text-stone-500 shrink-0">/</span>
+          <span className="shrink-0 whitespace-nowrap">{ui.medical}</span>
+          <a href="tel:108" title="Tap to call Ambulance 108" className="shrink-0 whitespace-nowrap min-h-[48px] flex items-center font-mono font-bold text-[#D4AF37] hover:text-[#F4F1EA] hover:underline">108</a>
         </div>
       </section>
 

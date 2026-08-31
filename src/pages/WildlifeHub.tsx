@@ -239,7 +239,7 @@ export const WildlifeHub: React.FC = () => {
       <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xs border border-slate-200">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-xs font-bold mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold mb-3">
               <Radio size={14} className="animate-pulse" />
               <span>{lang === 'ta' ? 'நேரடி வனவிலங்கு ரேடார் & பாதுகாப்பு நெட்வொர்க்' : 'Live Wildlife Radar & Citizen Safety Net'}</span>
             </div>

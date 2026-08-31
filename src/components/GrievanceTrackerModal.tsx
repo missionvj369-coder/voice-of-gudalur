@@ -109,7 +109,7 @@ export const GrievanceTrackerModal: React.FC<GrievanceTrackerModalProps> = ({ is
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Government Portal / Department <span className="text-rose-500">*</span>
+                      Government Portal / Department <span className="text-amber-600">*</span>
                     </label>
                     <select
                       value={authority}
@@ -127,7 +127,7 @@ export const GrievanceTrackerModal: React.FC<GrievanceTrackerModalProps> = ({ is
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Official Complaint / Token ID <span className="text-rose-500">*</span>
+                      Official Complaint / Token ID <span className="text-amber-600">*</span>
                     </label>
                     <input
                       type="text"
@@ -141,7 +141,7 @@ export const GrievanceTrackerModal: React.FC<GrievanceTrackerModalProps> = ({ is
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Subject / Brief Title <span className="text-rose-500">*</span>
+                      Subject / Brief Title <span className="text-amber-600">*</span>
                     </label>
                     <input
                       type="text"

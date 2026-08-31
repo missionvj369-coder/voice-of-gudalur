@@ -35,7 +35,7 @@ const SECTIONS = [
   {
     id: 'spots',
     title: 'Hidden Gems',
-    icon: <Compass className="text-rose-500" />,
+    icon: <Compass className="text-amber-500" />,
     description: 'Spots beyond Needle Rock—peaceful trails and forest views.',
     color: 'bg-rose-50'
   },

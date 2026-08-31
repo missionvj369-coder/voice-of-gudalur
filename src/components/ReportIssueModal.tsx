@@ -209,7 +209,7 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Locality in Gudalur <span className="text-rose-500">*</span>
+                      Locality in Gudalur <span className="text-amber-600">*</span>
                     </label>
                     <select
                       value={localityId}
@@ -226,7 +226,7 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Category of Civic Issue <span className="text-rose-500">*</span>
+                      Category of Civic Issue <span className="text-amber-600">*</span>
                     </label>
                     <select
                       value={category}
@@ -246,7 +246,7 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Specific Problem Title <span className="text-rose-500">*</span>
+                      Specific Problem Title <span className="text-amber-600">*</span>
                     </label>
                     <input
                       type="text"
@@ -260,7 +260,7 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Detailed Description & Impact <span className="text-rose-500">*</span>
+                      Detailed Description & Impact <span className="text-amber-600">*</span>
                     </label>
                     <textarea
                       required

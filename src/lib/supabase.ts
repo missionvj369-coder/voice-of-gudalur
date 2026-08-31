@@ -644,6 +644,69 @@ export const db = {
     }
   },
 
+  /** Live count of official email-submission dockets recorded in the proof ledger. */
+  async getManifestoSubmissionCount(): Promise<{ count: number | null; error: any }> {
+    try {
+      const { count, error } = await supabase
+        .from('manifesto_submissions')
+        .select('id', { count: 'exact', head: true });
+      if (error) return { count: null, error };
+      return { count: count ?? 0, error: null };
+    } catch (e: any) {
+      return { count: null, error: e };
+    }
+  },
+
+  /** Docket verification lookup — returns the public proof fields for a docket ref. */
+  async getSubmissionByDocket(docketRef: string): Promise<{ data: any | null; error: any }> {
+    try {
+      const ref = docketRef.trim().toUpperCase();
+      const { data, error } = await supabase
+        .from('manifesto_submissions')
+        .select('docket_ref, sender_name, gudalur_id, locality, subject, lang, created_at, source_url')
+        .eq('docket_ref', ref)
+        .maybeSingle();
+      if (error) return { data: null, error };
+      return { data, error: null };
+    } catch (e: any) {
+      return { data: null, error: e };
+    }
+  },
+
+  /** Records a geotagged wildlife incident (WhatsApp/citizen intake pipeline). */
+  async addWildlifeIncident(incident: {
+    type: string;
+    locality_id?: string;
+    generalized_area?: string;
+    lat?: number | null;
+    lng?: number | null;
+    urgency?: string;
+    reported_by?: string;
+    behavior_notes?: string | null;
+    herd_size?: number | null;
+  }) {
+    try {
+      const { data, error } = await supabase
+        .from('wildlife_incidents')
+        .insert({
+          type: incident.type,
+          locality_id: incident.locality_id || 'gudalur-town',
+          generalized_area: incident.generalized_area || 'Gudalur',
+          lat: incident.lat ?? null,
+          lng: incident.lng ?? null,
+          urgency: incident.urgency || 'MEDIUM',
+          reported_by: incident.reported_by || 'citizen',
+          behavior_notes: incident.behavior_notes ?? null,
+          herd_size: incident.herd_size ?? null,
+        })
+        .select('id')
+        .single();
+      return { id: data?.id ?? null, error };
+    } catch (e: any) {
+      return { id: null, error: e };
+    }
+  },
+
   /** Records one signature for the petition: the exact global counter + signature row for a REAL, identified resident.
    *  Path 1: `record_manifesto_signature` SECURITY DEFINER RPC — works even when the live
    *          table grants / policies are missing (the RPC owns the table).
@@ -955,6 +1018,17 @@ export const subscribeToAlerts = (callback: (alerts: AlertRow[]) => void) => {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'alerts' }, () => {
       db.getActiveAlerts().then(({ data }) => { if (data) callback(data); });
     })
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+};
+
+/** Zero-latency live updates for the movement metrics bar: fires whenever a new
+ *  signature or official email submission lands in the public ledger. */
+export const subscribeToManifestoStats = (onChanged: () => void) => {
+  const channel = supabase
+    .channel('public:signatures')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'manifesto_signatures' }, onChanged)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'manifesto_submissions' }, onChanged)
     .subscribe();
   return () => { supabase.removeChannel(channel); };
 };

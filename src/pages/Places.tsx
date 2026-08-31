@@ -157,7 +157,7 @@ export const Places: React.FC = () => {
                     <p className="text-xs text-emerald-700 font-semibold">{loc.nameTa}</p>
                   </div>
                   <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full ${
-                    loc.alertStatus === 'ALERT' ? 'bg-rose-100 text-rose-800' :
+                    loc.alertStatus === 'ALERT' ? 'bg-amber-100 text-amber-800' :
                     loc.alertStatus === 'CAUTION' ? 'bg-amber-100 text-amber-800' :
                     'bg-emerald-100 text-emerald-800'
                   }`}>

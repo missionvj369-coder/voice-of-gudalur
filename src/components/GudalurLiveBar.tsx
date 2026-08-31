@@ -73,7 +73,7 @@ export const GudalurLiveBar: React.FC = () => {
           {/* Mudumalai Night Travel Rule Status */}
           <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border font-medium ${
             isNightBanActive 
-              ? 'bg-rose-950/60 border-rose-800 text-rose-300' 
+              ? 'bg-amber-950/60 border-amber-800 text-amber-300' 
               : 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
           }`}>
             <Moon size={12} />

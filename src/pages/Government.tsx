@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { 
   Landmark, 
   PhoneCall, 
@@ -76,7 +76,7 @@ export const Government: React.FC = () => {
       <div className="rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white p-6 sm:p-7 border border-indigo-900/60 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-2 max-w-xl">
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+            <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
               <Flame size={12} />
               Emergency Citizen Representation
             </span>

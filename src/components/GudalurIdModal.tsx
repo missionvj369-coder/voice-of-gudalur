@@ -337,7 +337,7 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
                 <form onSubmit={handleSave} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Your Full Name <span className="text-rose-500">*</span>
+                      Your Full Name <span className="text-amber-600">*</span>
                     </label>
                     <div className="relative">
                       <User size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
@@ -354,7 +354,7 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Mobile Number (For Locality SMS Alerts) <span className="text-rose-500">*</span>
+                      Mobile Number (For Locality SMS Alerts) <span className="text-amber-600">*</span>
                     </label>
                     <div className="relative">
                       <Phone size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
@@ -389,7 +389,7 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Locality / Area <span className="text-rose-500">*</span>
+                        Locality / Area <span className="text-amber-600">*</span>
                       </label>
                       <input
                         list="gudalur-locality-list"
@@ -410,7 +410,7 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Pincode <span className="text-rose-500">*</span>
+                        Pincode <span className="text-amber-600">*</span>
                       </label>
                       <input
                         type="text"

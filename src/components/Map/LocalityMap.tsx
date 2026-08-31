@@ -84,7 +84,7 @@ export const LocalityMap: React.FC<LocalityMapProps> = ({
                 <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-1">
                   <h4 className="font-bold text-sm text-slate-900">{loc.name}</h4>
                   <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
-                    loc.alertStatus === 'ALERT' ? 'bg-rose-100 text-rose-800' :
+                    loc.alertStatus === 'ALERT' ? 'bg-amber-100 text-amber-800' :
                     loc.alertStatus === 'CAUTION' ? 'bg-amber-100 text-amber-800' :
                     'bg-emerald-100 text-emerald-800'
                   }`}>

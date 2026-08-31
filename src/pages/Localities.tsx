@@ -164,7 +164,7 @@ export const Localities: React.FC = () => {
                 isUserArea
                   ? 'border-emerald-600 ring-2 ring-emerald-600/20'
                   : isAlert
-                  ? 'border-red-300 bg-red-50/20'
+                  ? 'border-amber-300 bg-amber-50/20'
                   : 'border-slate-200'
               }`}
             >
