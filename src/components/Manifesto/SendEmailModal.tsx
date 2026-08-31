@@ -54,9 +54,9 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
   const [rescueOpen, setRescueOpen] = useState(false);
   const [waShareUrl, setWaShareUrl] = useState<string | null>(null);
 
-  /** WhatsApp celebration share — prefilled message + voiceofgudalur.com link. */
+  /** WhatsApp celebration share — prefilled message + voiceofgudalur.space link. */
   const buildWhatsAppShareUrl = (docket: string | null) => {
-    const msg = `🌿 I signed the *Voice of Gudalur* petition — Right to Life for Gudalur.${docket ? `\n🧾 Official Docket: ${docket}` : ''}\n✉️ Sent to the Hon'ble Chief Minister & all departments.\n\n🇮🇳 Read, Sign & Send yours:\nhttps://voiceofgudalur.com\n\n📎 Tip: download your signed petition PDF on the petition page and attach it here.`;
+    const msg = `🌿 I signed the *Voice of Gudalur* petition — Right to Life for Gudalur.${docket ? `\n🧾 Official Docket: ${docket}` : ''}\n✉️ Sent to the Hon'ble Chief Minister & all departments.\n\n🇮🇳 Read, Sign & Send yours:\nhttps://voiceofgudalur.space\n\n📎 Tip: download your signed petition PDF on the petition page and attach it here.`;
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
   };
 

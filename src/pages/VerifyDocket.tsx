@@ -60,7 +60,7 @@ type VerifyState =
 
 const VerifyDocket: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const [ref, setRef] = useState<string>((searchParams.get('ref') || '').toUpperCase());
+  const [ref, setRef] = useState<string>(((searchParams.get('ref') || searchParams.get('id') || '') as string).toUpperCase());
   const [state, setState] = useState<VerifyState>({ kind: 'idle' });
   const ledgerOnline = isSupabaseConfigured();
 
@@ -97,7 +97,7 @@ const VerifyDocket: React.FC = () => {
 
   // Auto-verify when deep-linked with ?ref=VG-...
   useEffect(() => {
-    if (ledgerOnline && (searchParams.get('ref') || '').trim()) {
+    if (ledgerOnline && (searchParams.get('ref') || searchParams.get('id') || '').trim()) {
       runVerify();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

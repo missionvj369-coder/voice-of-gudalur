@@ -135,7 +135,7 @@ export const generatePetitionPDF = (petition: Petition) => {
   // Footer Note
   doc.setFontSize(8);
   doc.setTextColor(148, 163, 184);
-  doc.text('Generated via VoiceOfGudalur Platform • Independent Democratic Civic Record • https://ai.studio/build/VoiceOfGudalur', margin, 285);
+  doc.text('Generated via VoiceOfGudalur Platform • Independent Democratic Civic Record • https://voiceofgudalur.space', margin, 285);
 
   doc.save(`VoiceOfGudalur_Representation_${petition.id}_${new Date().toISOString().slice(0, 10)}.pdf`);
 };

@@ -315,6 +315,69 @@ export type Tables = {
   };
 };
 
+// ============================================
+// PLATFORM ENHANCEMENT TYPES (PostGIS civic layer)
+// ============================================
+
+/** Registered user profile row (profiles table). */
+export interface ProfileRow {
+  id: string;
+  phone: string;
+  full_name: string;
+  village: string;
+  email?: string | null;
+  created_at?: string;
+}
+
+/** Digital signature docket row (dockets table) — the public proof ledger. */
+export interface DocketsRow {
+  id: string;
+  docket_hash: string;
+  full_name: string;
+  village: string;
+  phone: string;
+  email?: string | null;
+  latitude: number;
+  longitude: number;
+  user_agent_hash?: string | null;
+  created_at?: string;
+}
+
+/** Community voice petition row (voice_petitions table). */
+export interface VoicePetitionRow {
+  id: string;
+  docket_id?: string | null;
+  place_name: string;
+  language: string;
+  audio_url: string;
+  transcript?: string | null;
+  speaker_name?: string | null;
+  latitude: number;
+  longitude: number;
+  created_at?: string;
+}
+
+/** Verified animal sighting row (animal_sightings table). */
+export interface AnimalSightingRow {
+  id: string;
+  user_id?: string | null;
+  place_name: string;
+  sighting_time: string;
+  audio_url?: string | null;
+  image_url?: string | null;
+  transcript?: string | null;
+  latitude: number;
+  longitude: number;
+  is_verified?: boolean;
+  created_at?: string;
+}
+
+/** Row returned by the village_voice_rankings view. */
+export interface VoiceRankRow {
+  place_name: string;
+  total_voices: number;
+  latest_voice_at: string | null;
+}
 export const db = {
   async getUserProfile(uid: string) {
     try {
@@ -959,6 +1022,205 @@ export const db = {
       return { error: e };
     }
   },
+// ============================================
+  // PLATFORM ENHANCEMENTS — dockets / voice / sightings
+  // ============================================
+
+  async addProfile(p: Partial<ProfileRow>) {
+    try {
+      const { data, error } = await supabase.from('profiles').insert(p).select().single();
+      return { data, error };
+    } catch (e: any) {
+      return { data: null, error: e };
+    }
+  },
+
+  async getProfileByPhone(phone: string) {
+    try {
+      const { data, error } = await supabase
+        .from('profiles').select('*').eq('phone', normalizePhone(phone)).maybeSingle();
+      return { data, error };
+    } catch (e: any) {
+      return { data: null, error: e };
+    }
+  },
+
+  /** Insert a digitally-signed docket into the public proof ledger. */
+  async addDocket(docket: Partial<DocketsRow>) {
+    try {
+      const { data, error } = await supabase.from('dockets').insert(docket).select().single();
+      return { data, error };
+    } catch (e: any) {
+      return { data: null, error: e };
+    }
+  },
+
+  /** Look up a docket by its verified token (e.g. VG-…). */
+  async getDocketByHash(docketHash: string) {
+    try {
+      const { data, error } = await supabase
+        .from('dockets').select('*').eq('docket_hash', docketHash.trim().toUpperCase()).maybeSingle();
+      return { data, error };
+    } catch (e: any) {
+      return { data: null, error: e };
+    }
+  },
+
+  /** Uniqueness guard — never issue the same docket token twice. */
+  async docketHashExists(docketHash: string): Promise<boolean> {
+    try {
+      const { data } = await supabase
+        .from('dockets').select('docket_hash').eq('docket_hash', docketHash.trim().toUpperCase()).limit(1);
+      return Boolean(data && data.length > 0);
+    } catch {
+      return false;
+    }
+  },
+
+  async getDockets(limit = 250) {
+    try {
+      const { data, error } = await supabase
+        .from('dockets').select('*').order('created_at', { ascending: false }).limit(limit);
+      return { data, error };
+    } catch (e: any) {
+      return { data: null, error: e };
+    }
+  },
+
+  /** Total verifiable digital signatures recorded on the public docket ledger. */
+  async getDocketCount(): Promise<{ count: number | null }> {
+    try {
+      const { count, error } = await supabase.from('dockets').select('id', { count: 'exact', head: true });
+      return { count: error ? null : (count ?? 0) };
+    } catch {
+      return { count: null };
+    }
+  },
+
+  /** Real signature counts per village/place — the official regional audit. */
+  async getSignatureCountsByVillage(): Promise<{ village: string; count: number }[]> {
+    try {
+      const { data, error } = await supabase.from('dockets').select('village');
+      if (error) return [];
+      const map = new Map<string, number>();
+      (data || []).forEach((r) => {
+        const key = (r.village || 'Gudalur').trim();
+        map.set(key, (map.get(key) || 0) + 1);
+      });
+             return Array.from(map.entries())
+        .map(([village, count]) => ({ village, count }))
+        .sort((a, b) => b.count - a.count);
+    } catch {
+      return [];
+    }
+  },
+
+  // ============================================
+  // PLATFORM ENHANCEMENTS — voice petitions
+  // ============================================
+
+  /** Insert a community voice petition recording with GPS + place metadata. */
+  async addVoicePetition(petition: Partial<VoicePetitionRow>) {
+    try {
+      const { data, error } = await supabase.from('voice_petitions').insert(petition).select().single();
+      return { data, error };
+    } catch (e: any) {
+      return { data: null, error: e };
+    }
+  },
+
+  /** Fetch recent voice petitions (most recent first), optionally filtered by place or language. */
+  async getVoicePetitions(opts?: {
+    limit?: number;
+    placeName?: string;
+    language?: string;
+  }): Promise<{ data: VoicePetitionRow[] | null; error: any }> {
+    try {
+      let q = supabase
+        .from('voice_petitions')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (opts?.limit) q = q.limit(opts.limit);
+      if (opts?.placeName) q = q.ilike('place_name', opts.placeName);
+      if (opts?.language) q = q.eq('language', opts.language);
+      const { data, error } = await q;
+      return { data: (data as VoicePetitionRow[] | null) || null, error };
+    } catch (e: any) {
+      return { data: null, error: e };
+    }
+  },
+
+  /** Live village/place rankings from the view — highest activity at the top. */
+  async getVoiceRankings(): Promise<{ data: VoiceRankRow[] | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('village_voice_rankings')
+        .select('*')
+        .order('total_voices', { ascending: false });
+      return { data: (data as VoiceRankRow[] | null) || null, error };
+    } catch (e: any) {
+      return { data: null, error: e };
+    }
+  },
+
+  // ============================================
+  // PLATFORM ENHANCEMENTS — animal sightings
+  // ============================================
+
+  /** Insert a verified animal sighting row (registered users only — app-gated). */
+  async addAnimalSighting(sighting: Partial<AnimalSightingRow>) {
+    try {
+      const { data, error } = await supabase.from('animal_sightings').insert(sighting).select().single();
+      return { data, error };
+    } catch (e: any) {
+      return { data: null, error: e };
+    }
+  },
+
+  /** Fetch recent verified animal sightings. */
+  async getAnimalSightings(limit = 100): Promise<{ data: AnimalSightingRow[] | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('animal_sightings')
+        .select('*')
+        .eq('is_verified', true)
+        .order('sighting_time', { ascending: false })
+        .limit(limit);
+      return { data: (data as AnimalSightingRow[] | null) || null, error };
+    } catch (e: any) {
+      return { data: null, error: e };
+    }
+  },
+
+  /** Sightings from the last N hours (for proximity alert scanning). */
+  async getRecentSightings(hours = 24): Promise<{ data: AnimalSightingRow[] | null; error: any }> {
+    try {
+      const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('animal_sightings')
+        .select('*')
+        .eq('is_verified', true)
+        .gte('sighting_time', cutoff)
+        .order('sighting_time', { ascending: false });
+      return { data: (data as AnimalSightingRow[] | null) || null, error };
+    } catch (e: any) {
+      return { data: null, error: e };
+    }
+  },
+
+  /** Real-time proximity scan — sightings within p_radius_km of a coordinate (postgis function). */
+  async getNearbySightings(lat: number, lng: number, radiusKm = 3): Promise<{ data: AnimalSightingRow[] | null; error: any }> {
+    try {
+      const { data, error } = await supabase.rpc('nearby_sightings', {
+        p_lat: lat,
+        p_lng: lng,
+        p_radius_km: radiusKm,
+      });
+      return { data: (data as AnimalSightingRow[] | null) || null, error };
+    } catch (e: any) {
+      return { data: null, error: e };
+    }
+  },
 };
 
 // ============================================
@@ -1027,8 +1289,30 @@ export const subscribeToAlerts = (callback: (alerts: AlertRow[]) => void) => {
 export const subscribeToManifestoStats = (onChanged: () => void) => {
   const channel = supabase
     .channel('public:signatures')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'manifesto_signatures' }, onChanged)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'manifesto_signatures' }, onChanged)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'manifesto_submissions' }, onChanged)
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+};
+
+/** Live updates for the community voice soundboard — fires on new voice petitions. */
+export const subscribeToVoicePetitions = (callback: (petitions: VoicePetitionRow[]) => void) => {
+  const channel = supabase
+    .channel('voice_petitions_changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'voice_petitions' }, () => {
+      db.getVoicePetitions().then(({ data }) => { if (data) callback(data); });
+    })
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+};
+
+/** Live updates for the conflict/sighting map — fires on new verified sightings. */
+export const subscribeToSightings = (callback: (sightings: AnimalSightingRow[]) => void) => {
+  const channel = supabase
+    .channel('animal_sightings_changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'animal_sightings' }, () => {
+      db.getAnimalSightings().then(({ data }) => { if (data) callback(data); });
+    })
     .subscribe();
   return () => { supabase.removeChannel(channel); };
 };

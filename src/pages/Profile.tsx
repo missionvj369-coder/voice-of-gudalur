@@ -74,7 +74,7 @@ export const Profile: React.FC = () => {
       `🆔 Gudalur ID: ${profile.gudalurId}\n` +
       `📍 Locality: ${profile.localityName} (${profile.pincode})\n` +
       `🛡️ Status: ${profile.verificationLevel}\n` +
-      `Together for a safer, united Gudalur! https://voiceofgudalur.org`
+      `Together for a safer, united Gudalur! https://voiceofgudalur.space`
     );
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };

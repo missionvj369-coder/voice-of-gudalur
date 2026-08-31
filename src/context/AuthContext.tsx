@@ -108,6 +108,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     bio: data.bio || undefined,
     lat: data.lat || undefined,
     lng: data.lng || undefined,
+    aadhaarVerified: data.aadhaar_verified || undefined,
+    aadhaarLast4: data.aadhaar_last4 || undefined,
+    aadhaarRef: data.aadhaar_ref || undefined,
     createdAt: data.created_at ? new Date(data.created_at).getTime() : Date.now(),
     updatedAt: data.updated_at ? new Date(data.updated_at).getTime() : Date.now(),
     issuesReported: data.issues_reported || 0,
@@ -134,6 +137,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     bio: p.bio || null,
     lat: p.lat || null,
     lng: p.lng || null,
+    aadhaar_verified: p.aadhaarVerified || false,
+    aadhaar_last4: p.aadhaarLast4 || null,
+    aadhaar_ref: p.aadhaarRef || null,
     issues_reported: p.issuesReported,
     issues_supported: p.issuesSupported,
     representations_created: p.representationsCreated,
@@ -224,6 +230,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     pincode: string;
     lat?: number;
     lng?: number;
+    /** pyaadhaar verification result — QR-decoded or Verhoeff-checked number. */
+    aadhaarVerified?: boolean;
+    aadhaarLast4?: string;
+    aadhaarRef?: string;
   }): Promise<UserProfile> => {
     const loc = GUDALUR_LOCALITIES.find((l) => l.id === data.localityId);
     const locName = data.customPlaceName?.trim() || loc?.name || 'Gudalur Taluk';
@@ -253,6 +263,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       bio: profile?.bio,
       lat: data.lat || userCoords?.lat || loc?.lat,
       lng: data.lng || userCoords?.lng || loc?.lng,
+      aadhaarVerified: data.aadhaarVerified || false,
+      aadhaarLast4: data.aadhaarLast4,
+      aadhaarRef: data.aadhaarRef,
       createdAt: profile?.createdAt || Date.now(),
       updatedAt: Date.now(),
       issuesReported: profile?.issuesReported || 0,

@@ -7,3 +7,7 @@ coverage/
 .env*
 !.env.example
 preview_log.txt
+
+# Python bytecode cache
+__pycache__/
+*.pyc

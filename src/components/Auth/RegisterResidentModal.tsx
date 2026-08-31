@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ShieldCheck, MapPin, Phone, Mail, User, Check, X, Compass, Loader2, IdCard, Copy, CheckCircle2, LogIn } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { ShieldCheck, MapPin, Phone, Mail, User, Check, X, Compass, Loader2, IdCard, Copy, CheckCircle2, LogIn, QrCode, ScanLine, Keyboard, BadgeCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { GUDALUR_LOCALITIES } from '../../data/gudalurMasterData';
@@ -30,6 +30,74 @@ export const RegisterResidentModal: React.FC<Props> = ({ isOpen, onClose, onSucc
   const [issuedProfile, setIssuedProfile] = useState<UserProfile | null>(null);
   const [idCopied, setIdCopied] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+
+  /* ── Aadhaar verification (pyaadhaar) — scan the e-Aadhaar QR or enter the number ── */
+  interface AadhaarResult {
+    verified: boolean; method: 'qr' | 'number'; qr_type?: string;
+    name?: string; dob?: string; gender?: string; last4?: string;
+    referenceid?: string; address?: string; mobile_linked?: boolean | null;
+  }
+  const [aadhaarTab, setAadhaarTab] = useState<'qr' | 'number'>('qr');
+  const [aadhaarNumber, setAadhaarNumber] = useState('');
+  const [aadhaarResult, setAadhaarResult] = useState<AadhaarResult | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const scannerRef = useRef<any>(null);
+
+  const stopScanner = async () => {
+    try { await scannerRef.current?.stop(); scannerRef.current?.clear(); } catch { /* already stopped */ }
+    scannerRef.current = null;
+    setScanning(false);
+  };
+
+  const verifyAadhaar = async (payload: { qrData?: string; aadhaarNumber?: string }) => {
+    setVerifying(true);
+    try {
+      const res = await fetch('/api/aadhaar/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.verified) throw new Error(data.error || 'Verification failed');
+      setAadhaarResult(data);
+      // Pre-fill the verified legal name (only if the resident hasn't typed one yet)
+      if (data.method === 'qr' && data.name && !name.trim()) setName(data.name);
+      toast.success(
+        data.method === 'qr'
+          ? `Aadhaar verified via QR: ${data.name} (••••${data.last4})`
+          : `Aadhaar checksum verified (••••${data.last4})`
+      );
+    } catch (e: any) {
+      toast.error(e.message || 'Aadhaar verification failed');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const startScanner = async () => {
+    try {
+      const { Html5Qrcode } = await import('html5-qrcode');
+      const scanner = new Html5Qrcode('aadhaar-qr-region', { verbose: false });
+      scannerRef.current = scanner;
+      await scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decoded: string) => {
+          stopScanner();
+          verifyAadhaar({ qrData: decoded });
+        },
+        () => { /* per-frame decode miss — ignore */ }
+      );
+      setScanning(true);
+    } catch {
+      toast.error('Camera unavailable or permission denied — use “Enter Aadhaar Number” instead');
+      scannerRef.current = null;
+      setScanning(false);
+    }
+  };
+
+  const clearAadhaar = () => setAadhaarResult(null);
 
   if (showLogin) {
     return (
@@ -94,6 +162,10 @@ export const RegisterResidentModal: React.FC<Props> = ({ isOpen, onClose, onSucc
       toast.error(lang === 'ta' ? '6 இலக்க அஞ்சல் குறியீட்டை (Pincode) உள்ளிடவும்' : 'Please enter a valid 6-digit Pincode');
       return;
     }
+    if (!aadhaarResult?.verified) {
+      toast.error('Verify your Aadhaar first — scan the QR on your e-Aadhaar or enter the 12-digit number.', { duration: 5000 });
+      return;
+    }
 
     // If the resident typed a locality that isn't in the official list, save it as
     // their own estate / village / settlement so the record stays precise.
@@ -115,7 +187,10 @@ export const RegisterResidentModal: React.FC<Props> = ({ isOpen, onClose, onSucc
         email: email.trim() || undefined,
         pincode: pincode.trim(),
         lat: userCoords?.lat,
-        lng: userCoords?.lng
+        lng: userCoords?.lng,
+        aadhaarVerified: true,
+        aadhaarLast4: aadhaarResult.last4,
+        aadhaarRef: aadhaarResult.method === 'qr' ? (aadhaarResult.referenceid || 'QR-VERIFIED') : 'CHKSUM-OK',
       });
       // Show the issued unique Gudalur ID on the success screen
       setIssuedProfile(registered);
@@ -279,6 +354,101 @@ export const RegisterResidentModal: React.FC<Props> = ({ isOpen, onClose, onSucc
             <p className="text-[11px] text-slate-400 mt-1">
               Printed on your signed petition PDF as your official contact.
             </p>
+          </div>
+
+          {/* ── AADHAAR VERIFICATION (pyaadhaar) — mandatory identity proof ── */}
+          <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/50 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                <ShieldCheck size={14} className="text-emerald-600" />
+                <span>Aadhaar Verification * <span className="font-normal text-slate-400">(pyaadhaar · offline &amp; private)</span></span>
+              </label>
+              {aadhaarResult?.verified && (
+                <button type="button" onClick={clearAadhaar} className="text-[10px] font-bold text-slate-400 hover:text-red-500 underline">
+                  Reset
+                </button>
+              )}
+            </div>
+
+            {aadhaarResult?.verified ? (
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-white border border-emerald-300">
+                <BadgeCheck size={22} className="text-emerald-600 shrink-0 mt-0.5" />
+                <div className="text-xs space-y-1 min-w-0">
+                  <p className="font-black text-emerald-800">
+                    {aadhaarResult.method === 'qr' ? 'Verified via e-Aadhaar QR' : 'Verified via UIDAI checksum'}
+                    {aadhaarResult.qr_type === 'old-qr' && ' (legacy QR)'}
+                  </p>
+                  <p className="font-mono font-bold text-slate-900">•••• {aadhaarResult.last4}</p>
+                  {aadhaarResult.method === 'qr' && (
+                    <>
+                      <p className="text-slate-700"><span className="font-bold">Name:</span> {aadhaarResult.name} {aadhaarResult.dob && <span className="text-slate-400">· {aadhaarResult.dob}</span>}</p>
+                      {aadhaarResult.address && <p className="text-slate-500 truncate"><span className="font-bold">Address:</span> {aadhaarResult.address}</p>}
+                    </>
+                  )}
+                  <p className="text-[10px] text-slate-400">Full Aadhaar number is never stored — only the masked last 4 digits.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-1 rounded-xl bg-white border border-slate-200 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setAadhaarTab('qr')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-black transition ${aadhaarTab === 'qr' ? 'bg-emerald-600 text-white shadow' : 'text-slate-500 hover:bg-slate-100'}`}
+                  >
+                    <ScanLine size={14} /> Scan Aadhaar QR
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { stopScanner(); setAadhaarTab('number'); }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-black transition ${aadhaarTab === 'number' ? 'bg-emerald-600 text-white shadow' : 'text-slate-500 hover:bg-slate-100'}`}
+                  >
+                    <Keyboard size={14} /> Enter Number
+                  </button>
+                </div>
+
+                {aadhaarTab === 'qr' ? (
+                  <div className="space-y-2">
+                    <div id="aadhaar-qr-region" className={`rounded-xl overflow-hidden bg-slate-900 ${scanning ? 'w-full' : 'hidden'}`} />
+                    <button
+                      type="button"
+                      onClick={scanning ? stopScanner : startScanner}
+                      disabled={verifying}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-black transition"
+                    >
+                      {verifying ? <Loader2 size={15} className="animate-spin" /> : <QrCode size={15} />}
+                      {scanning ? 'Stop Camera' : verifying ? 'Verifying…' : 'Open Camera & Scan the QR on e-Aadhaar'}
+                    </button>
+{/* AADHAAR-PART2 */}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      value={aadhaarNumber}
+                      onChange={(e) => setAadhaarNumber(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                      placeholder="12-digit Aadhaar number"
+                      maxLength={12}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm font-mono tracking-widest outline-none transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (aadhaarNumber.length !== 12) { toast.error('Enter the full 12-digit Aadhaar number'); return; }
+                        verifyAadhaar({ aadhaarNumber });
+                      }}
+                      disabled={verifying || aadhaarNumber.length !== 12}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-black transition"
+                    >
+                      {verifying ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
+                      {verifying ? 'Verifying…' : 'Verify Number'}
+                    </button>
+{/* AADHAAR-PART3 */}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Locality & Pincode Selection */}

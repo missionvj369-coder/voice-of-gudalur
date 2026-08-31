@@ -164,7 +164,7 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
       `👤 Name: ${profile.name}\n` +
       `🆔 Gudalur ID: ${profile.gudalurId}\n` +
       `📍 Locality: ${profile.localityName} (${profile.pincode})\n` +
-      `Together for a safer, united Gudalur! https://voiceofgudalur.org`
+      `Together for a safer, united Gudalur! https://voiceofgudalur.space`
     );
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };

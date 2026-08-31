@@ -74,6 +74,12 @@ export interface UserProfile {
   bio?: string;
   lat?: number;
   lng?: number;
+  /** Aadhaar verification (pyaadhaar) — QR-decoded or checksum-verified number. */
+  aadhaarVerified?: boolean;
+  /** Only the LAST 4 digits of the Aadhaar number are ever stored/printed. */
+  aadhaarLast4?: string;
+  /** UIDAI reference id (from secure QR decode) or 'CHKSUM' for number-verified users. */
+  aadhaarRef?: string;
   createdAt: number;
   updatedAt: number;
   // Stats for My ID dashboard

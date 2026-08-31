@@ -64,7 +64,7 @@ ${alert.description}
 🛡️ *Source:* ${alert.source}
 ✅ *Status:* ${alert.verificationStatus}
 
-🔗 *Live Pulse & Helplines:* https://voiceofgudalur.com
+🔗 *Live Pulse & Helplines:* https://voiceofgudalur.space
 _Shared via VoiceOfGudalur Citizen Platform_`;
 };
 
@@ -80,7 +80,7 @@ ${petition.titleTa ? `🏛️ *${petition.titleTa}*\n` : ''}
 ${petition.evidenceSummary}
 
 ✊ *Sign & Back this Demand on Voice of Gudalur:*
-👉 https://voiceofgudalur.org/act
+👉 https://voiceofgudalur.space/act
 
 _Every verified Gudalur resident signature counts towards official legislative representation._`;
 };
@@ -94,7 +94,7 @@ export const generateWhatsAppCivicIssueText = (issue: ShareCivicIssuePayload): s
 🏷️ *Category:* ${issue.category.toUpperCase()} | *Status:* ${issue.status}
 ${issue.assignedAuthority ? `🏛️ *Assigned Authority:* ${issue.assignedAuthority}\n` : ''}${issue.officialGrievanceId ? `🔢 *Govt Token:* ${issue.officialGrievanceId}\n` : ''}
 Track real-time progress on VoiceOfGudalur Civic Engine:
-👉 https://voiceofgudalur.com/issues`;
+👉 https://voiceofgudalur.space/issues`;
 };
 
 export const generateWhatsAppBusText = (bus: ShareBusRoutePayload): string => {

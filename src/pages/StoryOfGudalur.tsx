@@ -12,7 +12,7 @@ export const StoryOfGudalur: React.FC = () => {
     const text = encodeURIComponent(
       `📖 *The Story of Gudalur — Chapter ${chapter.number}: ${chapter.title}*\n` +
       `Read this living historical archive on Voice of Gudalur:\n` +
-      `https://voiceofgudalur.org/story`
+      `https://voiceofgudalur.space/story`
     );
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };

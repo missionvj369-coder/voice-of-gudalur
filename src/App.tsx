@@ -1,11 +1,19 @@
-import React from 'react';
+﻿import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ProximityAlertProvider } from './context/ProximityAlertProvider';
+import { LocationGate } from './components/LocationGate';
 import { LanguageProvider } from './context/LanguageContext';
 import { Shell } from './components/Layout/Shell';
 import Manifesto from './pages/Manifesto';
 import VerifyDocket from './pages/VerifyDocket';
+import { VoiceSoundboardPage } from './pages/VoiceSoundboardPage';
+import { LiveGisMapPage } from './pages/LiveGisMapPage';
+import { VoiceReportButton } from './components/VoiceReportButton';
+import { VoiceIncidentListener } from './components/VoiceIncidentListener';
+import { NavBar } from './components/NavBar';
+import { NewSightingPage } from './pages/NewSightingPage';
 
 const AppContent: React.FC = () => {
   const { loading } = useAuth();
@@ -19,13 +27,22 @@ const AppContent: React.FC = () => {
   }
 
   return (
+    <LocationGate>
     <Shell>
+      <NavBar />
       <Routes>
         <Route path="/" element={<Manifesto />} />
         <Route path="/verify-docket" element={<VerifyDocket />} />
+        <Route path="/voice-soundboard" element={<VoiceSoundboardPage />} />
+        <Route path="/live-gis-map" element={<LiveGisMapPage />} />
+          <Route path="/report-sighting" element={<NewSightingPage />} />
+
         <Route path="*" element={<Manifesto />} />
       </Routes>
+      <VoiceReportButton />
+      <VoiceIncidentListener />
     </Shell>
+    </LocationGate>
   );
 };
 
@@ -33,6 +50,7 @@ export default function App() {
   return (
     <LanguageProvider>
       <AuthProvider>
+        <ProximityAlertProvider>
         <Router>
           <AppContent />
           <Toaster
@@ -49,6 +67,7 @@ export default function App() {
             }}
           />
         </Router>
+        </ProximityAlertProvider>
       </AuthProvider>
     </LanguageProvider>
   );

@@ -7,6 +7,23 @@
 [functions]
   node_bundler = "esbuild"
 
+# Voice Notification API — rewrite /api/voice/* + /api/push/* to the voice function.
+[[redirects]]
+  from = "/api/voice/*"
+  to = "/.netlify/functions/voice"
+  status = 200
+
+[[redirects]]
+  from = "/api/push/*"
+  to = "/.netlify/functions/voice"
+  status = 200
+
+# Object Storage API — rewrite /api/storage/* to the storage function (Storj presign).
+[[redirects]]
+  from = "/api/storage/*"
+  to = "/.netlify/functions/storage"
+  status = 200
+
 # SPA fallback — lets /verify-docket and other client routes work on Netlify.
 # Function routes (/.netlify/functions/*) always take precedence over redirects.
 [[redirects]]
