@@ -50,9 +50,9 @@ export async function subscribeToPush(localityId?: string): Promise<PushSubscrip
     return null;
   }
 
-  const permission = await Notification.requestPermission();
-  if (permission !== 'granted') {
-    console.warn('[VoiceNotify] Notifications denied by user.');
+  // Never prompt on app load — only ever subscribe if the user has already granted permission
+  // (the prompt is triggered explicitly elsewhere, e.g. after the user opts in to wildlife alerts).
+  if (Notification.permission !== 'granted') {
     return null;
   }
 

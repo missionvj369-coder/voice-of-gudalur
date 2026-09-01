@@ -31,7 +31,10 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [readyQueue, setReadyQueue] = useState<{ id: number; fn: () => void }[]>([]);
 
-  const openIdModal = () => setIdModalOpen(true);
+  const openIdModal = () => {
+    if (profile?.gudalurId) setIdModalOpen(true);
+    else setRegisterModalOpen(true); // no profile → one-step Aadhaar scan registration
+  };
 
   React.useEffect(() => {
     if (!profile?.gudalurId || readyQueue.length === 0) return;
@@ -44,7 +47,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     (fn: () => void) => {
       if (profile?.gudalurId) { fn(); return; }
       setReadyQueue((q) => [...q, { id: Date.now(), fn }]);
-      setIdModalOpen(true);
+      setRegisterModalOpen(true); // no profile → one-step Aadhaar scan registration
     },
     [profile]
   );
@@ -61,7 +64,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         <div className="og-readbar" aria-hidden="true" />
         <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-transparent border-b border-slate-700/50 flex items-center">
           <div className="max-w-5xl mx-auto w-full px-4 flex items-center justify-between">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIdModalOpen(true)}>
+            <div className="flex items-center gap-2 cursor-pointer" onClick={openIdModal}>
               <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0">
                 <Flame size={12} className="text-amber-300" />
               </div>
@@ -89,7 +92,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
               </div>
               <button
                 type="button"
-                onClick={() => setIdModalOpen(true)}
+                onClick={openIdModal}
                 title={profile ? `${profile.name} — ${profile.gudalurId} — tap for ID card` : 'Register / Login'}
                 className="flex items-center gap-1.5 rounded-full bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 transition pl-0.5 pr-1 py-0.5 shrink-0"
               >

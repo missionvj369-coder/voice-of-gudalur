@@ -4,6 +4,7 @@
  */
 import React, { useState } from 'react';
 import { LiveGisMap } from '../components/LiveGisMap';
+import { OfflineAlertMap } from '../components/OfflineAlertMap';
 import { useAuth } from '../context/AuthContext';
 import { useProximityAlerts } from '../context/ProximityAlertProvider';
 import { X, AlertTriangle } from 'lucide-react';
@@ -34,6 +35,11 @@ export const LiveGisMapPage: React.FC = () => {
         </div>
       )}
       <LiveGisMap userCoords={userCoords} />
+
+      {/* Offline-capable alert map — only lives on this page, not globally */}
+      <div className="mt-6">
+        <OfflineAlertMap height="360px" showControls={true} />
+      </div>
     </div>
   );
 };

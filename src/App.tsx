@@ -16,28 +16,12 @@ import { NavBar } from './components/NavBar';
 import { NewSightingPage } from './pages/NewSightingPage';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { OfflineIndicator } from './components/OfflineIndicator';
-import { OfflineAlertMap } from './components/OfflineAlertMap';
-import { SMSEmergencyButton } from './components/SMSEmergencyButton';
-import { initializePeerSync } from './services/peerRelay';
 import { SignPetitionPage } from './pages/SignPetitionPage';
 import { VerifySignPage } from './pages/VerifySignPage';
 import { OfficialsPortalPage } from './pages/OfficialsPortalPage';
-import { useEffect, useState } from 'react';
 
 const AppContent: React.FC = () => {
   const { loading } = useAuth();
-  const [peerSyncStatus, setPeerSyncStatus] = useState<{ ble: boolean; local: boolean } | null>(null);
-
-  // Initialize peer-to-peer sync on mount
-  useEffect(() => {
-    initializePeerSync().then(status => {
-      setPeerSyncStatus(status);
-      console.log('[VOG] Peer sync initialized:', status);
-    }).catch(() => {
-      // Peer sync not available (no BLE/WiFi Direct)
-      setPeerSyncStatus({ ble: false, local: false });
-    });
-  }, []);
 
   if (loading) {
     return (
@@ -67,7 +51,6 @@ const AppContent: React.FC = () => {
       <VoiceIncidentListener />
       <PWAInstallPrompt />
       <OfflineIndicator />
-      <OfflineAlertMap height="300px" showControls={true} />
     </Shell>
     </LocationGate>
   );
