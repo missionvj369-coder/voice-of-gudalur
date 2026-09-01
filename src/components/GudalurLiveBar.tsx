@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CloudSun, Wind, AlertTriangle, Moon, ShieldCheck, MapPin, Radio, Compass } from 'lucide-react';
 import { WeatherSnapshot, UrgentAlert } from '../types';
-import { fetchLiveWeather } from '../services/geminiService';
+import { fetchLiveWeather } from '../services/aiService';
 import { INITIAL_URGENT_ALERTS } from '../data/gudalurMasterData';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';

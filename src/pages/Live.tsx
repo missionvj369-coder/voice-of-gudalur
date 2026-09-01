@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { WeatherSnapshot, UrgentAlert } from '../types';
-import { fetchLiveWeather } from '../services/geminiService';
+import { fetchLiveWeather } from '../services/aiService';
 import { INITIAL_URGENT_ALERTS } from '../data/gudalurMasterData';
 import { generateWhatsAppAlertText, shareToWhatsApp, shareViaWebShare } from '../utils/whatsappShare';
 import toast from 'react-hot-toast';

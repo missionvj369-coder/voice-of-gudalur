@@ -8,7 +8,7 @@ import { TrendingUp, TrendingDown, Minus, Clock, Sprout, ShoppingBag, Plus, Tag,
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
-import { chatWithGuideStream } from '../services/geminiService';
+import { chatWithGuideStream } from '../services/aiService';
 import { useLanguage } from '../context/LanguageContext';
 import toast from 'react-hot-toast';
 

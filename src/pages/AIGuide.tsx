@@ -14,7 +14,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { chatWithGuideStream } from '../services/geminiService';
+import { chatWithGuideStream } from '../services/aiService';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';

@@ -1,13 +1,13 @@
 ﻿import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig, loadEnv, type Plugin} from 'vite';
+import {defineConfig, type Plugin} from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 /**
  * Enterprise security headers applied to dev + preview servers.
  * HSTS / nosniff / frame-deny / referrer & permissions policy,
  * plus a CSP tuned for this app: Google Fonts, Supabase (HTTPS+WS),
- * Gemini API, leaflet map tiles, blob: PDFs.
+ * Hugging Face model CDN (on-device Whisper), leaflet map tiles, blob: PDFs.
  */
 const securityHeadersPlugin = (): Plugin => ({
   name: 'security-headers',
@@ -39,7 +39,7 @@ const securityHeaders: Record<string, string> = {
     "img-src 'self' data: blob: https:",
     "media-src 'self' data: blob: https:",
     "frame-src 'self' blob:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com https://api.whatsapp.com https://gateway.storjshare.io",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://huggingface.co https://*.huggingface.co https://api.whatsapp.com https://gateway.storjshare.io",
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
@@ -49,8 +49,7 @@ const securityHeaders: Record<string, string> = {
 
 
 
-export default defineConfig(({mode}) => {
-  const env = loadEnv(mode, '.', '');
+export default defineConfig(() => {
   return {
     plugins: [
       react(),
@@ -116,9 +115,6 @@ export default defineConfig(({mode}) => {
         devOptions: { enabled: false },
       }),
     ],
-    define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

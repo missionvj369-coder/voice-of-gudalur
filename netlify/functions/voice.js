@@ -7,9 +7,11 @@
  *
  * Endpoints (rewritten from /api/… via netlify.toml):
  *   POST /.netlify/functions/voice  →  /api/voice/incident
- *        Body: multipart/form-data { audio, type, urgency, locality, lat, lng, description }
- *        → Transcribes audio with Gemini, inserts a wildlife_incidents row,
- *          and sends a Web Push to every push_subscriptions subscriber.
+ *        Body: multipart/form-data { audio, type, urgency, locality, lat, lng, description, transcript }
+ *        → Uses the client's on-device Whisper transcript when present,
+ *          falls back to the self-hosted Whisper server, inserts a
+ *          wildlife_incidents row, and sends a Web Push to every
+ *          push_subscriptions subscriber.
  *   GET  /.netlify/functions/voice  →  /api/push/public-key
  *        → Returns the VAPID public key for browser subscription.
  *
@@ -26,7 +28,10 @@ const busboy = require('busboy');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 const SUPABASE_SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+// Self-hosted, open-source speech-to-text (Apache-2.0 / MIT stacks:
+// faster-whisper-server, speaches, whisper.cpp server — all OpenAI-compatible).
+const WHISPER_URL = process.env.WHISPER_URL || '';
+const WHISPER_MODEL = process.env.WHISPER_MODEL || 'whisper-small';
 const VAPID_PUBLIC = process.env.VITE_PUSH_PUBLIC_KEY || '';
 const VAPID_PRIVATE = process.env.PUSH_PRIVATE_KEY || '';
 const VAPID_EMAIL = process.env.VAPID_EMAIL || '';
@@ -69,25 +74,17 @@ function parseMultipart(event) {
   });
 }
 
-/** Transcribe an audio buffer with Gemini (resilient on failure). */
+/** Transcribe an audio buffer via the self-hosted Whisper server (resilient on failure). */
 async function transcribeAudio(buffer, mimeType) {
-  if (!GEMINI_API_KEY || !buffer || buffer.length === 0) return '';
+  if (!WHISPER_URL || !buffer || buffer.length === 0) return '';
   try {
-    const { GoogleGenAI } = await import('@google/genai');
-    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-    const prompt = 'Transcribe this wildlife incident voice report. Output ONLY a JSON object: {"description":"...","animal_type":"...","location":"...","urgency":"..."}';
-    const res = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [{
-        parts: [
-          { text: prompt },
-          { inlineData: { mimeType: mimeType || 'audio/webm', data: buffer.toString('base64') } },
-        ],
-      }],
-      config: { temperature: 0.3, maxOutputTokens: 512 },
-    });
-    try { return JSON.parse(res.text || '{}').description || res.text || ''; }
-    catch { return res.text || ''; }
+    const form = new FormData();
+    form.append('file', new Blob([buffer], { type: mimeType || 'audio/webm' }), 'voice.webm');
+    form.append('model', WHISPER_MODEL);
+    const res = await fetch(WHISPER_URL, { method: 'POST', body: form, signal: AbortSignal.timeout(60000) });
+    if (!res.ok) throw new Error(`Whisper server ${res.status}`);
+    const data = await res.json();
+    return data.text || '';
   } catch (e) {
     console.error('[voice] transcription failed:', e.message);
     return '';
@@ -168,8 +165,10 @@ export async function handler(event) {
       const lat = fields.lat ? Number(fields.lat) : null;
       const lng = fields.lng ? Number(fields.lng) : null;
 
-      // 1. Transcribe (if audio provided + Gemini key present)
-      const transcript = audio ? await transcribeAudio(audio.buffer, audio.mimeType) : '';
+      // 1. Transcript: browser runs Whisper on-device (Transformers.js);
+      //    fall back to the self-hosted Whisper server if configured.
+      let transcript = (fields.transcript || '').trim();
+      if (!transcript && audio) transcript = await transcribeAudio(audio.buffer, audio.mimeType);
 
       // 2. Insert incident
       const { data: incident, error: insErr } = await getSupabase()

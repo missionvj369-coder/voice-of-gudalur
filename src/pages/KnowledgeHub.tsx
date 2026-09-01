@@ -5,7 +5,7 @@ import {
   ChevronRight, Search, Landmark, Coffee, Compass, BookOpen, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { chatWithGuideStream } from '../services/geminiService';
+import { chatWithGuideStream } from '../services/aiService';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';

@@ -8,13 +8,16 @@
  *     in Supabase (table: push_subscriptions) so the server can address this
  *     device later.
  *  3. Lets the user record a short voice note (microphone → Opus/WebM blob).
- *  4. Uploads the recording together with incident metadata to
- *     POST /api/voice/incident, which (server-side) transcribes it with
- *     Gemini, records a row in `wildlife_incidents`, and fans out a push
- *     notification to every subscriber in the affected locality.
+ *  4. Transcribes the recording ON-DEVICE with open-source Whisper
+ *     (Transformers.js — Apache-2.0; audio never leaves the phone, works
+ *     offline after the model is cached) and uploads the recording together
+ *     with incident metadata + transcript to POST /api/voice/incident, which
+ *     records a row in `wildlife_incidents` and fans out a push notification
+ *     to every subscriber in the affected locality.
  */
 
 import { supabase } from '../lib/supabase';
+import { transcribeAudioBlob } from './transcriptionService';
 
 // ── 1. Web Push subscription (browser side) ──────────────────────────
 
@@ -143,8 +146,8 @@ export interface VoiceIncident {
 
 /**
  * Uploads a voice note + metadata to POST /api/voice/incident.
- * The Express server will:
- *   1. Transcribe the audio with Gemini 1.5
+ * Pipeline:
+ *   1. Transcribe the audio ON-DEVICE with open-source Whisper (offline-capable)
  *   2. Insert a row into wildlife_incidents
  *   3. Broadcast a Web Push notification to all subscribers in the locality
  */
@@ -155,6 +158,18 @@ export async function submitVoiceIncident(incident: VoiceIncident): Promise<{
   error: string | null;
 }> {
   try {
+    // 1. On-device transcription first (private + works with zero network).
+    let transcript: string | null = null;
+    if (incident.recording?.blob) {
+      try {
+        const result = await transcribeAudioBlob(incident.recording.blob);
+        transcript = result.text || null;
+      } catch (e) {
+        console.warn('[VoiceNotify] On-device transcription failed:', e);
+      }
+    }
+    if (!transcript && incident.description) transcript = incident.description;
+
     const formData = new FormData();
     if (incident.recording?.blob) {
       formData.append('audio', incident.recording.blob, 'voice.webm');
@@ -165,6 +180,7 @@ export async function submitVoiceIncident(incident: VoiceIncident): Promise<{
     if (incident.lat) formData.append('lat', String(incident.lat));
     if (incident.lng) formData.append('lng', String(incident.lng));
     if (incident.description) formData.append('description', incident.description);
+    if (transcript) formData.append('transcript', transcript);
     formData.append('durationMs', String(incident.recording?.durationMs || 0));
 
     const res = await fetch('/api/voice/incident', {

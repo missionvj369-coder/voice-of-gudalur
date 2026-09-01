@@ -1,30 +1,54 @@
-﻿import express from 'express';
+import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import axios from 'axios';
-import { GoogleGenAI } from '@google/genai';
-import multer from 'multer';
-import { createClient } from '@supabase/supabase-js';
-import webPush from 'web-push';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { spawn } from 'child_process';
-
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Lazy initialization for Gemini AI
-let geminiClient: GoogleGenAI | null = null;
-function getGeminiClient(): GoogleGenAI {
-  if (!geminiClient) {
-    geminiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-  }
-  return geminiClient;
+// ── 100% open-source AI backend (no proprietary API keys) ──────────────────
+// Chat:   any OpenAI-compatible local LLM via Ollama (MIT) — llama3.2 default.
+// Speech: self-hosted Whisper (Speaches/faster-whisper, Apache-2.0) — optional;
+//         the browser already transcribes on-device via Transformers.js.
+const OLLAMA_URL = process.env.OLLAMA_URL || 'http://127.0.0.1:11434/v1';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
+const WHISPER_URL = process.env.WHISPER_URL || ''; // e.g. http://127.0.0.1:8000/v1/audio/transcriptions
+import { createClient } from '@supabase/supabase-js';
+import webPush from 'web-push';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { spawn } from 'child_process';
+import multer from 'multer';
+
+// ── Open-source AI clients (no proprietary API keys) ────────────────────────
+interface ChatMessage { role: 'system' | 'user' | 'assistant'; content: string; }
+
+/** Chat via any OpenAI-compatible endpoint (Ollama by default, MIT license). */
+async function ollamaChat(messages: ChatMessage[], temperature = 0.7): Promise<string> {
+  const res = await axios.post(
+    `${OLLAMA_URL}/chat/completions`,
+    { model: OLLAMA_MODEL, messages, temperature, stream: false },
+    { timeout: 60000 }
+  );
+  const text = res.data?.choices?.[0]?.message?.content;
+  if (!text) throw new Error('Empty LLM response');
+  return text;
+}
+
+/** Transcription via self-hosted Whisper (Speaches / faster-whisper, Apache-2.0). */
+async function whisperTranscribe(audioBase64: string, language?: string): Promise<string> {
+  if (!WHISPER_URL) throw new Error('WHISPER_URL not configured');
+  const buffer = Buffer.from(audioBase64, 'base64');
+  const form = new FormData();
+  form.append('file', new Blob([new Uint8Array(buffer)], { type: 'audio/webm' }), 'audio.webm');
+  form.append('model', process.env.WHISPER_MODEL || 'whisper-small');
+  if (language) form.append('language', language);
+  const res = await axios.post(WHISPER_URL, form, { timeout: 120000, headers: form.getHeaders ? form.getHeaders() : undefined } as any);
+  return res.data?.text || '';
 }
 
 // In-memory cache for weather snapshot
@@ -150,16 +174,6 @@ async function startServer() {
         return res.status(400).json({ error: 'Message query is required' });
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        return res.json({
-          reply: lang === 'ta' 
-            ? 'à®•à¯‚à®Ÿà®²à¯‚à®°à¯ à®¤à®•à®µà®²à¯ à®®à¯ˆà®¯à®®à¯: à®•à¯‚à®Ÿà®²à¯‚à®°à¯ à®¨à®•à®°à®¾à®Ÿà¯à®šà®¿ à®®à®±à¯à®±à¯à®®à¯ à®¨à¯€à®²à®•à®¿à®°à®¿ à®®à®¾à®µà®Ÿà¯à®Ÿ à®…à®°à®šà¯ à®•à¯à®±à¯ˆà®¤à¯€à®°à¯à®ªà¯à®ªà¯ à®Žà®£à¯: 1100 (à®®à¯à®¤à®²à¯à®µà®°à®¿à®©à¯ à®®à¯à®•à®µà®°à®¿), à®®à®¿à®©à¯à®¤à¯à®±à¯ˆ à®‰à®¤à®µà®¿ à®Žà®£à¯: 94987 94987, à®µà®©à®¤à¯à®¤à¯à®±à¯ˆ à®…à®µà®šà®° à®Žà®£à¯: 1800 425 6100.'
-            : 'VOICE OF GUDALUR Civic Navigator: For urgent civic grievances use CM Helpline 1100, TNEB Minnal 94987 94987, and Gudalur Forest Division 1800 425 6100. Localities SS Nagar, First Mile, Kasimvayal, and Thorapalli are connected.'
-        });
-      }
-
-      const ai = getGeminiClient();
       const langContext = lang === 'ta' ? 'Tamil' : lang === 'ml' ? 'Malayalam' : 'English';
       
       const systemInstruction = `
@@ -178,18 +192,13 @@ Role:
 4. Respond in ${langContext}. Keep answers structured with bullet points where appropriate.
 `;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: message,
-        config: {
-          systemInstruction,
-          temperature: 0.7,
-        }
-      });
-
-      res.json({ reply: response.text || 'Information updated.' });
+      const reply = await ollamaChat([
+        { role: 'system', content: systemInstruction },
+        { role: 'user', content: message },
+      ]);
+      res.json({ reply: reply || 'Information updated.' });
     } catch (error: any) {
-      console.error('Gemini Server Error:', error);
+      console.error('[AI Chat] Error:', error);
       res.status(500).json({ 
         error: 'Unable to connect to AI Navigator right now.',
         fallback: 'For emergency assistance in Gudalur, please contact 108 (Ambulance), 100 (Police), or 1800 425 6100 (Forest Squad).'
@@ -260,25 +269,22 @@ Role:
         res.json({ success: true });
   });
 
-  // POST /api/voice/incident — receive audio, transcribe via Gemini, store + broadcast
+  // POST /api/voice/incident — receive audio, transcribe on-device or via Whisper, store + broadcast
   app.post('/api/voice/incident', upload.single('audio'), async (req, res) => {
     try {
-      const { type, urgency, locality, lat, lng, description, durationMs } = req.body;
-      // 1. Transcribe audio with Gemini
-      let transcript = '';
-      if (req.file) {
-        const b64 = req.file.buffer.toString('base64');
-        const ai = getGeminiClient();
-        const prompt = type === 'human-wildlife'
-          ? 'Transcribe this wildlife incident voice report. Output ONLY a JSON object: {"description":"...","animal_type":"...","location":"...","urgency":"..."}'
-          : 'Transcribe this incident voice report. Output ONLY JSON: {"description":"...","urgency":"..."}';
-        const gen = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: req.file.mimetype || 'audio/webm', data: b64 } }] }],
-          config: { temperature: 0.3, maxOutputTokens: 512 },
-        });
-        try { transcript = JSON.parse(gen.text || '{}').description || gen.text || ''; }
-        catch { transcript = gen.text || ''; }
+      const { type, urgency, locality, lat, lng, description, durationMs, transcript: clientTranscript } = req.body;
+      // 1. Transcript: browser already runs Whisper on-device (Transformers.js);
+      //    server falls back to self-hosted Whisper (Apache-2.0) only if the
+      //    client could not transcribe (old client / unsupported browser).
+      let transcript = typeof clientTranscript === 'string' && clientTranscript.trim()
+        ? clientTranscript.trim()
+        : (typeof description === 'string' ? description : '');
+      if (!transcript && req.file && WHISPER_URL) {
+        try {
+          transcript = (await whisperTranscribe(req.file.buffer.toString('base64'))).trim() || transcript;
+        } catch (err: any) {
+          console.warn('[VoiceIncident] Whisper transcription failed:', err?.message);
+        }
       }
 
       // 2. Insert into wildlife_incidents
@@ -439,7 +445,7 @@ Role:
   });
 
   // ────────────────────────────────────────────────────────────────
-  // AI TRANSCRIPTION — Gemini converts voice reports to civic text
+  // AI TRANSCRIPTION — self-hosted Whisper (Apache-2.0) converts voice reports to civic text
   // Accepts multipart/form-data `audio` OR JSON { audioUrl }
   // ────────────────────────────────────────────────────────────────
   app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
@@ -456,19 +462,14 @@ Role:
       }
       if (!b64) return res.status(400).json({ error: 'An audio file or audioUrl is required.' });
 
-      if (!process.env.GEMINI_API_KEY) {
-        // No AI key — the recording itself remains valid civic evidence.
-        return res.json({ transcript: null, note: 'AI transcription not configured.' });
+      if (!WHISPER_URL) {
+        // No server Whisper — the recording itself remains valid civic evidence.
+        // (Browsers transcribe on-device via Transformers.js before upload.)
+        return res.json({ transcript: null, note: 'Server transcription not configured.' });
       }
 
-      const ai = getGeminiClient();
-      const prompt = "You are Voice of Gudalur's civic-integrity AI. Transcribe the following voice report faithfully. Output ONLY plain text transcription, then on a final line: LOCATION: <exact place mentioned, if any>. If nothing clearly spoken, output ONLY: (no clear speech detected).";
-      const gen = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType, data: b64 } }] }],
-        config: { temperature: 0.2, maxOutputTokens: 800 },
-      });
-      res.json({ transcript: (gen.text || '').trim() || null });
+      const text = (await whisperTranscribe(b64)).trim();
+      res.json({ transcript: text || null });
     } catch (err: any) {
       console.error('[Transcribe] Error:', err?.message);
       res.status(500).json({ error: 'Transcription failed. Your voice recording on the map remains valid — you may retry AI text later.' });
