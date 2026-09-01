@@ -30,6 +30,8 @@ export const RegisterResidentModal: React.FC<Props> = ({ isOpen, onClose, onSucc
   const [issuedProfile, setIssuedProfile] = useState<UserProfile | null>(null);
   const [idCopied, setIdCopied] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  // Step-based flow: Aadhaar first, then registration form
+  const [step, setStep] = useState<'aadhaar' | 'register'>('aadhaar');
 
   /* ── Aadhaar verification (pyaadhaar) — scan the e-Aadhaar QR or enter the number ── */
   interface AadhaarResult {

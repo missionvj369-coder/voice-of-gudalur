@@ -12,10 +12,10 @@ import { CORRIDORS, HOTSPOTS } from '../../data/corridorData';
  */
 export const CorridorMap: React.FC<{ height?: string }> = ({ height = '420px' }) => {
   const gudalurCenter: [number, number] = [11.505, 76.49];
-  // Provider toggle — if a network/ad-blocker interferes with the dark tiles,
-  // one tap restores the map over OpenStreetMap's standard tiles (key-less,
-  // the same free provider used by the app's other maps).
-  const [standardTiles, setStandardTiles] = useState(false);
+  // Provider toggle — defaults to OpenStreetMap standard tiles (key-less,
+  // the same free provider used by the app's other maps). If the network
+  // supports CartoDB Dark Matter, the user can toggle via the overlay button.
+  const [standardTiles, setStandardTiles] = useState(true);
 
   return (
     <div

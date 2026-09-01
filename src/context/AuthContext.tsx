@@ -21,6 +21,10 @@ interface AuthContextType {
     pincode: string;
     lat?: number;
     lng?: number;
+    /** pyaadhaar verification result — QR-decoded or Verhoeff-checked number. */
+    aadhaarVerified?: boolean;
+    aadhaarLast4?: string;
+    aadhaarRef?: string;
   }) => Promise<UserProfile>;
   /** Login with EITHER mobile number OR Gudalur ID number (no password — either identifier alone works). */
   loginResident: (phone?: string, gudalurId?: string) => Promise<UserProfile>;

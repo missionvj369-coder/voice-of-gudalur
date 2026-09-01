@@ -2,6 +2,7 @@
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, loadEnv, type Plugin} from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 /**
  * Enterprise security headers applied to dev + preview servers.
  * HSTS / nosniff / frame-deny / referrer & permissions policy,
@@ -51,7 +52,70 @@ const securityHeaders: Record<string, string> = {
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
-    plugins: [react(), tailwindcss(), securityHeadersPlugin()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      securityHeadersPlugin(),
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+        manifest: {
+          name: 'Voice of Gudalur - Wildlife & Citizen Platform',
+          short_name: 'VOG',
+          description: 'Citizen-powered wildlife monitoring and community voice platform for Gudalur, Nilgiris',
+          theme_color: '#059669',
+          background_color: '#ffffff',
+          display: 'standalone',
+          orientation: 'portrait-primary',
+          scope: '/',
+          start_url: '/',
+          categories: ['government', 'utilities', 'lifestyle'],
+          icons: [
+            { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+            { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+            { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          ],
+          screenshots: [
+            { src: 'screenshot-wide.png', sizes: '1280x720', type: 'image/png', form_factor: 'wide' },
+            { src: 'screenshot-narrow.png', sizes: '720x1280', type: 'image/png', form_factor: 'narrow' },
+          ],
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'supabase-api-cache',
+                expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/.*\.tile\.openstreetmap\.org\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'osm-tiles-cache',
+                expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/api\.open-meteo\.com\/.*/i,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'weather-api-cache',
+                expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 12 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+          ],
+          navigateFallback: '/index.html',
+        },
+        devOptions: { enabled: false },
+      }),
+    ],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },

@@ -43,8 +43,39 @@ export const LiveGisMap: React.FC<{ userCoords?: { lat: number; lng: number } | 
 
   useEffect(() => {
     const fetchData = async () => {
-      try { const { data: sData } = await db.getAnimalSightings(100); setSightings(sData || []); } catch (e) { console.error(e); }
-      try { const { data: vData } = await db.getVoicePetitions(100); setVoices(vData || []); } catch (e) { console.error(e); }
+      try {
+        const { data: sData } = await db.getAnimalSightings(100);
+        // Map DB rows (animal_sightings schema) to the local Sighting model
+        const mapped: Sighting[] = (sData || []).map(r => ({
+          id: r.id,
+          species: (r.transcript || 'Wildlife').trim(),
+          location: r.place_name,
+          lat: r.latitude,
+          lng: r.longitude,
+          reportedBy: r.user_id || 'anonymous',
+          reportedByName: r.user_id ? 'Registered Resident' : 'Community Report',
+          reportedAt: r.sighting_time ? new Date(r.sighting_time).getTime() : Date.now(),
+          severity: 'HIGH',
+        }));
+        setSightings(mapped);
+      } catch (e) { console.error(e); }
+      try {
+        const { data: vData } = await db.getVoicePetitions({ limit: 100 });
+        // Map DB rows (voice_petitions schema) to the local VoicePetition model
+        const mappedVoices: VoicePetition[] = (vData || []).map(r => ({
+          id: r.id,
+          title: (r.transcript || r.place_name || 'Voice petition').slice(0, 80),
+          description: r.transcript || '',
+          audioUrl: r.audio_url,
+          localityName: r.place_name,
+          lat: r.latitude,
+          lng: r.longitude,
+          createdByName: r.speaker_name || 'Resident',
+          createdAt: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+          category: r.language || 'voice',
+        }));
+        setVoices(mappedVoices);
+      } catch (e) { console.error(e); }
     };
     fetchData();
     const ch1 = supabase.channel('animal_sightings').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'animal_sightings' }, fetchData).subscribe();

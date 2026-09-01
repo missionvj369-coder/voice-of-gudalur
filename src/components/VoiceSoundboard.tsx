@@ -35,7 +35,27 @@ export const VoiceSoundboard: React.FC<{ userCoords?: { lat: number; lng: number
 
   const fetchPetitions = async () => {
     setLoading(true);
-    try { const { data } = await db.getVoicePetitions(50); setPetitions(data || []); }
+    try {
+      const { data } = await db.getVoicePetitions({ limit: 50 });
+      // Map DB rows (voice_petitions schema) to the local VoicePetition model
+      const mapped: VoicePetition[] = (data || []).map(r => ({
+        id: r.id,
+        title: (r.transcript || r.place_name || 'Voice petition').slice(0, 80),
+        description: r.transcript || '',
+        audioUrl: r.audio_url,
+        localityId: '',
+        localityName: r.place_name,
+        lat: r.latitude,
+        lng: r.longitude,
+        createdBy: r.docket_id || '',
+        createdByName: r.speaker_name || 'Resident',
+        createdByGudalurId: '',
+        createdAt: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+        supportCount: 0,
+        category: r.language || 'voice',
+      }));
+      setPetitions(mapped);
+    }
     catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -62,11 +82,18 @@ export const VoiceSoundboard: React.FC<{ userCoords?: { lat: number; lng: number
     try {
       const { ext, contentType } = audioBlobMeta(currentAudioBlob.current);
       const url = await uploadToStorj('voice', currentAudioBlob.current, ext, contentType);
+      // voice_petitions schema: place_name, language, audio_url, transcript, speaker_name, latitude, longitude
+      const transcript = newDescription.trim()
+        ? `${newTitle.trim()} — ${newDescription.trim()} [${newCategory}]`
+        : `${newTitle.trim()} [${newCategory}]`;
       const { error } = await db.addVoicePetition({
-        title: newTitle.trim(), title_ta: null, description: newDescription.trim(), description_ta: null,
-        audio_url: url, locality_id: profile.localityId, locality_name: profile.localityName,
-        lat: profile.lat || 0, lng: profile.lng || 0, created_by: profile.uid,
-        created_by_name: profile.name, created_by_gudalur_id: profile.gudalurId, category: newCategory,
+        place_name: profile.localityName || newTitle.trim(),
+        language: navigator.language?.toLowerCase().startsWith('ta') ? 'ta' : 'en',
+        audio_url: url,
+        transcript,
+        speaker_name: profile.name,
+        latitude: profile.lat || 0,
+        longitude: profile.lng || 0,
       });
       if (error) throw error;
       toast.success('Published!'); setShowRecorder(false); setNewTitle(''); setNewDescription(''); currentAudioBlob.current = null; fetchPetitions();
