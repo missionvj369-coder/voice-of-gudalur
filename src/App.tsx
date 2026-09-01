@@ -19,6 +19,9 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { OfflineAlertMap } from './components/OfflineAlertMap';
 import { SMSEmergencyButton } from './components/SMSEmergencyButton';
 import { initializePeerSync } from './services/peerRelay';
+import { SignPetitionPage } from './pages/SignPetitionPage';
+import { VerifySignPage } from './pages/VerifySignPage';
+import { OfficialsPortalPage } from './pages/OfficialsPortalPage';
 import { useEffect, useState } from 'react';
 
 const AppContent: React.FC = () => {
@@ -54,6 +57,9 @@ const AppContent: React.FC = () => {
         <Route path="/voice-soundboard" element={<VoiceSoundboardPage />} />
         <Route path="/live-gis-map" element={<LiveGisMapPage />} />
           <Route path="/report-sighting" element={<NewSightingPage />} />
+          <Route path="/sign-petition" element={<SignPetitionPage />} />
+          <Route path="/verify-sign" element={<VerifySignPage />} />
+          <Route path="/officials" element={<OfficialsPortalPage />} />
 
         <Route path="*" element={<Manifesto />} />
       </Routes>

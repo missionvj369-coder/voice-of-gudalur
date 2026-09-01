@@ -47,7 +47,10 @@ async function whisperTranscribe(audioBase64: string, language?: string): Promis
   form.append('file', new Blob([new Uint8Array(buffer)], { type: 'audio/webm' }), 'audio.webm');
   form.append('model', process.env.WHISPER_MODEL || 'whisper-small');
   if (language) form.append('language', language);
-  const res = await axios.post(WHISPER_URL, form, { timeout: 120000, headers: form.getHeaders ? form.getHeaders() : undefined } as any);
+  const res = await axios.post(WHISPER_URL, form, {
+    timeout: 120000,
+    headers: (typeof (form as any).getHeaders === 'function' ? (form as any).getHeaders() : undefined) as any,
+  } as any);
   return res.data?.text || '';
 }
 

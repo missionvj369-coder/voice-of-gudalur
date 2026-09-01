@@ -1,126 +1,135 @@
-/**
- * LocationGate.tsx
- * Mandatory geolocation requirement for Voice of Gudalur.
- */
-import React, { useEffect, useState } from 'react';
-import { MapPin, ShieldCheck, BarChart, Map, Lock } from 'lucide-react';
-import { motion } from 'motion/react';
+import React, { useCallback, useEffect } from "react";
 
-const LOCATION_GRANTED_KEY = 'vog_location_granted';
+const STORAGE_KEY = "vog_location_granted";
+const COORDS_KEY = "vog_location_coords";
 
-export interface LocationGateProps {
+interface LocationGateProps {
   children: React.ReactNode;
+  onLocation?: (pos: { lat: number; lng: number }) => void;
 }
 
-export const LocationGate: React.FC<LocationGateProps> = ({ children }) => {
-  const [granted, setGranted] = useState(false);
-  const [checking, setChecking] = useState(true);
+export interface StoredCoords {
+  lat: number;
+  lng: number;
+}
 
-  useEffect(() => {
+export function getStoredCoords(): StoredCoords | null {
+  try {
+    const raw = sessionStorage.getItem(COORDS_KEY);
+    return raw ? (JSON.parse(raw) as StoredCoords) : null;
+  } catch {
+    return null;
+  }
+}
+
+export const LocationGate: React.FC<LocationGateProps> = ({
+  children,
+  onLocation,
+}) => {
+  const [status, setStatus] = React.useState<
+    "loading" | "granted" | "denied"
+  >(() => {
     try {
-      if (sessionStorage.getItem(LOCATION_GRANTED_KEY) === 'true') {
-        setGranted(true);
-        setChecking(false);
-        return;
-      }
-    } catch {}
+      return sessionStorage.getItem(STORAGE_KEY) === "true"
+        ? "granted"
+        : "loading";
+    } catch {
+      return "loading";
+    }
+  });
+  const [errorMsg, setErrorMsg] = React.useState("");
 
+  const requestLocation = useCallback(() => {
+    setStatus("loading");
+    setErrorMsg("");
     if (!navigator.geolocation) {
-      setChecking(false);
+      setErrorMsg("This browser does not support geolocation. Please use Chrome, Edge or Safari.");
+      setStatus("denied");
       return;
     }
-
     navigator.geolocation.getCurrentPosition(
-      () => {
-        setGranted(true);
-        try { sessionStorage.setItem(LOCATION_GRANTED_KEY, 'true'); } catch {}
-        setChecking(false);
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        try {
+          sessionStorage.setItem(STORAGE_KEY, "true");
+          sessionStorage.setItem(COORDS_KEY, JSON.stringify(coords));
+        } catch {
+          /* storage full/blocked — proceed */
+        }
+        onLocation?.(coords);
+        setStatus("granted");
       },
-      () => { setChecking(false); },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 },
-    );
-  }, []);
-
-  const handleRequestLocation = () => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      () => {
-        setGranted(true);
-        try { sessionStorage.setItem(LOCATION_GRANTED_KEY, 'true'); } catch {}
+      (err) => {
+        setErrorMsg(
+          err.code === err.PERMISSION_DENIED
+            ? "Location access was denied by the browser."
+            : err.message || "Unable to determine your location."
+        );
+        setStatus("denied");
       },
-      () => {},
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     );
-  };
+  }, [onLocation]);
 
-  const handleReset = () => {
-    try { sessionStorage.removeItem(LOCATION_GRANTED_KEY); } catch {}
-    setGranted(false);
-    setTimeout(handleRequestLocation, 100);
-  };
+  useEffect(() => {
+    let granted = false;
+    try {
+      granted = sessionStorage.getItem(STORAGE_KEY) === "true";
+    } catch {
+      granted = false;
+    }
+    if (!granted) {
+      requestLocation();
+    }
+  }, [requestLocation]);
 
-  if (checking) {
+  if (status === "loading") {
     return (
-      <div className="fixed inset-0 z-[200] bg-[#0f172a] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4 text-slate-300">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent"></div>
-          <span className="text-xs">Requesting precise location…</span>
+      <div className="fixed inset-0 z-[9999] bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center">
+        <div className="text-center text-white px-6">
+          <div className="h-12 w-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-5" />
+          <p className="text-base font-bold">Requesting precise location…</p>
+          <p className="text-xs text-slate-400 mt-2">
+            Voice of Gudalur needs your location for wildlife alerts &amp; petition verification.
+          </p>
         </div>
       </div>
     );
   }
 
-  if (!granted && navigator.geolocation) {
+  if (status === "denied") {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="fixed inset-0 z-[200] bg-gradient-to-b from-[#0a0e0c] via-[#0f172a] to-[#0a0e0c] flex items-center justify-center p-6"
-      >
-        <div className="max-w-md w-full space-y-6 text-center">
-          <div className="flex justify-center">
-            <MapPin className="h-14 w-14 text-amber-400 animate-pulse" />
+      <div className="fixed inset-0 z-[9999] bg-gradient-to-b from-red-50 via-orange-50 to-amber-50 flex items-center justify-center p-6 overflow-y-auto">
+        <div className="max-w-lg w-full bg-white rounded-3xl shadow-2xl border border-red-100 p-8 my-8">
+          <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center text-4xl mb-5">
+            📍
           </div>
-          <h2 className="text-2xl font-serif font-black text-white leading-tight">
-            Location Access Required
-          </h2>
-          <p className="text-slate-300 text-sm leading-relaxed">
-            Voice of Gudalur requires your precise location to show real-time wildlife
-            corridor alerts, display community voice petitions on the live conflict map,
-            and accurately verify regional signature dockets.
+          <h1 className="text-2xl font-black text-slate-900 mb-2">
+            Location is Mandatory
+          </h1>
+          <p className="text-sm text-slate-600 leading-relaxed mb-5">
+            <strong>Voice of Gudalur</strong> requires your precise location to show
+            real-time wildlife corridor alerts near you, display verified community
+            voice petitions on the live conflict map, and accurately verify regional
+            signature dockets.
           </p>
-          <div className="grid grid-cols-3 gap-2 text-center pt-2">
-            <div className="flex flex-col items-center gap-1">
-              <ShieldCheck className="h-6 w-6 text-emerald-400" />
-              <span className="text-[10px] text-slate-400">Civic integrity</span>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <BarChart className="h-6 w-6 text-amber-400" />
-              <span className="text-[10px] text-slate-400">Real-time alerts</span>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <Map className="h-6 w-6 text-blue-400" />
-              <span className="text-[10px] text-slate-400">Verified dockets</span>
-            </div>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-xs text-red-700 mb-6">
+            <span className="font-bold block mb-1">⛔ Access blocked</span>
+            {errorMsg}
           </div>
           <button
-            onClick={handleRequestLocation}
-            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-black text-sm shadow-2xl transition transform hover:scale-[1.02]"
+            onClick={requestLocation}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-sm shadow-lg hover:from-amber-500 hover:to-orange-500 transition"
           >
-            Enable Location Access
+            🔄 Allow Access &amp; Unlock the App
           </button>
-          <button
-            onClick={handleReset}
-            className="text-xs text-slate-500 hover:text-slate-400 underline underline-offset-2"
-          >
-            Location blocked? Try again
-          </button>
-          <p className="text-[10px] text-slate-500 flex items-center justify-center gap-1">
-            <Lock className="h-3 w-3" />
-            Your location is never stored or shared — it powers alerts local to you.
+          <p className="text-[11px] text-slate-400 text-center mt-4 leading-relaxed">
+            If the browser blocked permission: tap the <strong>lock 🔒 icon</strong> in
+            the address bar → <strong>Site settings</strong> → <strong>Location → Allow</strong>,
+            then press the button above.
           </p>
         </div>
-      </motion.div>
+      </div>
     );
   }
 

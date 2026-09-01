@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Mic, Map, Image } from 'lucide-react';
+import { Home, Mic, Map, Image, PenLine, ShieldCheck } from 'lucide-react';
 
 export const NavBar: React.FC = () => (
   <nav className="bg-slate-900 text-slate-100 py-2 px-4 flex items-center gap-4">
@@ -35,6 +35,22 @@ export const NavBar: React.FC = () => (
       }
     >
       <Image size={18} /> Report Sighting
+    </NavLink>
+    <NavLink
+      to="/sign-petition"
+      className={({ isActive }) =>
+        isActive ? 'flex items-center gap-1 font-bold' : 'flex items-center gap-1 hover:text-amber-300'
+      }
+    >
+      <PenLine size={18} /> Sign Petition
+    </NavLink>
+    <NavLink
+      to="/officials"
+      className={({ isActive }) =>
+        isActive ? 'flex items-center gap-1 font-bold' : 'flex items-center gap-1 hover:text-amber-300'
+      }
+    >
+      <ShieldCheck size={18} /> Officials
     </NavLink>
   </nav>
 );
