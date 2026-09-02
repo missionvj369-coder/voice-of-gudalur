@@ -16,6 +16,8 @@ export interface VoiceRecorderController {
   isRecording: boolean;
   /** Current recording duration in seconds */
   durationSec: number;
+  /** Live microphone input level 0..1 (for UI meters) */
+  level: number;
   /** The finalized blob after stop() — null until stopped */
   blob: Blob | null;
   /** Reset to initial state */
@@ -37,10 +39,14 @@ export function createVoiceRecorder(maxSeconds: number = 30): VoiceRecorderContr
   let startTime = 0;
   let timerId: ReturnType<typeof setInterval> | null = null;
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let audioCtx: AudioContext | null = null;
+  let analyser: AnalyserNode | null = null;
+  let timeData: Uint8Array | null = null;
 
   const state = {
     isRecording: false,
     durationSec: 0,
+    level: 0,
     blob: null as Blob | null,
     error: null as string | null,
   };
@@ -49,7 +55,29 @@ export function createVoiceRecorder(maxSeconds: number = 30): VoiceRecorderContr
   const notify = () => listeners.forEach((fn) => fn());
   const subscribe = (fn: () => void) => {
     listeners.add(fn);
-    return () => listeners.delete(fn);
+    return () => {
+      listeners.delete(fn);
+    };
+  };
+
+  /** Live input meter — RMS of the latest audio frame, normalised 0..1. */
+  const readLevel = (): number => {
+    if (!analyser || !timeData) return 0;
+    analyser.getByteTimeDomainData(timeData);
+    let sum = 0;
+    for (let i = 0; i < timeData.length; i++) {
+      const v = (timeData[i] - 128) / 128;
+      sum += v * v;
+    }
+    return Math.min(1, Math.sqrt(sum / timeData.length) * 2.5);
+  };
+
+  const teardownMeter = () => {
+    try { audioCtx?.close().catch(() => { /* ignore */ }); } catch { /* ignore */ }
+    audioCtx = null;
+    analyser = null;
+    timeData = null;
+    state.level = 0;
   };
 
   const cleanup = () => {
@@ -59,6 +87,7 @@ export function createVoiceRecorder(maxSeconds: number = 30): VoiceRecorderContr
       stream.getTracks().forEach((t) => t.stop());
       stream = null;
     }
+    teardownMeter();
     mediaRecorder = null;
   };
 
@@ -69,6 +98,7 @@ export function createVoiceRecorder(maxSeconds: number = 30): VoiceRecorderContr
       stream.getTracks().forEach((t) => t.stop());
       stream = null;
     }
+    teardownMeter();
     if (chunks.length > 0) {
       state.blob = new Blob(chunks, { type: 'audio/webm' });
     }
@@ -101,6 +131,18 @@ export function createVoiceRecorder(maxSeconds: number = 30): VoiceRecorderContr
       return;
     }
 
+    // Live input meter (analyser only — never connected to output, so no echo)
+    try {
+      audioCtx = new AudioContext();
+      const src = audioCtx.createMediaStreamSource(stream);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      timeData = new Uint8Array(analyser.frequencyBinCount);
+      src.connect(analyser);
+    } catch {
+      /* metering is optional — recording continues without it */
+    }
+
     // Determine supported mimeType
     let mimeType = 'audio/webm;codecs=opus';
     if (!MediaRecorder.isTypeSupported(mimeType)) {
@@ -130,6 +172,7 @@ export function createVoiceRecorder(maxSeconds: number = 30): VoiceRecorderContr
     // Update duration every 200ms
     timerId = setInterval(() => {
       state.durationSec = Math.floor((Date.now() - startTime) / 1000);
+      state.level = readLevel();
       notify();
     }, 200);
 
@@ -156,6 +199,7 @@ export function createVoiceRecorder(maxSeconds: number = 30): VoiceRecorderContr
     chunks = [];
     state.isRecording = false;
     state.durationSec = 0;
+    state.level = 0;
     state.blob = null;
     state.error = null;
     notify();
@@ -166,6 +210,7 @@ export function createVoiceRecorder(maxSeconds: number = 30): VoiceRecorderContr
     stop,
     get isRecording() { return state.isRecording; },
     get durationSec() { return state.durationSec; },
+    get level() { return state.level; },
     get blob() { return state.blob; },
     get error() { return state.error; },
     reset,

@@ -1,9 +1,15 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
-import { decodeAadhaar, type AadhaarDecodeResult as AadhaarData } from "../../lib/aadhaarDecoder";
+import {
+  decodeAadhaar,
+  verifyAadhaarSecureQr,
+  type AadhaarDecodeResult,
+  type AadhaarVerification,
+} from "../../lib/aadhaarDecoder";
+import { initUidaiVerification } from "../../lib/uidaiPublicKeys";
 import { Html5Qrcode } from "html5-qrcode";
-import { Shield, AlertCircle, CheckCircle, X } from "lucide-react";
+import { Shield, ShieldCheck, ShieldAlert, ShieldQuestion, AlertCircle, CheckCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -19,51 +25,85 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
   const visible = open !== undefined ? open : !!isOpen;
   const { registerResident } = useAuth();
   const [stage, setStage] = useState<Stage>("scanning");
-  const [aadhaar, setAadhaar] = useState<AadhaarData | null>(null);
+  const [aadhaar, setAadhaar] = useState<AadhaarDecodeResult | null>(null);
+  const [verify, setVerify] = useState<AadhaarVerification | null>(null);
   const [error, setError] = useState("");
-  const [html5QrCode, setHtml5QrCode] = useState<Html5Qrcode | null>(null);
+  const [session, setSession] = useState(0); // bump to restart the scanner
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const lastScanRef = useRef(0);
+
+  useEffect(() => {
+    initUidaiVerification();
+  }, []);
+
+  const stopScanner = useCallback(async () => {
+    const s = scannerRef.current;
+    scannerRef.current = null;
+    if (!s) return;
+    try { await s.stop(); } catch { /* already stopped */ }
+    try { s.clear(); } catch { /* ignore */ }
+  }, []);
+
+  // Scanner lifecycle — keyed to [visible, session] so "Scan Again" restarts it.
+  useEffect(() => {
+    if (!visible) {
+      stopScanner();
+      return;
+    }
+    let cancelled = false;
+    // Wait for the #qr-reader element to mount inside the animated modal.
+    const timer = setTimeout(async () => {
+      if (cancelled || scannerRef.current) return;
+      if (!document.getElementById("qr-reader")) {
+        setError("Scanner could not start. Please close and reopen this dialog.");
+        return;
+      }
+      const html5 = new Html5Qrcode("qr-reader", false);
+      scannerRef.current = html5;
+      try {
+        await html5.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1.0 },
+          async (decoded) => {
+            const now = Date.now();
+            if (now - lastScanRef.current < 1200) return; // debounce same-frame hits
+            lastScanRef.current = now;
+            const data = decodeAadhaar(decoded);
+            if (!data || !data.ok || !data.name) {
+              // Not an Aadhaar QR — keep the camera running for the next frame.
+              setError("That QR is not an Aadhaar card. Scan the QR printed on the Aadhaar card / e-Aadhaar.");
+              return;
+            }
+            setError("");
+            await stopScanner();
+            const v = await verifyAadhaarSecureQr(data);
+            setVerify(v);
+            setAadhaar(data);
+            setStage("verified");
+          },
+          () => { /* per-frame decode misses are normal — stay silent */ }
+        );
+      } catch {
+        if (!cancelled) {
+          setError("Could not access the camera. Allow camera permission in your browser, then tap Scan Again.");
+        }
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      stopScanner();
+    };
+  }, [visible, session, stopScanner]);
 
   useEffect(() => {
     if (!visible) return;
     setStage("scanning");
     setAadhaar(null);
+    setVerify(null);
     setError("");
   }, [visible]);
 
-  const startScan = useCallback(async () => {
-    if (!visible) return;
-    setError("");
-    const html5 = new Html5Qrcode("qr-reader");
-    setHtml5QrCode(html5);
-
-    try {
-      await html5.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        (decoded) => {
-          try { if (html5) html5.clear(); } catch { /* ignore */ }
-          const data = decodeAadhaar(decoded);
-          if (!data || !data.name) {
-            setError("Scanned QR is not a valid Aadhaar card.");
-            return;
-          }
-          setAadhaar(data);
-          setStage("verified");
-        },
-        () => { /* silent: scan errors are normal while initializing */ }
-      );
-    } catch {
-      setError("Could not access camera. Please allow camera permissions.");
-    }
-  }, [visible]);
-
-  useEffect(() => {
-    if (visible) {
-      startScan();
-    } else if (html5QrCode) {
-      try { html5QrCode.clear(); } catch { /* ignore */ }
-    }
-  }, [visible, startScan]);
   const handleRegister = async () => {
     if (!aadhaar) return;
     setStage("registering");
@@ -89,13 +129,16 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Registration failed. Please try again.");
       setStage("scanning");
+      setSession((s) => s + 1); // restart the camera for the retry
     }
   };
 
   const resetScan = () => {
     setAadhaar(null);
-    setStage("scanning");
+    setVerify(null);
     setError("");
+    setStage("scanning");
+    setSession((s) => s + 1);
   };
 
   if (!visible) return null;
@@ -115,7 +158,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
           className="bg-slate-900 rounded-2xl shadow-xl w-full max-w-md border border-slate-700 relative overflow-hidden"
         >
           <button
-            onClick={onClose}
+            onClick={() => { stopScanner(); onClose(); }}
             className="absolute top-3 right-3 text-slate-400 hover:text-white transition z-10"
             aria-label="Close"
           >
@@ -128,26 +171,59 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
               <div className="text-center">
                 <Shield size={32} className="text-amber-400 mx-auto mb-3" />
                 <h3 className="text-xl font-bold text-white mb-2">Register as Gudalur Resident</h3>
-                <p className="text-sm text-slate-300 mb-4">
-                  Scan your Aadhaar QR to verify your identity.
+                <p className="text-sm text-slate-300 mb-1">
+                  Scan the QR code on your Aadhaar card.
                 </p>
-                <div id="qr-reader" className="w-full mb-4 rounded-xl overflow-hidden" />
+                <p className="text-xs text-slate-400 mb-4">
+                  உங்கள் ஆதார் அட்டையில் உள்ள QR குறியீட்டை ஸ்கேன் செய்யவும்
+                </p>
+                <div id="qr-reader" data-testid="qr-reader-region" className="w-full mb-4 rounded-xl overflow-hidden bg-slate-800 min-h-[240px]" />
                 {error && (
-                  <div className="flex items-center gap-2 justify-center text-red-400 text-xs mt-2">
-                    <AlertCircle size={14} />
-                    <span>{error}</span>
+                  <div data-testid="scan-error" className="flex items-start gap-2 text-left mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                    <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+                    <span className="text-xs text-red-300">{error}</span>
                   </div>
                 )}
+                <p className="text-[11px] text-slate-500 text-center mt-3">
+                  Decoded on your device only — your Aadhaar never leaves this phone.
+                </p>
               </div>
             )}
 
             {/* Verified Stage */}
             {stage === "verified" && aadhaar && (
               <>
-                <div className="flex items-center justify-center mb-4">
+                <div className="flex items-center justify-center mb-2">
                   <CheckCircle size={40} className="text-emerald-400" />
                 </div>
-                <h3 className="text-xl font-bold text-center text-white mb-4">Aadhaar Verified</h3>
+                <h3 className="text-xl font-bold text-center text-white mb-2" data-testid="aadhaar-verified-card">Aadhaar Verified</h3>
+                <div className="flex flex-col items-center gap-1 mb-4">
+                  {verify?.integrityOk === true && (
+                    <span className="inline-flex items-center gap-1.5 text-emerald-400 text-xs font-medium">
+                      <ShieldCheck size={14} /> Integrity verified (SHA-256)
+                    </span>
+                  )}
+                  {verify?.integrityOk === false && (
+                    <span className="inline-flex items-center gap-1.5 text-red-400 text-xs font-medium">
+                      <ShieldAlert size={14} /> QR data looks corrupted — please rescan
+                    </span>
+                  )}
+                  {verify?.integrityOk == null && (
+                    <span className="inline-flex items-center gap-1.5 text-slate-400 text-xs">
+                      <ShieldQuestion size={14} /> Integrity check unavailable for this QR type
+                    </span>
+                  )}
+                  {verify?.signatureOk === true && (
+                    <span className="inline-flex items-center gap-1.5 text-emerald-400 text-xs font-medium">
+                      <ShieldCheck size={14} /> Digitally signed by UIDAI
+                    </span>
+                  )}
+                  {verify?.signatureOk === false && (
+                    <span className="inline-flex items-center gap-1.5 text-amber-400 text-xs">
+                      <ShieldAlert size={14} /> UIDAI signature key not matched (key rotation) — decoded offline
+                    </span>
+                  )}
+                </div>
                 <div className="bg-slate-800/60 rounded-xl p-4 space-y-2 mb-4">
                   <p className="text-sm">
                     <span className="text-slate-400">Name: </span>
@@ -200,7 +276,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
             {stage === "registering" && (
               <div className="text-center py-8">
                 <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-sm text-slate-300">Creating your GDR ID and registeringâ€¦</p>
+                <p className="text-sm text-slate-300">Creating your GDR ID and registering…</p>
               </div>
             )}
 

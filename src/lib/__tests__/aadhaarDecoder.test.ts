@@ -7,6 +7,8 @@ import {
   validateAadhaarNumber,
   verhoeffCheck,
   aadhaarAddress,
+  verifyAadhaarSecureQr,
+  setUidaiSpkiKeys,
   type AadhaarDecodeResult,
 } from '../aadhaarDecoder';
 
@@ -91,5 +93,84 @@ describe('decodeAadhaar', () => {
   it('handles malformed input without throwing', () => {
     const r = decodeAadhaar('not xml at all');
     expect(r.ok).toBe(false);
+  });
+});
+
+describe('Aadhaar Secure QR (v2, signed) — on-device structural decode', () => {
+  const enc = new TextEncoder();
+  const u16 = (n: number) => new Uint8Array([(n >> 8) & 0xff, n & 0xff]);
+  const str = (s: string) => {
+    const b = enc.encode(s);
+    const out = new Uint8Array(2 + b.length);
+    out.set(u16(b.length), 0);
+    out.set(b, 2);
+    return out;
+  };
+  const concat = (...parts: Uint8Array[]) => {
+    const len = parts.reduce((a, p) => a + p.length, 0);
+    const out = new Uint8Array(len);
+    let o = 0;
+    for (const p of parts) { out.set(p, o); o += p.length; }
+    return out;
+  };
+
+  /** Build the full decimal Secure QR string (unsigned → signature can't verify). */
+  async function buildSecureQrString(opts?: { refId?: number; corruptHash?: boolean }): Promise<string> {
+    const refId = opts?.refId ?? 0x1234;
+    const fields = concat(
+      new Uint8Array([2, 0]), // version=2, emailMobileStatus=0
+      u16(refId),
+      str('SARAVANA KUMAR'),
+      str('01-01-1990'),
+      str('M'),
+      str('S/O MURUGAN'),
+      str('12, temple street, near bus stand, GUDALUR, GUDALUR PO, GUDALUR, THE NILGIRIS, TAMIL NADU, 643212'),
+      str('4321'), // share code
+    );
+    const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', fields));
+    if (opts?.corruptHash) digest[0] ^= 0xff;
+    const sig = new Uint8Array(256).fill(0xab); // fake signature — we lack UIDAI's private key
+    const all = new Uint8Array(fields.length + 32 + 256);
+    all.set(fields, 0);
+    all.set(digest, fields.length);
+    all.set(sig, fields.length + 32);
+    let hex = '';
+    for (const b of all) hex += b.toString(16).padStart(2, '0');
+    return BigInt('0x' + hex).toString();
+  }
+
+  it('decodes the modern pure-digit Secure QR (mAadhaar / e-Aadhaar style)', async () => {
+    const qr = await buildSecureQrString();
+    expect(qr).toMatch(/^\d{400,}$/); // pure numeric, long
+    const r = decodeAadhaar(qr);
+    expect(r.ok).toBe(true);
+    expect(r.name).toBe('SARAVANA KUMAR');
+    expect(r.last4).toBe('1234'); // from reference id 0x1234
+    expect(r.state).toBe('TAMIL NADU');
+    expect(r.pc).toBe('643212');
+  });
+
+  it('detects tampering via the embedded SHA-256 integrity hash', async () => {
+    const good = await buildSecureQrString();
+    const bad = await buildSecureQrString({ corruptHash: true });
+    const vGood = await verifyAadhaarSecureQr(decodeAadhaar(good));
+    const vBad = await verifyAadhaarSecureQr(decodeAadhaar(bad));
+    expect(vGood.integrityOk).toBe(true);
+    expect(vBad.integrityOk).toBe(false);
+    // Without UIDAI keys registered, the signature check is unavailable (null).
+    expect(vGood.signatureOk).toBeNull();
+  });
+
+  it('rejects short numeric strings and non-numeric garbage', () => {
+    expect(decodeAadhaar('12345')).toEqual(expect.objectContaining({ ok: false }));
+    expect(decodeAadhaar('<foo/>')).toEqual(expect.objectContaining({ ok: false }));
+  });
+});
+
+describe('UIDAI public key registry', () => {
+  it('accepts registered SPKI keys and filters junk entries', () => {
+    expect(() =>
+      setUidaiSpkiKeys(['short', 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A' + 'A'.repeat(300)]),
+    ).not.toThrow();
   });
 });

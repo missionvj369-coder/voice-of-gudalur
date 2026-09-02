@@ -154,8 +154,8 @@ export const VoiceReporter: React.FC<VoiceReporterProps> = ({
               {showRecorder ? (
                 <VoiceRecorder
                   maxSeconds={30}
-                  onSave={(blob) => {
-                    setAudio({ blob, durationMs: 0 });
+                  onSave={(blob, durationMs) => {
+                    setAudio({ blob, durationMs: durationMs || 0 });
                     setShowRecorder(false);
                     setStep('confirm');
                   }}
