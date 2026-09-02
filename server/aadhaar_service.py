@@ -26,15 +26,15 @@ import re
 
 VERHOEFF_D = [
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-    [1, 2, 3, 4, 0, 5, 6, 7, 8, 9],
-    [2, 3, 4, 0, 1, 6, 7, 8, 9, 5],
-    [3, 4, 0, 1, 2, 7, 8, 9, 5, 6],
-    [4, 0, 1, 2, 3, 8, 9, 5, 6, 7],
+    [1, 2, 3, 4, 0, 6, 7, 8, 9, 5],
+    [2, 3, 4, 0, 1, 7, 8, 9, 5, 6],
+    [3, 4, 0, 1, 2, 8, 9, 5, 6, 7],
+    [4, 0, 1, 2, 3, 9, 5, 6, 7, 8],
     [5, 9, 8, 7, 6, 0, 4, 3, 2, 1],
-    [6, 0, 7, 8, 9, 1, 2, 3, 4, 5],
-    [7, 8, 9, 5, 6, 1, 2, 3, 4, 0],
-    [8, 9, 5, 6, 7, 2, 3, 4, 0, 1],
-    [9, 5, 6, 7, 8, 3, 4, 0, 1, 2],
+    [6, 5, 9, 8, 7, 1, 0, 4, 3, 2],
+    [7, 6, 5, 9, 8, 2, 1, 0, 4, 3],
+    [8, 7, 6, 5, 9, 3, 2, 1, 0, 4],
+    [9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
 ]
 VERHOEFF_P = [
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -87,9 +87,22 @@ def verify_qr(raw: str) -> None:
         decoded = None
         source = None
         try:
-            obj = AadhaarSecureQr(data)
+            # pyaadhaar's Secure-QR constructor needs the payload as an INT
+            # (it calls .to_bytes() internally); passing a str always fails.
+            obj = AadhaarSecureQr(int(data))
             decoded = obj.decodeddata()
             source = "secure-qr"
+        except (ValueError, TypeError):
+            # Not a numeric payload — can only be the old XML-format QR.
+            try:
+                obj = AadhaarOldQr(data)
+                decoded = obj.decodeddata()
+                source = "old-qr"
+            except Exception as inner:
+                respond({"verified": False,
+                         "error": "Not a decodable Aadhaar QR. Scan the Secure QR printed on e-Aadhaar.",
+                         "detail": str(inner)[:200]})
+                return
         except Exception:
             try:
                 obj = AadhaarOldQr(data)
@@ -106,7 +119,13 @@ def verify_qr(raw: str) -> None:
             return
 
         # Masked identity — last 4 digits only, never the full number.
-        last4 = decoded.get("adhaar_last_4_digit") or decoded.get("adhaar_last_digit")
+        # pyaadhaar uses "aadhaar_*" spelling; older data may use "adhaar_*".
+        last4 = (
+            decoded.get("aadhaar_last_4_digit")
+            or decoded.get("adhaar_last_4_digit")
+            or decoded.get("aadhaar_last_digit")
+            or decoded.get("adhaar_last_digit")
+        )
         if not last4 and decoded.get("uid"):
             last4 = str(decoded["uid"])[-4:]
         if not last4:

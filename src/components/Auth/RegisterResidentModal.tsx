@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import {
-  decodeAadhaar,
+  decodeAadhaarAsync,
   looksLikeAadhaarSecureQr,
   verifyAadhaarSecureQr,
   type AadhaarDecodeResult,
@@ -88,6 +88,56 @@ function classifyCameraError(e: unknown): CameraHelp {
   };
 }
 
+type PhotoBitmap = ImageBitmap | HTMLImageElement;
+
+/** Decode an uploaded image to a drawable bitmap (ImageBitmap, legacy fallback). */
+async function loadPhotoBitmap(file: File): Promise<PhotoBitmap> {
+  if (typeof createImageBitmap === "function") {
+    try { return await createImageBitmap(file); } catch { /* older browsers */ }
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    await new Promise<void>((res, rej) => {
+      img.onload = () => res();
+      img.onerror = () => rej(new Error("Unsupported image"));
+      img.src = url;
+    });
+    return img;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/**
+ * Zoom ladder for photo scanning. Aadhaar secure QRs are Version-25 codes
+ * (~129 modules per side) — a phone photo only resolves at the right pixel
+ * scale, so we try the original size, then step down (or up for thumbnails).
+ */
+function photoScalePlan(w: number, h: number): number[] {
+  const longest = Math.max(w, h);
+  const plan = [longest, 2200, 1600, 1200, 900, 640];
+  if (longest < 700) plan.unshift(longest * 2);
+  return [...new Set(plan.filter((s) => s >= 320))].sort((a, b) => b - a);
+}
+
+async function renderScaledJpeg(src: PhotoBitmap, maxSide: number): Promise<Blob> {
+  const sw = "naturalWidth" in src ? src.naturalWidth : src.width;
+  const sh = "naturalHeight" in src ? src.naturalHeight : src.height;
+  const scale = Math.min(1, maxSide / Math.max(sw, sh));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(sw * scale));
+  canvas.height = Math.max(1, Math.round(sh * scale));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas unavailable");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+  return new Promise<Blob>((res, rej) =>
+    canvas.toBlob((b) => (b ? res(b) : rej(new Error("Image encode failed"))), "image/jpeg", 0.92),
+  );
+}
+
 export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, onSuccess }) => {
   const visible = open !== undefined ? open : !!isOpen;
   const { registerResident } = useAuth();
@@ -122,7 +172,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       const now = Date.now();
       if (now - lastScanRef.current < 1200) return; // debounce same-frame hits
       lastScanRef.current = now;
-      const data = decodeAadhaar(decoded);
+      const data = await decodeAadhaarAsync(decoded);
       if (!data || !data.ok || !data.name) {
         // Keep the camera running for the next frame. If the payload at
         // least looks like an Aadhaar secure QR, the capture worked and the
@@ -171,41 +221,50 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
     });
     scannerRef.current = html5;
-    try {
-      await html5.start(
-        {
-          facingMode: "environment",
-          // Aadhaar secure QRs are Version-25 codes (~129 modules/side): the
-          // denser payload needs a high-resolution stream or it can never be
-          // resolved. Ask for 1080p and let the browser pick the best offered.
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-        {
-          fps: 10,
-          // A fixed small qrbox crops the frame below the resolvable
-          // threshold for dense QRs — use ~85% of the viewfinder instead
-          // (min 280px so tiny streams still get enough px per module).
-          qrbox: (vw: number, vh: number) => {
-            const side = Math.max(280, Math.min(Math.floor(vw * 0.85), Math.floor(vh * 0.85)));
-            return { width: side, height: side };
+    // Aadhaar secure QRs are Version-25 codes (~129 modules/side): ask for
+    // 1080p first, then progressively looser constraints — some cameras
+    // (webcams, virtual drivers) reject strict sizes outright.
+    const fallbackConstraints: MediaTrackConstraints = {};
+    const constraintChain: Parameters<Html5Qrcode["start"]>[0][] = [
+      { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+      { facingMode: { ideal: "environment" } },
+      fallbackConstraints,
+    ];
+    let lastError: unknown = null;
+    for (const constraints of constraintChain) {
+      try {
+        await html5.start(
+          constraints,
+          {
+            fps: 10,
+            // A fixed small qrbox crops the frame below the resolvable
+            // threshold for dense QRs — use ~85% of the viewfinder instead
+            // (min 280px so tiny streams still get enough px per module).
+            qrbox: (vw: number, vh: number) => {
+              const side = Math.max(280, Math.min(Math.floor(vw * 0.85), Math.floor(vh * 0.85)));
+              return { width: side, height: side };
+            },
           },
-        },
-        (decoded) => {
-          void handleDecoded(decoded);
-        },
-        () => { /* per-frame decode misses are normal — stay silent */ }
-      );
-      setCamState("running");
-    } catch (e: unknown) {
-      scannerRef.current = null;
-      try { html5.clear(); } catch { /* ignore */ }
-      setCamState("idle");
-      setErrHelp(classifyCameraError(e));
+          (decoded) => {
+            void handleDecoded(decoded);
+          },
+          () => { /* per-frame decode misses are normal — stay silent */ }
+        );
+        setCamState("running");
+        return;
+      } catch (e: unknown) {
+        lastError = e;
+        try { await html5.stop(); } catch { /* never started */ }
+        try { html5.clear(); } catch { /* ignore */ }
+      }
     }
+    scannerRef.current = null;
+    try { html5.clear(); } catch { /* ignore */ }
+    setCamState("idle");
+    setErrHelp(classifyCameraError(lastError));
   }, [camState, handleDecoded]);
 
-  /** Native camera / gallery path — no web camera permission involved at all. */
+  /** Gallery / file-picker path — no web camera permission involved at all. */
   const decodePhoto = useCallback(
     async (file: File) => {
       setError("");
@@ -216,16 +275,43 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
         if (!document.getElementById("qr-reader")) {
           await new Promise((r) => setTimeout(r, 80));
         }
-        inst = new Html5Qrcode("qr-reader", { verbose: false });
-        const text = await inst.scanFile(file, false);
-        try { inst.clear(); } catch { /* ignore */ }
-        inst = null;
+        inst = new Html5Qrcode("qr-reader", {
+          verbose: false,
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        });
+
+        // Strategy 1 — decode the photo exactly as provided.
+        let text: string | null = null;
+        try {
+          text = await inst.scanFile(file, false);
+        } catch { text = null; }
+
+        // Strategy 2 — re-encode the photo at several zoom levels until the
+        // dense Version-25 Aadhaar QR resolves at the right pixel scale.
+        if (!text) {
+          try {
+            const bitmap = await loadPhotoBitmap(file);
+            for (const maxSide of photoScalePlan(bitmap.width, bitmap.height)) {
+              const blob = await renderScaledJpeg(bitmap, maxSide);
+              try {
+                text = await inst.scanFile(
+                  new File([blob], "frame.jpg", { type: "image/jpeg" }),
+                  false,
+                );
+              } catch { text = null; }
+              if (text) break;
+            }
+          } catch { /* undecodable image — fall through to the hint below */ }
+        }
+
+        if (!text) {
+          setError(
+            "Couldn't read a QR in that photo. Retake it with the QR filling the frame, sharp and well-lit — no glare. Tip: “Open Camera & Scan” focuses for you."
+          );
+          return;
+        }
         lastScanRef.current = 0; // photos must never be debounced
         await handleDecoded(text);
-      } catch {
-        setError(
-          "Couldn't read a QR in that photo. Retake it with the QR filling the frame, sharp and well-lit — no glare."
-        );
       } finally {
         if (inst) {
           try { inst.clear(); } catch { /* ignore */ }
@@ -398,7 +484,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                     className="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-sm active:scale-[0.99] transition disabled:opacity-40 disabled:cursor-not-allowed"
                     data-testid="photo-scan-button"
                   >
-                    🖼️ {photoBusy ? "Reading photo…" : "Scan from Photo (no permission needed)"}
+                    🖼️ {photoBusy ? "Scanning photo…" : "Scan from Photo — upload from gallery"}
                   </button>
                 </div>
 
@@ -428,7 +514,6 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                   ref={photoRef}
                   type="file"
                   accept="image/*"
-                  capture="environment"
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];

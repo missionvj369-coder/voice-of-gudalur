@@ -4,6 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   decodeAadhaar,
+  decodeAadhaarAsync,
   validateAadhaarNumber,
   verhoeffCheck,
   aadhaarAddress,
@@ -164,6 +165,71 @@ describe('Aadhaar Secure QR (v2, signed) — on-device structural decode', () =>
   it('rejects short numeric strings and non-numeric garbage', () => {
     expect(decodeAadhaar('12345')).toEqual(expect.objectContaining({ ok: false }));
     expect(decodeAadhaar('<foo/>')).toEqual(expect.objectContaining({ ok: false }));
+  });
+});
+
+describe('decodeAadhaarAsync — 2022 gzip “V2” e-Aadhaar QR', () => {
+  /**
+   * Current e-Aadhaar cards print a gzip-compressed, 0xFF-delimited V2 QR
+   * (the layout pyaadhaar parses). Build one synthetically: fields →
+   * 0xFF separators → photo/signature placeholders → gzip → decimal string.
+   */
+  async function buildGzipV2Qr(fields: string[]): Promise<string> {
+    const bytes: number[] = [];
+    for (const f of fields) {
+      for (let i = 0; i < f.length; i++) bytes.push(f.charCodeAt(i) & 0xff);
+      bytes.push(255);
+    }
+    // Real cards embed a ~3-5 KB JPEG photo — incompressible. Use a seeded
+    // PRNG so the gzip output (and thus the decimal string) has realistic
+    // length instead of collapsing into a short run of zeros.
+    let seed = 123456789;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff);
+    for (let i = 0; i < 2048; i++) bytes.push(rnd() & 0xff); // photo placeholder
+    for (let i = 0; i < 256; i++) bytes.push(0); // signature placeholder
+    const cs = new CompressionStream('gzip');
+    const buf = await new Response(
+      new Blob([new Uint8Array(bytes)]).stream().pipeThrough(cs),
+    ).arrayBuffer();
+    let hex = '';
+    for (const b of new Uint8Array(buf)) hex += b.toString(16).padStart(2, '0');
+    return BigInt('0x' + hex).toString();
+  }
+
+  const v2Fields = [
+    'V2', '0', '1234', 'GUDALUR TEST', '01/01/1990', 'M', 'S/O PARENT',
+    'THE NILGIRIS', 'NEAR BUS STAND', '12 TEMPLE STREET', 'GUDALUR TOWN',
+    '643212', 'GUDALUR PO', 'TAMIL NADU', 'MAIN STREET', 'GUDALUR', 'GUDALUR',
+    '9876',
+  ];
+
+  it('decodes the 2022 gzip-compressed V2 format that current cards print', async () => {
+    const qr = await buildGzipV2Qr(v2Fields);
+    expect(qr).toMatch(/^\d{400,}$/); // pure numeric, long
+    const r = await decodeAadhaarAsync(qr);
+    expect(r.ok).toBe(true);
+    expect(r.name).toBe('GUDALUR TEST');
+    expect(r.last4).toBe('1234'); // referenceId → masked last-4 only
+    expect(r.yob).toBe('1990');
+    expect(r.vtc).toBe('GUDALUR');
+    expect(r.dist).toBe('THE NILGIRIS');
+    expect(r.state).toBe('TAMIL NADU');
+    expect(r.pc).toBe('643212');
+  });
+
+  it('still decodes legacy XML payloads through the async path', async () => {
+    const xml = `<PrintLetterBarcodeData uid="473401559304" name="RAHUL" gender="M" yob="1992" pc="643211"/>`;
+    const r = await decodeAadhaar(xml);
+    expect(r.ok).toBe(true);
+    expect(r.name).toBe('RAHUL');
+    expect(r.last4).toBe('9304');
+  });
+
+  it('rejects an undecodable numeric payload with a clear error', async () => {
+    const junk = '9' + '2'.repeat(500);
+    const r = await decodeAadhaarAsync(junk);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Secure QR/i);
   });
 });
 

@@ -252,6 +252,108 @@ export function decodeAadhaar(value: string): AadhaarDecodeResult {
   }
 }
 
+/* ========= 2022 “V2” e-Aadhaar QR — gzip-compressed, 0xFF-delimited ========= */
+/**
+ * Current e-Aadhaar PDFs and printed cards pack the Secure QR as:
+ * 0xFF-delimited fields → gzip → one big integer (decimal). This is the same
+ * layout the pyaadhaar reference implementation parses. Field order (V2):
+ *   version "V2" | emailMobileStatus | referenceId | name | dob | gender |
+ *   careOf | district | landmark | house | location | pincode | postOffice |
+ *   state | street | subdistrict | vtc | last4OfMobile  (+ photo + RSA sig)
+ * v1 payloads are identical minus the version and last4OfMobile fields.
+ */
+const GZIP_V2_FIELDS = [
+  "version", "emailMobileStatus", "referenceid", "name", "dob", "gender",
+  "careof", "district", "landmark", "house", "location", "pincode",
+  "postoffice", "state", "street", "subdistrict", "vtc", "last4mobile",
+];
+const GZIP_V1_FIELDS = GZIP_V2_FIELDS.slice(1, -1);
+
+/** gzip (0x1f 0x8b) → raw bytes via the native DecompressionStream. */
+async function gunzipBytes(bytes: Uint8Array): Promise<Uint8Array | null> {
+  const DS = (
+    globalThis as unknown as { DecompressionStream?: typeof DecompressionStream }
+  ).DecompressionStream;
+  if (!DS || bytes.length < 2 || bytes[0] !== 0x1f || bytes[1] !== 0x8b) return null;
+  try {
+    const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DS("gzip"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+/** ISO-8859-1 decode of a byte range (UIDAI packs these fields as latin-1). */
+function latin1(bytes: Uint8Array, from: number, to: number): string {
+  let out = "";
+  const CH = 4096;
+  for (let i = from; i < to; i += CH) {
+    out += String.fromCharCode(...bytes.subarray(i, Math.min(i + CH, to)));
+  }
+  return out;
+}
+
+function parseGzipV2Fields(arr: Uint8Array): AadhaarDecodeResult | null {
+  try {
+    const isV2 = arr.length > 1 && arr[0] === 0x56 && arr[1] === 0x32; // "V2"
+    const names = isV2 ? GZIP_V2_FIELDS : GZIP_V1_FIELDS;
+    // Every field is terminated by a 0xFF byte; collect exactly N delimiters
+    // (trailing photo/signature bytes may contain 0xFF — ignore them).
+    const delims: number[] = [];
+    for (let i = 0; i < arr.length && delims.length < names.length; i++) {
+      if (arr[i] === 0xff) delims.push(i);
+    }
+    if (delims.length < names.length) return null;
+    const get = (i: number) => latin1(arr, i === 0 ? 0 : delims[i - 1] + 1, delims[i]).trim();
+    const f: Record<string, string> = {};
+    names.forEach((n, i) => { f[n] = get(i); });
+    const name = f.name;
+    if (!name) return null;
+    const genderRaw = f.gender ?? "";
+    const loc = [f.landmark, f.location].filter(Boolean).join(", ") || undefined;
+    const refid = f.referenceid ?? "";
+    return {
+      ok: true,
+      name,
+      gender: genderRaw === "M" ? "Male" : genderRaw === "F" ? "Female" : genderRaw || undefined,
+      yob: f.dob && f.dob.length >= 4 ? f.dob.slice(-4) : undefined,
+      co: f.careof || undefined,
+      house: f.house || undefined,
+      street: f.street || undefined,
+      loc,
+      vtc: f.vtc || undefined,
+      po: f.postoffice || undefined,
+      dist: f.district || undefined,
+      state: f.state || undefined,
+      pc: /^\d{6}$/.test(f.pincode ?? "") ? f.pincode : undefined,
+      referenceId: refid || undefined,
+      last4: refid.slice(0, 4) || undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Async master decoder — understands every real-world Aadhaar QR variant:
+ * 1. legacy XML (pre-2019 cards), 2. TLV Secure QR (mAadhaar offline eKYC),
+ * 3. 2022 gzip-compressed V2 (what current e-Aadhaar cards print).
+ */
+export async function decodeAadhaarAsync(value: string): Promise<AadhaarDecodeResult> {
+  const trimmed = (value ?? "").trim();
+  if (looksLikeSecureQr(trimmed)) {
+    const tlv = decodeAadhaarSecureQr(trimmed);
+    if (tlv) return tlv;
+    try {
+      const gz = await gunzipBytes(decimalToBytes(trimmed));
+      const parsed = gz ? parseGzipV2Fields(gz) : null;
+      if (parsed) return { ...parsed, raw: trimmed };
+    } catch { /* fall through to the generic failure */ }
+    return { ok: false, error: "UIDAI Secure QR detected but could not be decoded" };
+  }
+  return decodeAadhaar(trimmed);
+}
+
 /** 12-digit number check: Verhoeff + last4 extraction. No PII leaves device. */
 export function validateAadhaarNumber(number: string): AadhaarDecodeResult {
   const digits = number.replace(/\D/g, "");
