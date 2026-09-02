@@ -22,6 +22,72 @@ interface Props {
 
 type Stage = "scanning" | "verified" | "registering" | "done";
 
+interface CameraHelp {
+  title: string;
+  steps: string[];
+}
+
+const isMobileDevice = (): boolean =>
+  /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+
+/** Turn a getUserMedia / Html5Qrcode start failure into human recovery steps. */
+function classifyCameraError(e: unknown): CameraHelp {
+  const raw =
+    typeof e === "string"
+      ? e
+      : e instanceof Error
+        ? e.message
+        : e && typeof e === "object" && "name" in e
+          ? String((e as { name?: unknown }).name)
+          : "";
+  const blob = raw.toLowerCase();
+  if (blob.includes("notallowed") || blob.includes("permission")) {
+    return isMobileDevice()
+      ? {
+          title: "Camera is blocked for this site — two taps to fix",
+          steps: [
+            "Android Chrome: tap ⋮ (or the 🔒/ⓘ icon) beside the address bar → Permissions → Camera → Allow.",
+            "iPhone Safari: tap aA in the address bar → Site Settings → Camera → Allow.",
+            "Then tap “Open Camera & Scan” again — or use “Scan from Photo”, which needs no permission.",
+          ],
+        }
+      : {
+          title: "Camera is blocked for this site",
+          steps: [
+            "Click the 🔒/ⓘ icon in the address bar → Site settings → Camera → Allow.",
+            "Refresh the page, then tap “Open Camera & Scan” again — or use “Scan from Photo”.",
+          ],
+        };
+  }
+  if (blob.includes("notfound") || blob.includes("nocamera")) {
+    return {
+      title: "No camera found on this device",
+      steps: ["Use “Scan from Photo” below — it works without any camera permission."],
+    };
+  }
+  if (blob.includes("notreadable") || blob.includes("in use") || blob.includes("track start")) {
+    return {
+      title: "The camera is busy",
+      steps: [
+        "Close other apps or tabs using the camera (video calls, other scanner tabs), then try again.",
+      ],
+    };
+  }
+  if (typeof window !== "undefined" && !window.isSecureContext) {
+    return {
+      title: "Camera needs a secure (https) connection",
+      steps: ["Open the site over https — or just use “Scan from Photo”, which always works."],
+    };
+  }
+  return {
+    title: "Couldn't open the camera",
+    steps: [
+      "Tap “Open Camera & Scan” once more — phones sometimes need a second tap.",
+      "Or skip the camera entirely with “Scan from Photo”.",
+    ],
+  };
+}
+
 export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, onSuccess }) => {
   const visible = open !== undefined ? open : !!isOpen;
   const { registerResident } = useAuth();
@@ -31,9 +97,12 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
   const [error, setError] = useState("");
   const [phone, setPhone] = useState(""); // secure QRs carry no phone — collected here
   const [gdrId, setGdrId] = useState(""); // auto-issued ID, shown on the Done screen
-  const [session, setSession] = useState(0); // bump to restart the scanner
+  const [camState, setCamState] = useState<"idle" | "starting" | "running">("idle");
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [errHelp, setErrHelp] = useState<CameraHelp | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const lastScanRef = useRef(0);
+  const photoRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     initUidaiVerification();
@@ -47,89 +116,156 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
     try { s.clear(); } catch { /* ignore */ }
   }, []);
 
-  // Scanner lifecycle — keyed to [visible, session] so "Scan Again" restarts it.
-  useEffect(() => {
-    if (!visible) {
-      stopScanner();
-      return;
-    }
-    let cancelled = false;
-    // Wait for the #qr-reader element to mount inside the animated modal.
-    const timer = setTimeout(async () => {
-      if (cancelled || scannerRef.current) return;
-      if (!document.getElementById("qr-reader")) {
-        setError("Scanner could not start. Please close and reopen this dialog.");
+  /** Shared success path for camera frames AND scanned photos. */
+  const handleDecoded = useCallback(
+    async (decoded: string) => {
+      const now = Date.now();
+      if (now - lastScanRef.current < 1200) return; // debounce same-frame hits
+      lastScanRef.current = now;
+      const data = decodeAadhaar(decoded);
+      if (!data || !data.ok || !data.name) {
+        // Keep the camera running for the next frame. If the payload at
+        // least looks like an Aadhaar secure QR, the capture worked and the
+        // read was noisy — guide the user instead of confusing them.
+        setError(
+          looksLikeAadhaarSecureQr(decoded)
+            ? "Aadhaar QR detected but read unclearly. Hold steadier, get 10-15 cm closer, avoid glare — or use “Scan from Photo”."
+            : "That QR is not an Aadhaar card. Scan the QR printed on the Aadhaar card / e-Aadhaar."
+        );
         return;
       }
-      const html5 = new Html5Qrcode("qr-reader", {
-        verbose: false,
-        // Native BarcodeDetector (Chrome/Android) is dramatically faster and
-        // more reliable on dense Version-25 codes than the JS fallback.
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-      });
-      scannerRef.current = html5;
+      setError("");
+      setErrHelp(null);
+      await stopScanner();
+      setCamState("idle");
+      const v = await verifyAadhaarSecureQr(data);
+      setVerify(v);
+      // Legacy XML QRs may carry a phone — prefill. Modern secure QRs
+      // never do; the user types it on the Verified screen.
+      setPhone(data.phone || "");
+      setAadhaar(data);
+      setStage("verified");
+    },
+    [stopScanner]
+  );
+
+  /**
+   * Started DIRECTLY from the button tap so the browser ties its native
+   * "Allow camera?" prompt to a real user gesture (mandatory on iOS, and it
+   * makes the Allow decision a single obvious tap on Android).
+   */
+  const openCamera = useCallback(async () => {
+    if (scannerRef.current || camState !== "idle") return;
+    setError("");
+    setErrHelp(null);
+    if (!document.getElementById("qr-reader")) {
+      await new Promise((r) => setTimeout(r, 80)); // let the stage mount
+      if (!document.getElementById("qr-reader")) return;
+    }
+    setCamState("starting");
+    const html5 = new Html5Qrcode("qr-reader", {
+      verbose: false,
+      // Native BarcodeDetector (Chrome/Android) is dramatically faster and
+      // more reliable on dense Version-25 codes than the JS fallback.
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+      formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+    });
+    scannerRef.current = html5;
+    try {
+      await html5.start(
+        {
+          facingMode: "environment",
+          // Aadhaar secure QRs are Version-25 codes (~129 modules/side): the
+          // denser payload needs a high-resolution stream or it can never be
+          // resolved. Ask for 1080p and let the browser pick the best offered.
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        {
+          fps: 10,
+          // A fixed small qrbox crops the frame below the resolvable
+          // threshold for dense QRs — use ~85% of the viewfinder instead
+          // (min 280px so tiny streams still get enough px per module).
+          qrbox: (vw: number, vh: number) => {
+            const side = Math.max(280, Math.min(Math.floor(vw * 0.85), Math.floor(vh * 0.85)));
+            return { width: side, height: side };
+          },
+        },
+        (decoded) => {
+          void handleDecoded(decoded);
+        },
+        () => { /* per-frame decode misses are normal — stay silent */ }
+      );
+      setCamState("running");
+    } catch (e: unknown) {
+      scannerRef.current = null;
+      try { html5.clear(); } catch { /* ignore */ }
+      setCamState("idle");
+      setErrHelp(classifyCameraError(e));
+    }
+  }, [camState, handleDecoded]);
+
+  /** Native camera / gallery path — no web camera permission involved at all. */
+  const decodePhoto = useCallback(
+    async (file: File) => {
+      setError("");
+      setErrHelp(null);
+      setPhotoBusy(true);
+      let inst: Html5Qrcode | null = null;
       try {
-        await html5.start(
-          {
-            facingMode: "environment",
-            // Aadhaar secure QRs are Version-25 codes (~129 modules/side): the
-            // denser payload needs a high-resolution stream or it can never be
-            // resolved. Ask for 1080p and let the browser pick the best offered.
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          },
-          {
-            fps: 10,
-            // A fixed small qrbox crops the frame down below the resolvable
-            // threshold for dense QRs — use ~85% of the viewfinder instead
-            // (min 280px so tiny streams still get enough px per module).
-            qrbox: (vw: number, vh: number) => {
-              const side = Math.max(280, Math.min(Math.floor(vw * 0.85), Math.floor(vh * 0.85)));
-              return { width: side, height: side };
-            },
-          },
-          async (decoded) => {
-            const now = Date.now();
-            if (now - lastScanRef.current < 1200) return; // debounce same-frame hits
-            lastScanRef.current = now;
-            const data = decodeAadhaar(decoded);
-            if (!data || !data.ok || !data.name) {
-              // Keep the camera running for the next frame. If the payload at
-              // least looks like an Aadhaar secure QR, the scan optics worked
-              // and the read was noisy — guide the user instead of confusing
-              // them with "not an Aadhaar card".
-              setError(
-                looksLikeAadhaarSecureQr(decoded)
-                  ? "Aadhaar QR detected but read unclearly. Hold the phone steadier, move 10-15 cm closer and avoid glare."
-                  : "That QR is not an Aadhaar card. Scan the QR printed on the Aadhaar card / e-Aadhaar."
-              );
-              return;
-            }
-            setError("");
-            await stopScanner();
-            const v = await verifyAadhaarSecureQr(data);
-            setVerify(v);
-            // Legacy XML QRs may carry a phone — prefill. Modern secure QRs
-            // never do; the user types it on the Verified screen.
-            setPhone(data.phone || "");
-            setAadhaar(data);
-            setStage("verified");
-          },
-          () => { /* per-frame decode misses are normal — stay silent */ }
-        );
-      } catch {
-        if (!cancelled) {
-          setError("Could not access the camera. Allow camera permission in your browser, then tap Scan Again.");
+        if (!document.getElementById("qr-reader")) {
+          await new Promise((r) => setTimeout(r, 80));
         }
+        inst = new Html5Qrcode("qr-reader", { verbose: false });
+        const text = await inst.scanFile(file, false);
+        try { inst.clear(); } catch { /* ignore */ }
+        inst = null;
+        lastScanRef.current = 0; // photos must never be debounced
+        await handleDecoded(text);
+      } catch {
+        setError(
+          "Couldn't read a QR in that photo. Retake it with the QR filling the frame, sharp and well-lit — no glare."
+        );
+      } finally {
+        if (inst) {
+          try { inst.clear(); } catch { /* ignore */ }
+        }
+        setPhotoBusy(false);
       }
-    }, 300);
+    },
+    [handleDecoded]
+  );
+
+  // When permission is ALREADY granted, skip the tap and go live instantly
+  // (also makes "Scan Again" resume straight into the viewfinder).
+  useEffect(() => {
+    if (!visible || stage !== "scanning" || scannerRef.current) return;
+    let cancelled = false;
+    try {
+      navigator.permissions
+        ?.query({ name: "camera" as PermissionName })
+        .then((ps) => {
+          if (!cancelled && ps.state === "granted") void openCamera();
+        })
+        .catch(() => { /* prompt/denied/unsupported → wait for the explicit tap */ });
+    } catch {
+      /* unsupported — wait for the explicit tap */
+    }
     return () => {
       cancelled = true;
-      clearTimeout(timer);
-      stopScanner();
     };
-  }, [visible, session, stopScanner]);
+  }, [visible, stage, openCamera]);
+
+  useEffect(() => {
+    if (!visible) stopScanner();
+  }, [visible, stopScanner]);
+
+  useEffect(
+    () => () => {
+      void stopScanner(); // unmount safety — release the camera
+    },
+    [stopScanner]
+  );
 
   useEffect(() => {
     if (!visible) return;
@@ -178,11 +314,13 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
   };
 
   const resetScan = () => {
+    void stopScanner();
     setAadhaar(null);
     setVerify(null);
     setError("");
+    setErrHelp(null);
+    setCamState("idle");
     setStage("scanning");
-    setSession((s) => s + 1);
   };
 
   const phoneDigits = phone.replace(/\D/g, "");
@@ -224,16 +362,81 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                 <p className="text-xs text-slate-400 mb-4">
                   உங்கள் ஆதார் அட்டையில் உள்ள QR குறியீட்டை ஸ்கேன் செய்யவும்
                 </p>
-                <div id="qr-reader" data-testid="qr-reader-region" className="w-full mb-2 rounded-xl overflow-hidden bg-slate-800 min-h-[320px]" />
-                <p className="text-[11px] text-sky-300 text-center mb-2">
-                  Fill most of the box with the QR, 10-15 cm away, good light, hold steady.
-                </p>
+                <div className="relative w-full mb-2 rounded-xl overflow-hidden bg-slate-800 min-h-[220px]">
+                  <div id="qr-reader" data-testid="qr-reader-region" className="w-full min-h-[220px]" />
+                  {camState === "idle" && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-6 text-center pointer-events-none">
+                      <span className="text-4xl">📷</span>
+                      <p className="text-xs text-slate-300 font-medium">Tap “Open Camera &amp; Scan” below</p>
+                      <p className="text-[11px] text-slate-400">
+                        Your phone asks for camera access — just tap <b>Allow</b>
+                      </p>
+                    </div>
+                  )}
+                  {camState === "starting" && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center pointer-events-none">
+                      <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-xs text-slate-300">
+                        Opening camera… tap <b>Allow</b> if your phone asks
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2 mt-1">
+                  <button
+                    onClick={() => void openCamera()}
+                    disabled={camState !== "idle" || photoBusy}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-sm shadow-lg hover:from-amber-500 hover:to-orange-500 active:scale-[0.99] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    data-testid="open-camera"
+                  >
+                    📷 {camState === "starting" ? "Opening camera…" : camState === "running" ? "Camera live — scanning…" : "Open Camera & Scan"}
+                  </button>
+                  <button
+                    onClick={() => photoRef.current?.click()}
+                    disabled={photoBusy || camState === "starting" || camState === "running"}
+                    className="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-sm active:scale-[0.99] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    data-testid="photo-scan-button"
+                  >
+                    🖼️ {photoBusy ? "Reading photo…" : "Scan from Photo (no permission needed)"}
+                  </button>
+                </div>
+
+                {camState === "running" && (
+                  <p className="text-[11px] text-sky-300 text-center mt-2">
+                    Fill most of the box with the QR, 10-15 cm away, good light, hold steady.
+                  </p>
+                )}
+
+                {errHelp && (
+                  <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-left" data-testid="camera-help">
+                    <p className="text-xs font-bold text-amber-300 mb-1">🔒 {errHelp.title}</p>
+                    <ol className="space-y-1 text-[11px] text-amber-200/90 list-decimal list-inside">
+                      {errHelp.steps.map((s, i) => (
+                        <li key={i}>{s}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
                 {error && (
                   <div data-testid="scan-error" className="flex items-start gap-2 text-left mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
                     <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
                     <span className="text-xs text-red-300">{error}</span>
                   </div>
                 )}
+                <input
+                  ref={photoRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (f) void decodePhoto(f);
+                  }}
+                  data-testid="photo-scan-input"
+                />
                 <p className="text-[11px] text-slate-500 text-center mt-3">
                   Decoded on your device only — your Aadhaar never leaves this phone.
                 </p>
