@@ -34,6 +34,7 @@ src/
 server.ts             # Express edge layer: AI proxy, weather, voice transcription, SMS gateway, S3 uploads
 netlify/functions/    # WhatsApp intake webhook + storage/voice Netlify functions
 supabase/             # Full SQL: schema, RLS policies, triggers, indexes, official-access RPC
+docs/                 # Ops runbooks (UIDAI Secure-QR signing-key rotation)
 tests/                # Playwright E2E (geolocation-simulated, Chromium + Pixel 7)
 ```
 
@@ -94,10 +95,16 @@ CI (`.github/workflows/ci.yml`) runs **lint → test → build** on every push a
 
 ## 🔐 Security & Privacy posture
 
-- **Aadhaar:** full number verified on-device and discarded; only `last4` persisted. Entity-safe parsing + Verhoeff checksum.
+- **Aadhaar:** full number verified on-device and discarded; only `last4` persisted. Decodes legacy XML **and modern Secure QR v2**, verifies the embedded SHA-256 integrity hash plus the UIDAI RSA-2048 signature on-device, with **zero-release key rotation** via Supabase (see [docs/UIDAI_KEY_ROTATION.md](docs/UIDAI_KEY_ROTATION.md)). Entity-safe parsing + Verhoeff checksum.
 - **Auth:** passwordless phone login; GDR ID as the civic identity; Supabase RLS gates resident vs official views.
 - **Client hardening:** `sanitizeText` (XSS), `checkRateLimit` (anti-spam), `sha256Hex` device fingerprint, OTP-gated officials access.
 - **Server:** strict CSP, HSTS, nosniff, frame-deny headers; files stored via S3 presigned uploads.
+
+---
+
+## ⚠️ Known issues & maintenance (honest engineering)
+
+- **UIDAI signing-key rotation:** the newest UIDAI Offline PKI certificate we could obtain (`17022026`) **expired Feb 2026** and UIDAI's site 404s the newer file, so very-recent cards may show *"signature key not matched (key rotation)"*. Every scan is still guarded by the on-device **SHA-256 integrity check**, and the fix is a **one-file drop into `scripts/certs/`** — or a single Supabase row update that rotates keys **without any release**. Full runbook: [docs/UIDAI_KEY_ROTATION.md](docs/UIDAI_KEY_ROTATION.md).
 
 ---
 
