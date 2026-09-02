@@ -29,6 +29,8 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
   const [aadhaar, setAadhaar] = useState<AadhaarDecodeResult | null>(null);
   const [verify, setVerify] = useState<AadhaarVerification | null>(null);
   const [error, setError] = useState("");
+  const [phone, setPhone] = useState(""); // secure QRs carry no phone — collected here
+  const [gdrId, setGdrId] = useState(""); // auto-issued ID, shown on the Done screen
   const [session, setSession] = useState(0); // bump to restart the scanner
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const lastScanRef = useRef(0);
@@ -108,6 +110,9 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
             await stopScanner();
             const v = await verifyAadhaarSecureQr(data);
             setVerify(v);
+            // Legacy XML QRs may carry a phone — prefill. Modern secure QRs
+            // never do; the user types it on the Verified screen.
+            setPhone(data.phone || "");
             setAadhaar(data);
             setStage("verified");
           },
@@ -132,17 +137,24 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
     setAadhaar(null);
     setVerify(null);
     setError("");
+    setPhone("");
+    setGdrId("");
   }, [visible]);
 
   const handleRegister = async () => {
     if (!aadhaar) return;
+    const digits = phone.replace(/\D/g, "").slice(-10);
+    if (digits.length !== 10) {
+      setError("Enter your 10-digit mobile number to complete registration.");
+      return;
+    }
     setStage("registering");
     setError("");
 
     try {
-      await registerResident({
+      const prof = await registerResident({
         name: aadhaar.name ?? "",
-        phone: aadhaar.phone ?? "",
+        phone: digits,
         localityId: "gudalur-town",
         customPlaceName: [aadhaar.vtc, aadhaar.dist].filter(Boolean).join(", "),
         pincode: aadhaar.pc ?? "643211",
@@ -153,13 +165,15 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
         aadhaarRef: aadhaar.referenceId,
       });
 
+      setGdrId(prof.gudalurId || "");
       setStage("done");
       onSuccess?.();
       toast.success("Welcome to Voice of Gudalur! Registration complete via Aadhaar scan.");
     } catch (e: unknown) {
+      // Stay on the Verified screen so the user can fix the problem (e.g. a
+      // duplicate phone number) without rescanning their Aadhaar card.
       setError(e instanceof Error ? e.message : "Registration failed. Please try again.");
-      setStage("scanning");
-      setSession((s) => s + 1); // restart the camera for the retry
+      setStage("verified");
     }
   };
 
@@ -170,6 +184,9 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
     setStage("scanning");
     setSession((s) => s + 1);
   };
+
+  const phoneDigits = phone.replace(/\D/g, "");
+  const phoneOk = phoneDigits.length === 10;
 
   if (!visible) return null;
 
@@ -284,11 +301,38 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                     Verified &bull; Last 4: {aadhaar.last4}
                   </p>
                 </div>
+                <div className="mb-4">
+                  <label
+                    htmlFor="vog-reg-phone"
+                    className="block text-xs font-medium text-slate-300 mb-1.5"
+                  >
+                    Mobile number <span className="text-amber-400">*</span>
+                    <span className="text-slate-500"> — for sign-in &amp; alerts</span>
+                  </label>
+                  <input
+                    id="vog-reg-phone"
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    maxLength={10}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    placeholder="10-digit mobile number"
+                    data-testid="reg-phone-input"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-sm tracking-widest placeholder:text-slate-500 placeholder:tracking-normal focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                  />
+                  {phoneDigits.length > 0 && !phoneOk && (
+                    <p className="text-[11px] text-amber-400 mt-1">
+                      Aadhaar QRs never carry your number — enter all 10 digits to continue.
+                    </p>
+                  )}
+                </div>
                 <button
                   onClick={handleRegister}
-                  className="w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold shadow-lg hover:from-amber-500 hover:to-orange-500 transition"
+                  disabled={!phoneOk}
+                  className="w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold shadow-lg hover:from-amber-500 hover:to-orange-500 transition disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Register
+                  {phoneOk ? "Register & Get My GDR ID" : "Enter mobile number to register"}
                 </button>
                 <button
                   onClick={resetScan}
@@ -320,6 +364,38 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                 <h3 className="text-xl font-bold text-white mb-2">Registration Complete!</h3>
                 <p className="text-sm text-slate-300 mb-4">
                   You are now a verified Voice of Gudalur resident.
+                </p>
+                {gdrId && (
+                  <div
+                    className="mb-4 p-4 rounded-xl bg-slate-800 border border-emerald-500/30"
+                    data-testid="gdr-id-card"
+                  >
+                    <p className="text-[11px] uppercase tracking-wider text-slate-400 mb-1">
+                      Your Gudalur Resident ID
+                    </p>
+                    <p
+                      className="text-2xl font-mono font-black text-emerald-400 tracking-wider"
+                      data-testid="gdr-id-value"
+                    >
+                      {gdrId}
+                    </p>
+                    <button
+                      onClick={() => {
+                        try {
+                          navigator.clipboard?.writeText(gdrId);
+                          toast.success("GDR ID copied to clipboard");
+                        } catch {
+                          toast.error("Could not copy — please note it down");
+                        }
+                      }}
+                      className="mt-2 text-xs text-slate-400 hover:text-white underline underline-offset-2 transition"
+                    >
+                      Copy ID
+                    </button>
+                  </div>
+                )}
+                <p className="text-xs text-slate-400 mb-4">
+                  Sign in anytime with this ID or your mobile number — no password needed.
                 </p>
                 <button
                   onClick={onClose}
