@@ -116,8 +116,16 @@ function looksLikeSecureQr(value: string): boolean {
   return /^\d{400,}$/.test(value);
 }
 
-export function decodeAadhaarSecureQr(value: string): AadhaarDecodeResult | null {
+/** Public helper for UI feedback — did the camera see an Aadhaar secure QR it couldn't parse? */
+export function looksLikeAadhaarSecureQr(value: string): boolean {
+  return looksLikeSecureQr((value ?? "").trim());
+}
+
+export function decodeAadhaarSecureQr(input: string): AadhaarDecodeResult | null {
   try {
+    // Scanners occasionally return the payload with stray whitespace.
+    const value = (input ?? "").replace(/\D/g, "");
+    if (value.length < 400) return null;
     const all = decimalToBytes(value);
     if (all.length < SECURE_QR_SIG_BYTES + SECURE_QR_HASH_BYTES + 10) return null;
     const sigBytes = all.slice(all.length - SECURE_QR_SIG_BYTES);
@@ -127,11 +135,13 @@ export function decodeAadhaarSecureQr(value: string): AadhaarDecodeResult | null
 
     let p = 0;
     const version = fields[p++];
-    if (version !== 2) return null;
+    if (version < 1 || version > 3) return null; // v2 is current; tolerate 1–3 for rotation
     const emailMobileStatus = fields[p++];
     const refId = readU16(fields, p); p += 2;
     const readStr = (): string => {
+      if (p + 2 > fields.length) throw new Error("truncated");
       const len = readU16(fields, p); p += 2;
+      if (p + len > fields.length) throw new Error("truncated");
       const s = UTF8.decode(fields.subarray(p, p + len));
       p += len;
       return s;
