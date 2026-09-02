@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mic, Send, X } from 'lucide-react';
+import { Mic, Send, X, Trash2 } from 'lucide-react';
 import { submitVoiceIncident } from '../services/voiceReportService';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';

@@ -55,13 +55,25 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   return (
     <IdModalContext.Provider value={{ openIdModal, whenRegistered }}>
       <div className="min-h-screen bg-transparent text-slate-100 font-sans antialiased overflow-x-hidden flex flex-col">
-        {/* Ambient attention layer — forest mist, rising embers, reading pulse (no boxes, no cartoons) */}
+                {/* Ambient attention layer — lightweight SVG background (no animated divs for low-end devices) */}
         <div className="og-ambient" aria-hidden="true">
-          <div className="mist mist-1" /><div className="mist mist-2" /><div className="mist mist-3" />
-          <div className="ember" /><div className="ember" /><div className="ember" /><div className="ember" />
-          <div className="ember" /><div className="ember" /><div className="ember" />
+          <svg
+            className="absolute inset-0 w-full h-full -z-1 pointer-events-none"
+            preserveAspectRatio="xMidYMid slice"
+            viewBox="0 0 100 100"
+            opacity="0.03"
+          >
+            <circle cx="20" cy="30" r="2" fill="currentColor" className="text-amber-400">
+              <animate attributeName="opacity" values="0.03;0.05;0.03" dur="4s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="50" cy="60" r="1.5" fill="currentColor" className="text-emerald-400">
+              <animate attributeName="opacity" values="0.02;0.04;0.02" dur="6s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="80" cy="40" r="1" fill="currentColor" className="text-slate-400">
+              <animate attributeName="opacity" values="0.02;0.03;0.02" dur="5s" repeatCount="indefinite" />
+            </circle>
+          </svg>
         </div>
-        <div className="og-readbar" aria-hidden="true" />
         <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-transparent border-b border-slate-700/50 flex items-center">
           <div className="max-w-5xl mx-auto w-full px-4 flex items-center justify-between">
             <div className="flex items-center gap-2 cursor-pointer" onClick={openIdModal}>

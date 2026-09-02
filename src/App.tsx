@@ -11,7 +11,6 @@ import VerifyDocket from './pages/VerifyDocket';
 import { VoiceSoundboardPage } from './pages/VoiceSoundboardPage';
 import { LiveGisMapPage } from './pages/LiveGisMapPage';
 import { VoiceReportButton } from './components/VoiceReportButton';
-import { VoiceIncidentListener } from './components/VoiceIncidentListener';
 import { NavBar } from './components/NavBar';
 import { NewSightingPage } from './pages/NewSightingPage';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
@@ -33,25 +32,24 @@ const AppContent: React.FC = () => {
 
   return (
     <LocationGate>
-    <Shell>
-      <NavBar />
-      <Routes>
-        <Route path="/" element={<Manifesto />} />
-        <Route path="/verify-docket" element={<VerifyDocket />} />
-        <Route path="/voice-soundboard" element={<VoiceSoundboardPage />} />
-        <Route path="/live-gis-map" element={<LiveGisMapPage />} />
+      <Shell>
+        <NavBar />
+        <Routes>
+          <Route path="/" element={<Manifesto />} />
+          <Route path="/verify-docket" element={<VerifyDocket />} />
+          <Route path="/voice-soundboard" element={<VoiceSoundboardPage />} />
+          <Route path="/live-gis-map" element={<LiveGisMapPage />} />
           <Route path="/report-sighting" element={<NewSightingPage />} />
           <Route path="/sign-petition" element={<SignPetitionPage />} />
           <Route path="/verify-sign" element={<VerifySignPage />} />
           <Route path="/officials" element={<OfficialsPortalPage />} />
 
-        <Route path="*" element={<Manifesto />} />
-      </Routes>
-      <VoiceReportButton />
-      <VoiceIncidentListener />
-      <PWAInstallPrompt />
-      <OfflineIndicator />
-    </Shell>
+                  <Route path="*" element={<Manifesto />} />
+          </Routes>
+        <VoiceReportButton />
+        <PWAInstallPrompt />
+        <OfflineIndicator />
+      </Shell>
     </LocationGate>
   );
 };

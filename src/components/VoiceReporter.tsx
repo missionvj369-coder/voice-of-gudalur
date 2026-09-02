@@ -2,8 +2,9 @@
  * Modal-based voice incident reporter — record → review → send.
  */
 import React, { useState, useEffect } from 'react';
-import { Mic, X, MapPin, Shield, Upload, Send } from 'lucide-react';
-import { recordVoiceNote, submitVoiceIncident, IncidentType, Urgency } from '../services/voiceReportService';
+import { Mic, X, MapPin, Shield, Upload, Send, Trash2 } from 'lucide-react';
+import { submitVoiceIncident, IncidentType, Urgency } from '../services/voiceReportService';
+import { VoiceRecorder } from './VoiceRecorder';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import toast from 'react-hot-toast';
@@ -34,6 +35,7 @@ export const VoiceReporter: React.FC<VoiceReporterProps> = ({
   const [urgency, setUrgency] = useState<Urgency>('MEDIUM');
   const [recording, setRecording] = useState(false);
   const [audio, setAudio] = useState<{ blob: Blob; durationMs: number } | null>(null);
+  const [showRecorder, setShowRecorder] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
     profile ? { lat: profile.lat || 0, lng: profile.lng || 0 } : null,
@@ -55,11 +57,9 @@ export const VoiceReporter: React.FC<VoiceReporterProps> = ({
     );
   };
 
-  const handleRecord = async () => {
-    setRecording(true);
-    const r = await recordVoiceNote(90);
-    setRecording(false);
-    if (r) setAudio({ blob: r.blob, durationMs: r.durationMs });
+    const handleRecord = async () => {
+    setAudio(null);
+    setShowRecorder(true);
   };
 
   const handleSend = async () => {
@@ -148,22 +148,32 @@ export const VoiceReporter: React.FC<VoiceReporterProps> = ({
                                                         </button>
           </>)}
 
-          {/* === Step: recording === */}
+                    {/* === Step: record === */}
           {step === 'record' && (
-            <div className="space-y-4 text-center">
-              {recording ? (
+            <div className="space-y-4">
+              {showRecorder ? (
+                <VoiceRecorder
+                  maxSeconds={30}
+                  onSave={(blob) => {
+                    setAudio({ blob, durationMs: 0 });
+                    setShowRecorder(false);
+                    setStep('confirm');
+                  }}
+                  onCancel={() => setShowRecorder(false)}
+                />
+              ) : recording ? (
                 <div className="py-6">
                   <div className="flex justify-center mb-2">
                     <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
                   </div>
                   <p className="text-sm text-red-400 font-black">
-                    {t('recording') || 'Recording…'} (max 90s)
+                    {t('recording') || 'Recording…'} (max 30s)
                   </p>
                 </div>
               ) : audio ? (
                 <div className="py-4">
                   <p className="text-xs text-slate-300 mb-2">
-                    🎙 {Math.round(audio.durationMs / 1000)}s audio recorded
+                    🎙 {Math.round(audio?.durationMs / 1000)}s audio recorded
                   </p>
                   <button
                     onClick={() => setStep('confirm')}
@@ -175,7 +185,7 @@ export const VoiceReporter: React.FC<VoiceReporterProps> = ({
                 </div>
               ) : (
                 <button
-                  onClick={handleRecord}
+                  onClick={() => setShowRecorder(true)}
                   className="flex items-center justify-center gap-2 w-full py-4 text-xs font-black rounded-lg bg-slate-800 hover:bg-slate-700 transition"
                 >
                   <Mic size={16} className="text-amber-500" />
