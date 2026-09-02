@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import {
   decodeAadhaar,
+  looksLikeAadhaarSecureQr,
   verifyAadhaarSecureQr,
   type AadhaarDecodeResult,
   type AadhaarVerification,
 } from "../../lib/aadhaarDecoder";
 import { initUidaiVerification } from "../../lib/uidaiPublicKeys";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { Shield, ShieldCheck, ShieldAlert, ShieldQuestion, AlertCircle, CheckCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -58,20 +59,49 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
         setError("Scanner could not start. Please close and reopen this dialog.");
         return;
       }
-      const html5 = new Html5Qrcode("qr-reader", false);
+      const html5 = new Html5Qrcode("qr-reader", {
+        verbose: false,
+        // Native BarcodeDetector (Chrome/Android) is dramatically faster and
+        // more reliable on dense Version-25 codes than the JS fallback.
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+      });
       scannerRef.current = html5;
       try {
         await html5.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1.0 },
+          {
+            facingMode: "environment",
+            // Aadhaar secure QRs are Version-25 codes (~129 modules/side): the
+            // denser payload needs a high-resolution stream or it can never be
+            // resolved. Ask for 1080p and let the browser pick the best offered.
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+          {
+            fps: 10,
+            // A fixed small qrbox crops the frame down below the resolvable
+            // threshold for dense QRs — use ~85% of the viewfinder instead
+            // (min 280px so tiny streams still get enough px per module).
+            qrbox: (vw: number, vh: number) => {
+              const side = Math.max(280, Math.min(Math.floor(vw * 0.85), Math.floor(vh * 0.85)));
+              return { width: side, height: side };
+            },
+          },
           async (decoded) => {
             const now = Date.now();
             if (now - lastScanRef.current < 1200) return; // debounce same-frame hits
             lastScanRef.current = now;
             const data = decodeAadhaar(decoded);
             if (!data || !data.ok || !data.name) {
-              // Not an Aadhaar QR — keep the camera running for the next frame.
-              setError("That QR is not an Aadhaar card. Scan the QR printed on the Aadhaar card / e-Aadhaar.");
+              // Keep the camera running for the next frame. If the payload at
+              // least looks like an Aadhaar secure QR, the scan optics worked
+              // and the read was noisy — guide the user instead of confusing
+              // them with "not an Aadhaar card".
+              setError(
+                looksLikeAadhaarSecureQr(decoded)
+                  ? "Aadhaar QR detected but read unclearly. Hold the phone steadier, move 10-15 cm closer and avoid glare."
+                  : "That QR is not an Aadhaar card. Scan the QR printed on the Aadhaar card / e-Aadhaar."
+              );
               return;
             }
             setError("");
@@ -177,7 +207,10 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                 <p className="text-xs text-slate-400 mb-4">
                   உங்கள் ஆதார் அட்டையில் உள்ள QR குறியீட்டை ஸ்கேன் செய்யவும்
                 </p>
-                <div id="qr-reader" data-testid="qr-reader-region" className="w-full mb-4 rounded-xl overflow-hidden bg-slate-800 min-h-[240px]" />
+                <div id="qr-reader" data-testid="qr-reader-region" className="w-full mb-2 rounded-xl overflow-hidden bg-slate-800 min-h-[320px]" />
+                <p className="text-[11px] text-sky-300 text-center mb-2">
+                  Fill most of the box with the QR, 10-15 cm away, good light, hold steady.
+                </p>
                 {error && (
                   <div data-testid="scan-error" className="flex items-start gap-2 text-left mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
                     <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
