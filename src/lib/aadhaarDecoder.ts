@@ -73,31 +73,42 @@ export function verhoeffCheck(num: string): boolean {
 }
 
 /** XML payload → full Aadhaar identity (used only for the QR-resident info). */
+function unescapeXmlEntities(value: string): string {
+  return value
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&#(\d+);/g, (_m, code: string) => String.fromCharCode(parseInt(code, 10)));
+}
+
 export function decodeAadhaar(xml: string): AadhaarDecodeResult {
   try {
     const attrs = parseXmlAttributes(xml);
     if (!attrs.uid && !attrs.name) {
       return { ok: false, error: "Not an e-Aadhaar QR payload" };
     }
+    const clean = (v?: string) => (v ? unescapeXmlEntities(v) : v);
     return {
       ok: true,
       raw: xml,
-      name: attrs.name,
-      gender: attrs.gender,
-      yob: attrs.yob,
-      uid: attrs.uid,
-      co: attrs.co,
-      house: attrs.house,
-      street: attrs.street,
-      loc: attrs.loc,
-      vtc: attrs.vtc,
-      po: attrs.po,
-      dist: attrs.dist,
-      state: attrs.state,
-      pc: attrs.pc,
-      email: attrs.email,
-      phone: attrs.phone,
-      referenceId: attrs.referenceid || attrs.ref,
+      name: clean(attrs.name),
+      gender: clean(attrs.gender),
+      yob: clean(attrs.yob),
+      uid: clean(attrs.uid),
+      co: clean(attrs.co),
+      house: clean(attrs.house),
+      street: clean(attrs.street),
+      loc: clean(attrs.loc),
+      vtc: clean(attrs.vtc),
+      po: clean(attrs.po),
+      dist: clean(attrs.dist),
+      state: clean(attrs.state),
+      pc: clean(attrs.pc),
+      email: clean(attrs.email),
+      phone: clean(attrs.phone),
+      referenceId: clean(attrs.referenceid || attrs.ref),
       last4: attrs.uid ? attrs.uid.slice(-4) : undefined,
     };
   } catch (e: any) {
@@ -117,9 +128,9 @@ export function validateAadhaarNumber(number: string): AadhaarDecodeResult {
   return { ok: true, uid: digits, last4: digits.slice(-4), raw: digits };
 }
 
-/** Human-readable address from decoded parts. */
+/** Human-readable address from decoded parts (includes the PIN code). */
 export function aadhaarAddress(r: AadhaarDecodeResult): string {
-  return [r.co, r.house, r.street, r.loc, r.vtc, r.po, r.dist, r.state]
+  return [r.co, r.house, r.street, r.loc, r.vtc, r.po, r.dist, r.state, r.pc]
     .filter(Boolean)
     .join(", ");
 }

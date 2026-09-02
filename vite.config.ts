@@ -126,6 +126,7 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
     },
     build: {
+      target: 'es2020',
       chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
@@ -134,6 +135,9 @@ export default defineConfig(() => {
             'vendor-maps': ['leaflet', 'react-leaflet'],
             'vendor-icons': ['lucide-react'],
             'vendor-supabase': ['@supabase/supabase-js'],
+            'vendor-firebase': ['firebase/app', 'firebase/firestore'],
+            'vendor-pdf': ['jspdf'],
+            'vendor-ai': ['@huggingface/transformers'],
           },
         },
       },
