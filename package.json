@@ -35,7 +35,6 @@
     "express-rate-limit": "^8.7.0",
     "fflate": "^0.8.2",
     "form-data": "^4.0.6",
-    "html5-qrcode": "^2.3.8",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
     "jsqr": "^1.4.0",

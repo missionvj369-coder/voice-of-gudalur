@@ -9,7 +9,6 @@ import {
   type AadhaarVerification,
 } from "../../lib/aadhaarDecoder";
 import { initUidaiVerification } from "../../lib/uidaiPublicKeys";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { decodePhotoQr, decodeVideoFrame } from "../../lib/qrDecode";
 import { Shield, ShieldCheck, ShieldAlert, ShieldQuestion, AlertCircle, CheckCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
@@ -31,7 +30,7 @@ interface CameraHelp {
 const isMobileDevice = (): boolean =>
   /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
 
-/** Turn a getUserMedia / Html5Qrcode start failure into human recovery steps. */
+/** Turn a getUserMedia / camera start failure into human recovery steps. */
 function classifyCameraError(e: unknown): CameraHelp {
   const raw =
     typeof e === "string"
@@ -89,55 +88,6 @@ function classifyCameraError(e: unknown): CameraHelp {
   };
 }
 
-type PhotoBitmap = ImageBitmap | HTMLImageElement;
-
-/** Decode an uploaded image to a drawable bitmap (ImageBitmap, legacy fallback). */
-async function loadPhotoBitmap(file: File): Promise<PhotoBitmap> {
-  if (typeof createImageBitmap === "function") {
-    try { return await createImageBitmap(file); } catch { /* older browsers */ }
-  }
-  const url = URL.createObjectURL(file);
-  try {
-    const img = new Image();
-    await new Promise<void>((res, rej) => {
-      img.onload = () => res();
-      img.onerror = () => rej(new Error("Unsupported image"));
-      img.src = url;
-    });
-    return img;
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
-/**
- * Zoom ladder for photo scanning. Aadhaar secure QRs are Version-25 codes
- * (~129 modules per side) — a phone photo only resolves at the right pixel
- * scale, so we try the original size, then step down (or up for thumbnails).
- */
-function photoScalePlan(w: number, h: number): number[] {
-  const longest = Math.max(w, h);
-  const plan = [longest, 2200, 1600, 1200, 900, 640];
-  if (longest < 700) plan.unshift(longest * 2);
-  return [...new Set(plan.filter((s) => s >= 320))].sort((a, b) => b - a);
-}
-
-async function renderScaledJpeg(src: PhotoBitmap, maxSide: number): Promise<Blob> {
-  const sw = "naturalWidth" in src ? src.naturalWidth : src.width;
-  const sh = "naturalHeight" in src ? src.naturalHeight : src.height;
-  const scale = Math.min(1, maxSide / Math.max(sw, sh));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(sw * scale));
-  canvas.height = Math.max(1, Math.round(sh * scale));
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas unavailable");
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
-  return new Promise<Blob>((res, rej) =>
-    canvas.toBlob((b) => (b ? res(b) : rej(new Error("Image encode failed"))), "image/jpeg", 0.92),
-  );
-}
 
 export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, onSuccess }) => {
   const visible = open !== undefined ? open : !!isOpen;
@@ -160,9 +110,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
     canvas: HTMLCanvasElement;
     tickCount: number;
     busy: boolean;
-  } | null>(null);
-  // html5-qrcode file scanner — last-resort fallback engine for photos only.
-  const fileScannerRef = useRef<Html5Qrcode | null>(null);
+    } | null>(null);
   const lastScanRef = useRef(0);
   const photoRef = useRef<HTMLInputElement | null>(null);
 
@@ -330,17 +278,16 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
   }, [camState, handleDecoded]);
 
   /** Gallery / file-picker path — no web camera permission involved at all. */
-  const decodePhoto = useCallback(
+    const decodePhoto = useCallback(
     async (file: File) => {
       setError("");
       setErrHelp(null);
       setPhotoBusy(true);
-      let inst: Html5Qrcode | null = null;
       try {
         setScanStatus("Loading image…");
-        // NEW multi-engine pipeline first — native BarcodeDetector → ZBar-wasm
-        // → jsQR, over scale / Otsu-contrast / sharpen variants. This is what
-        // makes low-quality photos work.
+        // Multi-engine pipeline: native BarcodeDetector → ZBar-wasm → jsQR,
+        // over scale / Otsu-contrast / sharpen variants. Runs heavy enhancement
+        // on a Web Worker pool, falls back to main-thread on old browsers.
         const hit = await decodePhotoQr(file, (m) => setScanStatus(m));
         if (hit) {
           setScanStatus(`QR decoded via ${hit.engine} — verifying Aadhaar payload…`);
@@ -348,44 +295,8 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
           await handleDecoded(hit.text);
           return;
         }
-        setScanStatus("Deep scan found nothing — trying the fallback engine…");
-        // Fallback: html5-qrcode file scanner (separate hidden element —
-        // never fights with the live camera element).
-        if (!document.getElementById("qr-reader-file")) {
-          const el = document.createElement("div");
-          el.id = "qr-reader-file";
-          el.style.display = "none";
-          document.body.appendChild(el);
-        }
-        if (!fileScannerRef.current) {
-          fileScannerRef.current = new Html5Qrcode("qr-reader-file", {
-            verbose: false,
-            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-          });
-        }
-        inst = fileScannerRef.current;
-        let text: string | null = null;
-        try {
-          text = await inst.scanFile(file, true);
-        } catch { text = null; }
-        if (!text) {
-          try {
-            const bitmap = await loadPhotoBitmap(file);
-            for (const maxSide of photoScalePlan(bitmap.width, bitmap.height)) {
-              const blob = await renderScaledJpeg(bitmap, maxSide);
-              try {
-                text = await inst.scanFile(new File([blob], "frame.jpg", { type: "image/jpeg" }), true);
-              } catch { text = null; }
-              if (text) break;
-            }
-          } catch { /* undecodable image */ }
-        }
-        if (!text) {
-          setError("No QR found in this photo even after deep scanning (scales, contrast, sharpening). Retake it: fill the frame with the QR, hold steady, avoid glare — or try the live camera.");
-          return;
-        }
-        lastScanRef.current = 0;
-        await handleDecoded(text);
+        setScanStatus("");
+        setError("No QR found in this photo even after deep scanning (scales, contrast, sharpening). Retake it: fill the frame with the QR, hold steady, avoid glare — or try the live camera.");
       } catch (e: unknown) {
         // Never swallow failures silently — surface them in the scan log so
         // the user isn't left staring at a stopped spinner.
@@ -394,9 +305,6 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
           `Photo scan failed${msg ? `: ${msg}` : ""}. Try a sharper, well-lit photo of the QR — or use the camera.`
         );
       } finally {
-        if (inst) {
-          try { inst.clear(); } catch { /* ignore */ }
-        }
         setPhotoBusy(false);
       }
     },
@@ -408,12 +316,8 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
 
 
   useEffect(() => {
-    if (!visible) {
+        if (!visible) {
       void stopScanner();
-      if (fileScannerRef.current) {
-        try { fileScannerRef.current.clear(); } catch { /* ignore */ }
-        fileScannerRef.current = null;
-      }
     }
   }, [visible, stopScanner]);
 
@@ -470,12 +374,8 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
     }
   };
 
-  const resetScan = () => {
+    const resetScan = () => {
     void stopScanner();
-    if (fileScannerRef.current) {
-      try { fileScannerRef.current.clear(); } catch { /* ignore */ }
-      fileScannerRef.current = null;
-    }
     setAadhaar(null);
     setVerify(null);
     setError("");
