@@ -9,7 +9,7 @@ import {
   type AadhaarVerification,
 } from "../../lib/aadhaarDecoder";
 import { initUidaiVerification } from "../../lib/uidaiPublicKeys";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 import { Shield, ShieldCheck, ShieldAlert, ShieldQuestion, AlertCircle, CheckCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -213,55 +213,47 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       if (!document.getElementById("qr-reader")) return;
     }
     setCamState("starting");
-    const html5 = new Html5Qrcode("qr-reader", {
-      verbose: false,
-      // Native BarcodeDetector (Chrome/Android) is dramatically faster and
-      // more reliable on dense Version-25 codes than the JS fallback.
-      experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-      formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-    });
+    // Reference html5-qrcode format: one simple start() with a facingMode
+    // constraint and a fixed 250px qrbox -- the setup that works on both
+    // Android and iOS without OverconstrainedError.
+    const html5 = new Html5Qrcode("qr-reader");
     scannerRef.current = html5;
-    // Aadhaar secure QRs are Version-25 codes (~129 modules/side): ask for
-    // 1080p first, then progressively looser constraints — some cameras
-    // (webcams, virtual drivers) reject strict sizes outright.
-    const fallbackConstraints: MediaTrackConstraints = {};
-    const constraintChain: Parameters<Html5Qrcode["start"]>[0][] = [
-      { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
-      { facingMode: { ideal: "environment" } },
-      fallbackConstraints,
-    ];
-    let lastError: unknown = null;
-    for (const constraints of constraintChain) {
+    try {
+      await html5.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decoded) => {
+          void handleDecoded(decoded);
+        },
+        () => { /* per-frame decode misses are normal - stay silent */ }
+      );
+      setCamState("running");
+      return;
+    } catch (e: unknown) {
+      // Retry once on a fresh instance with the most permissive constraint
+      // (covers desktop webcams / virtual drivers), then show recovery steps.
+      scannerRef.current = null;
+      try { html5.clear(); } catch { /* ignore */ }
+      const retry = new Html5Qrcode("qr-reader");
+      scannerRef.current = retry;
       try {
-        await html5.start(
-          constraints,
-          {
-            fps: 10,
-            // A fixed small qrbox crops the frame below the resolvable
-            // threshold for dense QRs — use ~85% of the viewfinder instead
-            // (min 280px so tiny streams still get enough px per module).
-            qrbox: (vw: number, vh: number) => {
-              const side = Math.max(280, Math.min(Math.floor(vw * 0.85), Math.floor(vh * 0.85)));
-              return { width: side, height: side };
-            },
-          },
+        await retry.start(
+          {},
+          { fps: 10, qrbox: { width: 250, height: 250 } },
           (decoded) => {
             void handleDecoded(decoded);
           },
-          () => { /* per-frame decode misses are normal — stay silent */ }
+          () => {}
         );
         setCamState("running");
         return;
-      } catch (e: unknown) {
-        lastError = e;
-        try { await html5.stop(); } catch { /* never started */ }
-        try { html5.clear(); } catch { /* ignore */ }
+      } catch (e2: unknown) {
+        scannerRef.current = null;
+        try { retry.clear(); } catch { /* ignore */ }
+        setCamState("idle");
+        setErrHelp(classifyCameraError(e2));
       }
     }
-    scannerRef.current = null;
-    try { html5.clear(); } catch { /* ignore */ }
-    setCamState("idle");
-    setErrHelp(classifyCameraError(lastError));
   }, [camState, handleDecoded]);
 
   /** Gallery / file-picker path — no web camera permission involved at all. */
