@@ -9,7 +9,7 @@ import {
   type AadhaarVerification,
 } from "../../lib/aadhaarDecoder";
 import { initUidaiVerification } from "../../lib/uidaiPublicKeys";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { Shield, ShieldCheck, ShieldAlert, ShieldQuestion, AlertCircle, CheckCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -149,6 +149,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
   const [gdrId, setGdrId] = useState(""); // auto-issued ID, shown on the Done screen
   const [camState, setCamState] = useState<"idle" | "starting" | "running">("idle");
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [scanTab, setScanTab] = useState<"camera" | "upload">("camera");
   const [errHelp, setErrHelp] = useState<CameraHelp | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const lastScanRef = useRef(0);
@@ -206,73 +207,58 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
    * makes the Allow decision a single obvious tap on Android).
    */
   const openCamera = useCallback(async () => {
-    if (scannerRef.current || camState !== "idle") return;
+    if (camState === "starting" || camState === "running") return;
     setError("");
     setErrHelp(null);
     if (!document.getElementById("qr-reader")) {
-      await new Promise((r) => setTimeout(r, 80)); // let the stage mount
+      await new Promise((r) => setTimeout(r, 80));
       if (!document.getElementById("qr-reader")) return;
     }
     setCamState("starting");
-    // Reference html5-qrcode format: one simple start() with a facingMode
-    // constraint and a fixed 250px qrbox -- the setup that works on both
-    // Android and iOS without OverconstrainedError.
-    const html5 = new Html5Qrcode("qr-reader");
-    scannerRef.current = html5;
-    try {
-      await html5.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          // Aadhaar QRs are dense Version-25 codes (~129 modules/side): the
-          // qrbox must cover ~90% of the viewfinder or the library cannot
-          // resolve enough pixels per module to detect anything.
-          qrbox: (vw: number, vh: number) => {
-            const side = Math.max(280, Math.min(Math.floor(vw * 0.9), Math.floor(vh * 0.9)));
-            return { width: side, height: side };
-          },
-        },
-        (decoded) => {
-          void handleDecoded(decoded);
-        },
-        () => { /* per-frame decode misses are normal - stay silent */ }
-      );
-      setCamState("running");
-      return;
-    } catch (e: unknown) {
-      // Retry once on a fresh instance with the most permissive constraint
-      // (covers desktop webcams / virtual drivers), then show recovery steps.
-      scannerRef.current = null;
-      try { html5.clear(); } catch { /* ignore */ }
-      const retry = new Html5Qrcode("qr-reader");
-      scannerRef.current = retry;
+    // Native BarcodeDetector (Chrome/Edge/Android) detects dense Version-25
+    // Aadhaar QRs far better than the JS engine at webcam resolutions.
+    const makeScanner = () =>
+      new Html5Qrcode("qr-reader", {
+        verbose: false,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+      });
+    const attempts: MediaTrackConstraints[] = [
+      { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+      { facingMode: "environment" },
+      {},
+    ];
+    let lastError: unknown = null;
+    for (const constraints of attempts) {
+      const html5 = makeScanner(); // fresh instance per attempt - never reuse
+      scannerRef.current = html5;
       try {
-        await retry.start(
-          {},
+        await html5.start(
+          constraints,
           {
-          fps: 10,
-          // Aadhaar QRs are dense Version-25 codes (~129 modules/side): the
-          // qrbox must cover ~90% of the viewfinder or the library cannot
-          // resolve enough pixels per module to detect anything.
-          qrbox: (vw: number, vh: number) => {
-            const side = Math.max(280, Math.min(Math.floor(vw * 0.9), Math.floor(vh * 0.9)));
-            return { width: side, height: side };
+            fps: 10,
+            // qrbox must cover most of the viewfinder: Aadhaar QRs are dense
+            // Version-25 codes (~129 modules per side).
+            qrbox: (vw: number, vh: number) => {
+              const side = Math.max(280, Math.min(Math.floor(vw * 0.9), Math.floor(vh * 0.9)));
+              return { width: side, height: side };
+            },
           },
-        },
           (decoded) => {
             void handleDecoded(decoded);
           },
-          () => {}
+          () => { /* per-frame misses are normal */ }
         );
         setCamState("running");
         return;
-      } catch (e2: unknown) {
+      } catch (e: unknown) {
+        lastError = e;
         scannerRef.current = null;
-        try { retry.clear(); } catch { /* ignore */ }
-        setCamState("idle");
-        setErrHelp(classifyCameraError(e2));
+        try { html5.clear(); } catch { /* ignore */ }
       }
     }
+    setCamState("idle");
+    setErrHelp(classifyCameraError(lastError));
   }, [camState, handleDecoded]);
 
   /** Gallery / file-picker path — no web camera permission involved at all. */
@@ -283,45 +269,33 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       setPhotoBusy(true);
       let inst: Html5Qrcode | null = null;
       try {
-        if (!document.getElementById("qr-reader")) {
+        // Separate hidden element for file scanning (reference format) -
+        // never fights with the live camera element.
+        if (!document.getElementById("qr-reader-file")) {
           await new Promise((r) => setTimeout(r, 80));
         }
-        inst = new Html5Qrcode("qr-reader", {
-          verbose: false,
-          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-        });
-
-        // Strategy 1 — decode the photo exactly as provided.
+        inst = new Html5Qrcode("qr-reader-file");
         let text: string | null = null;
         try {
-          text = await inst.scanFile(file, false);
+          text = await inst.scanFile(file, true);
         } catch { text = null; }
-
-        // Strategy 2 — re-encode the photo at several zoom levels until the
-        // dense Version-25 Aadhaar QR resolves at the right pixel scale.
         if (!text) {
           try {
             const bitmap = await loadPhotoBitmap(file);
             for (const maxSide of photoScalePlan(bitmap.width, bitmap.height)) {
               const blob = await renderScaledJpeg(bitmap, maxSide);
               try {
-                text = await inst.scanFile(
-                  new File([blob], "frame.jpg", { type: "image/jpeg" }),
-                  false,
-                );
+                text = await inst.scanFile(new File([blob], "frame.jpg", { type: "image/jpeg" }), true);
               } catch { text = null; }
               if (text) break;
             }
-          } catch { /* undecodable image — fall through to the hint below */ }
+          } catch { /* undecodable image */ }
         }
-
         if (!text) {
-          setError(
-            "Couldn't read a QR in that photo. Retake it with the QR filling the frame, sharp and well-lit — no glare. Tip: “Open Camera & Scan” focuses for you."
-          );
+          setError("Failed to detect a valid QR code in this image. Upload a clearer photo of the Aadhaar QR - sharp, well-lit, no glare, QR filling the frame.");
           return;
         }
-        lastScanRef.current = 0; // photos must never be debounced
+        lastScanRef.current = 0;
         await handleDecoded(text);
       } finally {
         if (inst) {
@@ -331,6 +305,15 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       }
     },
     [handleDecoded]
+  );
+
+  // Switching tabs tears down the camera stream (reference format).
+  const switchScanTab = useCallback(
+    (tab: "camera" | "upload") => {
+      setScanTab(tab);
+      if (tab === "upload") void stopScanner();
+    },
+    [stopScanner]
   );
 
 
@@ -441,65 +424,113 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                 <p className="text-xs text-slate-400 mb-4">
                   உங்கள் ஆதார் அட்டையில் உள்ள QR குறியீட்டை ஸ்கேன் செய்யவும்
                 </p>
-                <div className="relative w-full mb-2 rounded-xl overflow-hidden bg-slate-800 min-h-[220px]">
-                  <div id="qr-reader" data-testid="qr-reader-region" className="w-full min-h-[220px]" />
-                  {camState === "idle" && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-6 text-center pointer-events-none">
-                      <span className="text-4xl">📷</span>
-                      <p className="text-xs text-slate-300 font-medium">Tap “Open Camera &amp; Scan” below</p>
-                      <p className="text-[11px] text-slate-400">
-                        Your phone asks for camera access — just tap <b>Allow</b>
-                      </p>
-                    </div>
-                  )}
-                  {camState === "starting" && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center pointer-events-none">
-                      <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                      <p className="text-xs text-slate-300">
-                        Opening camera… tap <b>Allow</b> if your phone asks
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2 mt-1">
+                {/* Tab controls - Scan via Camera | Upload QR Image (reference format) */}
+                <div className="flex mb-3 border-b-2 border-slate-600">
                   <button
-                    onClick={() => void openCamera()}
-                    disabled={camState !== "idle" || photoBusy}
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-sm shadow-lg hover:from-amber-500 hover:to-orange-500 active:scale-[0.99] transition disabled:opacity-40 disabled:cursor-not-allowed"
-                    data-testid="open-camera"
+                    type="button"
+                    onClick={() => switchScanTab("camera")}
+                    className={`flex-1 px-2 py-2.5 text-sm font-bold transition ${scanTab === "camera" ? "text-amber-400 border-b-[3px] border-amber-400 -mb-0.5" : "text-slate-400 hover:text-slate-200"}`}
+                    data-testid="tab-camera"
                   >
-                    📷 {camState === "starting" ? "Opening camera…" : camState === "running" ? "Camera live — scanning…" : "Open Camera & Scan"}
+                    Scan via Camera
                   </button>
                   <button
-                    onClick={() => { void stopScanner(); photoRef.current?.click(); }}
-                    disabled={photoBusy}
-                    className="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-sm active:scale-[0.99] transition disabled:opacity-40 disabled:cursor-not-allowed"
-                    data-testid="photo-scan-button"
+                    type="button"
+                    onClick={() => switchScanTab("upload")}
+                    className={`flex-1 px-2 py-2.5 text-sm font-bold transition ${scanTab === "upload" ? "text-amber-400 border-b-[3px] border-amber-400 -mb-0.5" : "text-slate-400 hover:text-slate-200"}`}
+                    data-testid="tab-upload"
                   >
-                    🖼️ {photoBusy ? "Scanning photo…" : "Scan from Photo — upload from gallery"}
+                    Upload QR Image
                   </button>
                 </div>
 
-                {(camState === "running" || camState === "starting") && (
-                  <button
-                    onClick={() => { void stopScanner(); }}
-                    disabled={camState === "starting"}
-                    className="w-full py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-sm active:scale-[0.99] transition"
-                    data-testid="stop-camera"
-                  >
-                    Stop Camera - Back to Options
-                  </button>
+                {scanTab === "camera" && (
+                  <>
+                    <div className="relative w-full mb-2 rounded-xl overflow-hidden bg-slate-800 min-h-[220px]">
+                      <div id="qr-reader" data-testid="qr-reader-region" className="w-full min-h-[220px]" />
+                      {camState === "idle" && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-6 text-center pointer-events-none">
+                          <p className="text-xs text-slate-300 font-medium">Camera is off - tap Start Camera below</p>
+                          <p className="text-[11px] text-slate-400">Your phone asks for camera access - just tap Allow</p>
+                        </div>
+                      )}
+                      {camState === "starting" && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center pointer-events-none">
+                          <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                          <p className="text-xs text-slate-300">Opening camera... tap Allow if your phone asks</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 mt-1">
+                      {camState !== "running" ? (
+                        <button
+                          type="button"
+                          onClick={() => void openCamera()}
+                          disabled={camState === "starting"}
+                          className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-sm shadow-lg hover:from-amber-500 hover:to-orange-500 active:scale-[0.99] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                          data-testid="open-camera"
+                        >
+                          {camState === "starting" ? "Opening camera..." : "Start Camera"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => { void stopScanner(); }}
+                          className="flex-1 py-3.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-sm active:scale-[0.99] transition"
+                          data-testid="stop-camera"
+                        >
+                          Stop / Rescan
+                        </button>
+                      )}
+                    </div>
+                    {camState === "running" && (
+                      <p className="text-[11px] text-sky-300 text-center mt-2">
+                        Fill the box with the Aadhaar QR, 10-15 cm away, good light, hold steady.
+                      </p>
+                    )}
+                  </>
                 )}
-                {camState === "running" && (
-                  <p className="text-[11px] text-sky-300 text-center mt-2">
-                    Fill most of the box with the QR, 10-15 cm away, good light, hold steady.
-                  </p>
+
+                {scanTab === "upload" && (
+                  <div className="text-left">
+                    <label
+                      htmlFor="qr-file-input"
+                      className="block border-2 border-dashed border-slate-500 rounded-xl p-8 text-center cursor-pointer bg-slate-800/50 hover:border-amber-400 transition"
+                      data-testid="photo-scan-button"
+                    >
+                      <p className="text-sm font-bold text-slate-200">Click to upload</p>
+                      <p className="text-[11px] text-slate-400 mt-1">Supports PNG, JPG, JPEG QR files - no camera permission needed</p>
+                    </label>
+                    <input
+                      ref={photoRef}
+                      id="qr-file-input"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files && e.target.files[0];
+                        if (f) void decodePhoto(f);
+                      }}
+                    />
+                    {photoBusy && (
+                      <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-300">
+                        <div className="h-4 w-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                        Scanning image...
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { if (photoRef.current) photoRef.current.value = ""; setError(""); setErrHelp(null); }}
+                      className="w-full mt-2 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-sm transition"
+                    >
+                      Reset / Go Back
+                    </button>
+                  </div>
                 )}
 
                 {errHelp && (
                   <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-left" data-testid="camera-help">
-                    <p className="text-xs font-bold text-amber-300 mb-1">🔒 {errHelp.title}</p>
+                    <p className="text-xs font-bold text-amber-300 mb-1">{errHelp.title}</p>
                     <ol className="space-y-1 text-[11px] text-amber-200/90 list-decimal list-inside">
                       {errHelp.steps.map((s, i) => (
                         <li key={i}>{s}</li>
@@ -507,137 +538,22 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                     </ol>
                   </div>
                 )}
-                {error && (
-                  <div data-testid="scan-error" className="flex items-start gap-2 text-left mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
-                    <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
-                    <span className="text-xs text-red-300">{error}</span>
-                  </div>
-                )}
-                <input
-                  ref={photoRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    e.target.value = "";
-                    if (f) void decodePhoto(f);
-                  }}
-                  data-testid="photo-scan-input"
-                />
-                <p className="text-[11px] text-slate-500 text-center mt-3">
-                  Decoded on your device only — your Aadhaar never leaves this phone.
-                </p>
-              </div>
-            )}
 
-            {/* Verified Stage */}
-            {stage === "verified" && aadhaar && (
-              <>
-                <div className="flex items-center justify-center mb-2">
-                  <CheckCircle size={40} className="text-emerald-400" />
-                </div>
-                <h3 className="text-xl font-bold text-center text-white mb-2" data-testid="aadhaar-verified-card">Aadhaar Verified</h3>
-                <div className="flex flex-col items-center gap-1 mb-4">
-                  {verify?.integrityOk === true && (
-                    <span className="inline-flex items-center gap-1.5 text-emerald-400 text-xs font-medium">
-                      <ShieldCheck size={14} /> Integrity verified (SHA-256)
-                    </span>
-                  )}
-                  {verify?.integrityOk === false && (
-                    <span className="inline-flex items-center gap-1.5 text-red-400 text-xs font-medium">
-                      <ShieldAlert size={14} /> QR data looks corrupted — please rescan
-                    </span>
-                  )}
-                  {verify?.integrityOk == null && (
-                    <span className="inline-flex items-center gap-1.5 text-slate-400 text-xs">
-                      <ShieldQuestion size={14} /> Integrity check unavailable for this QR type
-                    </span>
-                  )}
-                  {verify?.signatureOk === true && (
-                    <span className="inline-flex items-center gap-1.5 text-emerald-400 text-xs font-medium">
-                      <ShieldCheck size={14} /> Digitally signed by UIDAI
-                    </span>
-                  )}
-                  {verify?.signatureOk === false && (
-                    <span className="inline-flex items-center gap-1.5 text-amber-400 text-xs">
-                      <ShieldAlert size={14} /> UIDAI signature key not matched (key rotation) — decoded offline
-                    </span>
-                  )}
-                </div>
-                <div className="bg-slate-800/60 rounded-xl p-4 space-y-2 mb-4">
-                  <p className="text-sm">
-                    <span className="text-slate-400">Name: </span>
-                    <span className="text-white font-medium">{aadhaar.name}</span>
-                  </p>
-                  {aadhaar.pc && (
-                    <p className="text-sm">
-                      <span className="text-slate-400">PIN: </span>
-                      <span className="text-white">{aadhaar.pc}</span>
-                    </p>
-                  )}
-                  {aadhaar.vtc && (
-                    <p className="text-sm">
-                      <span className="text-slate-400">VTC: </span>
-                      <span className="text-white">{aadhaar.vtc}</span>
-                    </p>
-                  )}
-                  {aadhaar.dist && (
-                    <p className="text-sm">
-                      <span className="text-slate-400">District: </span>
-                      <span className="text-white">{aadhaar.dist}</span>
-                    </p>
-                  )}
-                  <p className="text-xs text-slate-400 pt-1">
-                    Verified &bull; Last 4: {aadhaar.last4}
-                  </p>
-                </div>
-                <div className="mb-4">
-                  <label
-                    htmlFor="vog-reg-phone"
-                    className="block text-xs font-medium text-slate-300 mb-1.5"
-                  >
-                    Mobile number <span className="text-amber-400">*</span>
-                    <span className="text-slate-500"> — for sign-in &amp; alerts</span>
-                  </label>
-                  <input
-                    id="vog-reg-phone"
-                    type="tel"
-                    inputMode="numeric"
-                    autoComplete="tel-national"
-                    maxLength={10}
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    placeholder="10-digit mobile number"
-                    data-testid="reg-phone-input"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-sm tracking-widest placeholder:text-slate-500 placeholder:tracking-normal focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                  />
-                  {phoneDigits.length > 0 && !phoneOk && (
-                    <p className="text-[11px] text-amber-400 mt-1">
-                      Aadhaar QRs never carry your number — enter all 10 digits to continue.
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={handleRegister}
-                  disabled={!phoneOk}
-                  className="w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold shadow-lg hover:from-amber-500 hover:to-orange-500 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {phoneOk ? "Register & Get My GDR ID" : "Enter mobile number to register"}
-                </button>
-                <button
-                  onClick={resetScan}
-                  className="w-full mt-2 px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm transition"
-                >
-                  Scan Again
-                </button>
                 {error && (
                   <div className="flex items-center gap-2 justify-center text-red-400 text-xs mt-2">
                     <AlertCircle size={14} />
                     <span>{error}</span>
                   </div>
                 )}
-              </>
+
+                <button
+                  type="button"
+                  onClick={resetScan}
+                  className="w-full mt-2 px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm transition"
+                >
+                  Scan Again
+                </button>
+              </div>
             )}
 
             {/* Registering Stage */}
