@@ -190,12 +190,14 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       lastScanRef.current = now;
       const data = await decodeAadhaarAsync(decoded);
       if (!data || !data.ok || !data.name) {
-        // Keep the camera running for the next frame. If the payload at
-        // least looks like an Aadhaar secure QR, the capture worked and the
-        // read was noisy — guide the user instead of confusing them.
+        // Keep the camera running for the next frame. Distinguish a noisy read
+        // from a captured-but-unparseable payload — the fixes differ (steadier
+        // hands vs. browser too old to inflate the 2022 gzip format).
         setError(
           looksLikeAadhaarSecureQr(decoded)
-            ? "Aadhaar QR detected but read unclearly. Hold steadier, get 10-15 cm closer, avoid glare — or use “Scan from Photo”."
+            ? (data?.error ||
+                "Aadhaar QR detected but read unclearly") +
+                " Hold the card flat, avoid glare, get 10-15 cm closer — or use “Scan from Photo”."
             : "That QR is not an Aadhaar card. Scan the QR printed on the Aadhaar card / e-Aadhaar."
         );
         return;

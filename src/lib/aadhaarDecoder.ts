@@ -269,15 +269,29 @@ const GZIP_V2_FIELDS = [
 ];
 const GZIP_V1_FIELDS = GZIP_V2_FIELDS.slice(1, -1);
 
-/** gzip (0x1f 0x8b) → raw bytes via the native DecompressionStream. */
+/**
+ * gzip (0x1f 0x8b) → raw bytes.
+ * Uses the native DecompressionStream where it exists, and falls back to a
+ * pure-JS inflate (fflate) on browsers that ship without it — Safari < 16.4
+ * and some older Android WebViews. Without the fallback the 2022 gzip QR
+ * format printed on every current e-Aadhaar card can never decode there.
+ */
 async function gunzipBytes(bytes: Uint8Array): Promise<Uint8Array | null> {
+  if (bytes.length < 2 || bytes[0] !== 0x1f || bytes[1] !== 0x8b) return null;
   const DS = (
     globalThis as unknown as { DecompressionStream?: typeof DecompressionStream }
   ).DecompressionStream;
-  if (!DS || bytes.length < 2 || bytes[0] !== 0x1f || bytes[1] !== 0x8b) return null;
+  if (DS) {
+    try {
+      const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DS("gzip"));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    } catch {
+      /* native path failed — fall through to the pure-JS inflate */
+    }
+  }
   try {
-    const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DS("gzip"));
-    return new Uint8Array(await new Response(stream).arrayBuffer());
+    const { gunzipSync } = await import("fflate");
+    return gunzipSync(bytes);
   } catch {
     return null;
   }

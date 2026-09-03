@@ -1,0 +1,27 @@
+# VOICE OF GUDALUR — Netlify response headers.
+# Netlify serves existing static files BEFORE the SPA redirect in
+# netlify.toml, so /assets/* resolves fine — these rules pin the MIME types
+# and caching that the QR-scan pipeline (ZBar-wasm) and the PWA depend on.
+
+# WASM must come back as application/wasm for streaming instantiation. The
+# ZBar glue falls back to ArrayBuffer instantiation if the MIME is wrong, but
+# serving it correctly avoids the failed-attempt overhead on every scan.
+/*.wasm
+  Content-Type: application/wasm
+  Cache-Control: public, max-age=31536000, immutable
+
+# Hashed build output — cache forever.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Service worker and its registration helper must always revalidate, or PWA
+# clients keep running a stale bundle (symptom: "works in dev, broken live").
+/sw.js
+  Cache-Control: no-cache
+  Service-Worker-Allowed: /
+/registerSW.js
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Content-Type: application/manifest+json
+  Cache-Control: no-cache

@@ -225,6 +225,22 @@ describe('decodeAadhaarAsync — 2022 gzip “V2” e-Aadhaar QR', () => {
     expect(r.last4).toBe('9304');
   });
 
+  it('decodes the gzip V2 payload WITHOUT DecompressionStream (fflate fallback for Safari < 16.4)', async () => {
+    const qr = await buildGzipV2Qr(v2Fields);
+    const g = globalThis as unknown as { DecompressionStream?: unknown };
+    const saved = g.DecompressionStream;
+    delete g.DecompressionStream; // simulate Safari < 16.4 / old Android WebView
+    try {
+      const r = await decodeAadhaarAsync(qr);
+      expect(r.ok).toBe(true);
+      expect(r.name).toBe('GUDALUR TEST');
+      expect(r.last4).toBe('1234');
+      expect(r.pc).toBe('643212');
+    } finally {
+      g.DecompressionStream = saved; // restore for other tests
+    }
+  });
+
   it('rejects an undecodable numeric payload with a clear error', async () => {
     const junk = '9' + '2'.repeat(500);
     const r = await decodeAadhaarAsync(junk);

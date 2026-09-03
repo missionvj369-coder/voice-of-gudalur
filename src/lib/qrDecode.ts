@@ -169,6 +169,7 @@ function getNativeDetector(): BarcodeDetectorLike | null {
 }
 
 /** ZBar over WASM — lazily imported so the ~100KB wasm loads only when needed. */
+let zbarLoadWarned = false;
 async function zbarDecode(img: ImageData): Promise<string | null> {
   try {
     const { scanImageData } = await import("@undecaf/zbar-wasm");
@@ -177,13 +178,19 @@ async function zbarDecode(img: ImageData): Promise<string | null> {
       const text = s.decode();
       if (text) return text;
     }
-  } catch {
-    /* wasm unavailable / no symbol — fall through */
+  } catch (e) {
+    // A silent swallow here makes production failures undiagnosable (e.g. the
+    // wasm fetch returning the SPA's index.html). Warn once, keep scanning.
+    if (!zbarLoadWarned) {
+      zbarLoadWarned = true;
+      console.warn("[qr] ZBar-wasm engine unavailable — continuing with jsQR:", e);
+    }
   }
   return null;
 }
 
 /** jsQR — pure JS, reads the full-resolution RGBA buffer. */
+let jsqrLoadWarned = false;
 async function jsqrDecode(img: ImageData): Promise<string | null> {
   try {
     const mod = await import("jsqr");
@@ -192,9 +199,13 @@ async function jsqrDecode(img: ImageData): Promise<string | null> {
       inversionAttempts: "attemptBoth",
     });
     return code?.data || null;
-  } catch {
-    return null;
+  } catch (e) {
+    if (!jsqrLoadWarned) {
+      jsqrLoadWarned = true;
+      console.warn("[qr] jsQR engine unavailable:", e);
+    }
   }
+  return null;
 }
 
 /** Native detector (passes the real canvas) first, then ZBar, then jsQR. */
