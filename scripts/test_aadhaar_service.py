@@ -19,6 +19,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Windows consoles/redirects default to cp1252; the output uses typographic
+# characters (→, —) that cp1252 cannot encode. Force UTF-8 so the suite is
+# reproducible in CI and redirected pipelines.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 ROOT = Path(__file__).resolve().parent.parent
 SERVICE = ROOT / "server" / "aadhaar_service.py"
 sys.path.insert(0, str(SERVICE.parent))

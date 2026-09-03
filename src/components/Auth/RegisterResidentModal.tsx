@@ -649,6 +649,121 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
               </div>
             )}
 
+            {/* Verified Stage — decoded Aadhaar data, ready to register */}
+            {stage === "verified" && (
+              <div className="flex flex-col h-full gap-3 px-4 pt-14 sm:pt-6 pb-4 overflow-y-auto">
+                <div className="text-center">
+                  <div className="inline-flex items-center gap-2 bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 rounded-full px-3 py-1 mb-2">
+                    <CheckCircle size={15} />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Aadhaar Verified On-Device</span>
+                  </div>
+                  <h3
+                    className="text-xl font-bold text-white leading-tight"
+                    data-testid="decoded-name"
+                  >
+                    {aadhaar?.name || "Resident"}
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    {aadhaar?.gender}
+                    {aadhaar?.yob ? ` · Born ${aadhaar.yob}` : ""}
+                  </p>
+                </div>
+
+                {(verify?.integrityOk === true || verify?.signatureOk === true) && (
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {verify.integrityOk === true && (
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-2.5 py-1">
+                        <ShieldCheck size={12} /> Tamper check passed
+                      </span>
+                    )}
+                    {verify.signatureOk === true && (
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-2.5 py-1">
+                        <ShieldCheck size={12} /> Signed by UIDAI
+                      </span>
+                    )}
+                    {verify?.integrityOk === false && (
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-full px-2.5 py-1">
+                        <ShieldAlert size={12} /> Integrity hash not matched — treat with caution
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Identity summary card */}
+                <div className="rounded-xl bg-slate-800/70 border border-slate-600 p-4 space-y-2 text-left">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] uppercase tracking-wider text-slate-400">Aadhaar</span>
+                    <span
+                      className="font-mono font-bold text-slate-100 text-sm"
+                      data-testid="decoded-last4"
+                    >
+                      {aadhaar?.last4 ? `XXXX XXXX ${aadhaar.last4}` : ""}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] uppercase tracking-wider text-slate-400">Address</span>
+                    <span className="text-[11px] text-slate-300 text-right max-w-[65%]" data-testid="decoded-address">
+                      {[
+                        aadhaar?.house, aadhaar?.street, aadhaar?.loc, aadhaar?.vtc,
+                        aadhaar?.po, aadhaar?.dist, aadhaar?.state, aadhaar?.pc,
+                      ].filter(Boolean).join(", ") || "Not available"}
+                    </span>
+                  </div>
+                  {aadhaar?.referenceId && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] uppercase tracking-wider text-slate-400">Reference</span>
+                      <span className="font-mono text-[11px] text-slate-300">{aadhaar.referenceId}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Mobile number — required to complete registration */}
+                <div className="rounded-xl bg-slate-800/70 border border-slate-600 p-4 space-y-2">
+                  <label className="block text-[11px] uppercase tracking-wider text-slate-400">
+                    Your mobile number <span className="text-amber-400">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                    placeholder="10-digit mobile number"
+                    maxLength={10}
+                    className="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-slate-500 text-white text-center text-lg font-mono tracking-widest placeholder:text-slate-500 placeholder:text-sm focus:border-emerald-400 focus:outline-none transition"
+                    data-testid="phone-input"
+                  />
+                  <p className="text-[10px] text-slate-400">
+                    Used for your Gudalur Resident ID. The Aadhaar number itself stays on this device.
+                  </p>
+                </div>
+                {error && (
+                  <p className="text-red-400 text-xs font-bold text-center" data-testid="verified-error">
+                    {error}
+                  </p>
+                )}
+
+                <div className="flex gap-2 pt-1 mt-auto">
+                  <button
+                    type="button"
+                    onClick={resetScan}
+                    className="flex-1 py-3 rounded-xl border border-slate-500 bg-slate-800/60 text-slate-200 font-bold text-sm hover:border-amber-400 hover:text-amber-200 active:scale-[0.99] transition"
+                  >
+                    Scan Again
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleRegister()}
+                    disabled={!phoneOk}
+                    className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99] transition"
+                    data-testid="complete-registration"
+                  >
+                    Complete Registration
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Registering Stage */}
             {stage === "registering" && (
               <div className="text-center py-8 p-6">
