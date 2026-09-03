@@ -179,18 +179,14 @@ router.get('/csrf', (_req: Request, res: Response) => {
   res.json({ csrfToken: token });
 });
 
-/** POST /api/auth/forgot — issue a login OTP for an existing resident. */
-router.post('/forgot', async (req: Request, res: Response) => {
-  try {
-    const p = normalizePhone(req.body?.phone || '');
-    const user = await findUserByPhone(p);
-    if (!user) return res.status(404).json({ error: 'No resident for this number' });
-    const otp = await createOtp(p, 'login', 'phone');
-    res.json({ message: 'OTP sent', ...((process.env.OTP_PROVIDER || 'devel') === 'devel' ? { otp: { id: otp.id, code: otp.code } } : {}) });
-  } catch (e: any) {
-    logger.error('forgot:', e.message);
-    res.status(500).json({ error: 'Could not issue OTP' });
-  }
+/** POST /api/auth/forgot — residents authenticate via Aadhaar QR scan only.
+ * An OTP 'forgot password' flow no longer exists; registration is idempotent
+ * (re-scanning the same Aadhaar re-opens the same Gudalur ID). We return a
+ * 410 Gone with guidance so any stale client is redirected cleanly. */
+router.post('/forgot', async (_req: Request, res: Response) => {
+  res.status(410).json({
+    error: 'Passwordless Aadhaar verification only. Scan your Aadhaar QR to sign in or register.',
+  });
 });
 
 /** POST /api/auth/refresh — exchange refresh_token for a new access_token (rotates). */

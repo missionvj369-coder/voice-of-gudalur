@@ -4,17 +4,21 @@
  * Access is gated server-side by requireRole — an endpoint's existence does
  * NOT grant access.
  *
- *   POST /api/officials/request   — official requests portal access
+ * Officials authenticate via email + password — no OTP. A govt. official
+ * requests access by email; the master admin approves from this backend, then
+ * the official sets a password.
+ *
+ *   POST /api/officials/request    — official requests portal access
  *   POST /api/officials/approve/:id — ADMIN approves an official
- *   POST /api/officials/otp        — issue official email OTP
- *   POST /api/officials/verify     — verify official OTP, set session
+ *   POST /api/officials/set-password — set password (first time or reset)
+ *   POST /api/admin/login          — ADMIN login
+ *   POST /api/admin/approve-official — ADMIN approve official
  *   GET  /api/officials/signs      — APPROVED_OFFICIAL+
  *   GET  /api/officials/incidents   — APPROVED_OFFICIAL+
  */
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import { db } from '../db/client';
-import { createOtp, verifyOtp } from '../services/authService';
 import { createSession, SessionUser, requireAuth, requireRole, logAudit } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { listPetitionSigns } from '../db/repositories/petitionRepository';
@@ -133,55 +137,6 @@ router.post('/approve/:id', requireAuth, requireRole('ADMIN', 'PLATFORM_ADMIN'),
   );
   await logAudit({ actorId: req.user!.uid, actorKind: 'user', action: 'APPROVE_OFFICIAL', target: `officials/${req.params.id}`, ip: req.ip });
   res.json({ approved: (ok.rowCount ?? 0) > 0 });
-});
-
-/** POST /api/officials/otp — issue an email OTP (only for approved officials). */
-router.post('/otp', async (req: Request, res: Response) => {
-  try {
-    const email = (req.body?.email || '').trim().toLowerCase();
-    const official = await db.queryOne<{ id: number; email: string; name: string; status: string }>(
-      'SELECT id, email, name, status FROM officials WHERE email = $1', [email],
-    );
-    if (!official) return res.status(404).json({ error: 'Official not found' });
-    if (official.status !== 'APPROVED') return res.status(403).json({ error: 'Account not approved' });
-
-    const otp = await createOtp(official.email, 'official_otp', 'email', undefined, { identityId: String(official.id) });
-    res.json({ message: 'OTP sent', ...((process.env.OTP_PROVIDER || 'devel') === 'devel' ? { otp: { id: otp.id, code: otp.code } } : {}) });
-  } catch (e: any) {
-    logger.error('official otp:', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-/** POST /api/officials/verify — verify official OTP, set session. */
-router.post('/verify', async (req: Request, res: Response) => {
-  try {
-    const email = (req.body?.email || '').trim().toLowerCase();
-    const code: string = req.body?.code;
-    if (!/^\d{6}$/.test(code || '')) return res.status(400).json({ error: 'Invalid code' });
-
-    const identityId = await verifyOtp(email, 'official_otp', code);
-    if (!identityId) return res.status(401).json({ error: 'Invalid or expired OTP' });
-
-    const official = await db.queryOne<{ id: number; email: string; name: string; role: string }>(
-      'SELECT id, email, name, role FROM officials WHERE id = $1::int', [identityId],
-    );
-    if (!official) return res.status(404).json({ error: 'Official not found' });
-
-    const sessionUser: SessionUser = {
-      uid: String(official.id), phone: undefined, gudalurId: undefined,
-      name: official.name ?? official.email, role: official.role,
-      verificationLevel: 'PHONE_VERIFIED', kind: 'official',
-    };
-    const session = await createSession(sessionUser, req.get('user-agent'), req.ip);
-    res.cookie('access_token', session.accessToken, { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 15 * 60 * 1000 });
-    res.cookie('refresh_token', session.refreshToken, { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 86400000 });
-    res.cookie('csrf_token', session.csrfToken, { httpOnly: false, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 86400000 });
-    res.json({ user: sessionUser, csrfToken: session.csrfToken });
-  } catch (e: any) {
-    logger.error('official verify:', e.message);
-    res.status(500).json({ error: 'Verification failed' });
-  }
 });
 
 /** GET /api/officials/signs — approved officials only. */
