@@ -257,14 +257,30 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       video.playsInline = true;
       video.muted = true;
       video.autoplay = true;
+      // Legacy iOS (<15) needs the attribute, not just the property.
+      video.setAttribute("playsinline", "true");
+      video.setAttribute("webkit-playsinline", "true");
       video.style.width = "100%";
       video.style.display = "block";
       video.style.borderRadius = "12px";
       video.style.background = "#000";
+      video.style.objectFit = "cover";
       container.innerHTML = "";
       container.appendChild(video);
       video.srcObject = stream;
       await video.play().catch(() => { /* muted autoplay is allowed everywhere */ });
+
+      // Wait until the track reports real dimensions — on slow devices the
+      // first frames can otherwise be 0×0 and every engine no-ops silently.
+      if (!video.videoWidth || !video.videoHeight) {
+        await new Promise<void>((res) => {
+          const t = window.setTimeout(res, 4000); // hard timeout — don't hang forever
+          video.onloadedmetadata = () => { window.clearTimeout(t); res(); };
+        });
+      }
+      if (!video.videoWidth || !video.videoHeight) {
+        throw new Error("Camera started but no video track — try Scan from Photo.");
+      }
 
       const cam: NonNullable<typeof cameraRef.current> = {
         stream,

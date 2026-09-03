@@ -33,11 +33,16 @@ export interface QrDecodeHit {
  */
 export function planDecodeVariants(w: number, h: number): number[] {
   const longest = Math.max(1, Math.max(w, h));
-  // Never upscale past the native size — above `longest` only adds blur.
-  const ladder = [longest, 2200, 1600, 1200, 900, 640, 440].filter((s) => s <= longest);
-  if (longest < 700) {
+  // Never upscale past the native size — above `longest` only adds blur — and
+  // cap huge photos (12MP+) at 2560px: at native size a 4000px photo would
+  // blow a ~48MB canvas, enough to OOM a low-end Android. 2560px is plenty for
+  // a QR to resolve and keeps memory/timing sane across all devices.
+  const LONGEST_WORKABLE = 2560;
+  const top = Math.min(longest, LONGEST_WORKABLE);
+  const ladder = [top, 2200, 1600, 1200, 900, 640, 440].filter((s) => s <= top);
+  if (top < 700) {
     // Small shots (thumbnails/screenshots): try a meaningful upscale once.
-    ladder.unshift(Math.max(300, Math.min(1400, longest * 2)));
+    ladder.unshift(Math.max(300, Math.min(1400, top * 2)));
   }
   return [...new Set(ladder)].sort((a, b) => b - a);
 }
@@ -192,7 +197,7 @@ async function jsqrDecode(img: ImageData): Promise<string | null> {
   }
 }
 
-/** Native detector first (cheap), then ZBar, then jsQR. */
+/** Native detector (passes the real canvas) first, then ZBar, then jsQR. */
 async function decodeImageData(
   img: ImageData,
   canvas: ImageBitmapSource
@@ -249,7 +254,7 @@ export async function decodeVideoFrame(
   if (!ctx) return null;
   ctx.drawImage(video, 0, 0, cw, ch);
   const img = ctx.getImageData(0, 0, cw, ch);
-  return decodeImageData(img, img);
+  return decodeImageData(img, canvas);
 }
 
 /* ========================= DOM-dependent pipeline ========================= */
@@ -259,9 +264,17 @@ type PhotoBitmap = ImageBitmap | HTMLImageElement;
 async function loadPhotoBitmap(file: File): Promise<PhotoBitmap> {
   if (typeof createImageBitmap === "function") {
     try {
-      return await createImageBitmap(file);
+      // iOS Safari can silently hang createImageBitmap on some HEIC/EXIF
+      // images — race it against a timeout so we fall back to <img>.
+      const bitmap = await Promise.race([
+        createImageBitmap(file),
+        new Promise<never>((_, rej) =>
+          window.setTimeout(() => rej(new Error("createImageBitmap timeout")), 3000)
+        ),
+      ]);
+      return bitmap;
     } catch {
-      /* older browsers */
+      /* fall through to <img> */
     }
   }
   const url = URL.createObjectURL(file);
@@ -287,10 +300,14 @@ function bitmapSize(src: PhotoBitmap): { w: number; h: number } {
 function renderImageData(
   src: PhotoBitmap,
   maxSide: number
-): { img: ImageData; ctx: CanvasRenderingContext2D } | null {
+): { img: ImageData; ctx: CanvasRenderingContext2D; canvas: HTMLCanvasElement } | null {
   const { w: sw, h: sh } = bitmapSize(src);
   if (!sw || !sh) return null;
-  const scale = Math.min(1, maxSide / Math.max(sw, sh));
+  // Cap the working dimension: a QR only needs ~500-1600px to resolve, and
+  // a 12MP phone photo at native size would blow a 48MB canvas — enough to
+  // OOM a low-end Android. 2560px is plenty and keeps memory/timing sane.
+  const LONGEST_WORKABLE = 2560;
+  const scale = Math.min(1, Math.min(maxSide, LONGEST_WORKABLE) / Math.max(sw, sh));
   const w = Math.max(1, Math.round(sw * scale));
   const h = Math.max(1, Math.round(sh * scale));
   const canvas = document.createElement("canvas");
@@ -301,7 +318,7 @@ function renderImageData(
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(src, 0, 0, w, h);
-  return { img: ctx.getImageData(0, 0, w, h), ctx };
+  return { img: ctx.getImageData(0, 0, w, h), ctx, canvas };
 }
 
 /** Rebuild a derived grayscale buffer as an ImageData (R=G=B=gray). */
@@ -359,7 +376,11 @@ export async function decodePhotoQr(
         `Analyzing photo — ${label}, ${rendered.img.width}×${rendered.img.height} (pass ${attempts})…`
       );
       const derived = derive(rendered.img, rendered.ctx);
-      const hit = await decodeImageData(derived, derived);
+      // The detector prefers a real canvas element (not raw ImageData) for
+      // max compatibility across Chrome / Samsung Internet / in-app browsers;
+      // binarize/sharpen passes update rendered.canvas in place via putImageData.
+      const source = rendered.canvas;
+      const hit = await decodeImageData(derived, source);
       if (hit) return hit;
     }
     return null;

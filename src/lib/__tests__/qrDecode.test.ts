@@ -8,13 +8,15 @@ import {
 } from "../qrDecode";
 
 describe("planDecodeVariants", () => {
-  it("starts at the native size and steps down the ladder", () => {
+  it("starts at the native size, steps down, and caps huge photos at 2560px", () => {
     const plan = planDecodeVariants(1920, 1080);
     expect(plan[0]).toBe(1920);
     expect(plan.every((s) => s <= 1920)).toBe(true); // never upscales past native
     expect(plan).toContain(640);
     expect([...plan].sort((a, b) => b - a)).toEqual(plan); // descending
     expect(new Set(plan).size).toBe(plan.length); // no duplicates
+    // A 12MP (4000px) phone photo must be capped to protect low-end devices.
+    expect(planDecodeVariants(4000, 3000)[0]).toBe(2560);
   });
 
   it("upscales small images (thumbnails) before the ladder", () => {
