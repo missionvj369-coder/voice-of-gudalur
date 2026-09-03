@@ -80,7 +80,12 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          // Precache the app shell + the small ZBar wasm (~100 KB) so QR
+          // scanning works offline. The heavy HuggingFace ort-wasm AI model
+          // (23+ MB) is loaded on-demand at runtime — exclude it from
+          // precache (it also exceeds workbox's default 2 MiB limit).
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,wasm}'],
+          globIgnores: ['**/ort-wasm*'],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/.*\.tile\.openstreetmap\.org\/.*/i,

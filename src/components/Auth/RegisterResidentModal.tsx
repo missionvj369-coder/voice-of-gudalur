@@ -10,6 +10,7 @@ import {
 } from "../../lib/aadhaarDecoder";
 import { initUidaiVerification } from "../../lib/uidaiPublicKeys";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import { decodePhotoQr, decodeVideoFrame } from "../../lib/qrDecode";
 import { Shield, ShieldCheck, ShieldAlert, ShieldQuestion, AlertCircle, CheckCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -151,7 +152,17 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
   const [photoBusy, setPhotoBusy] = useState(false);
   const [scanStatus, setScanStatus] = useState("");
   const [errHelp, setErrHelp] = useState<CameraHelp | null>(null);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  // Live camera resources — raw getUserMedia, no scanner library in the loop.
+  const cameraRef = useRef<{
+    stream: MediaStream;
+    video: HTMLVideoElement;
+    timer: number | null;
+    canvas: HTMLCanvasElement;
+    tickCount: number;
+    busy: boolean;
+  } | null>(null);
+  // html5-qrcode file scanner — last-resort fallback engine for photos only.
+  const fileScannerRef = useRef<Html5Qrcode | null>(null);
   const lastScanRef = useRef(0);
   const photoRef = useRef<HTMLInputElement | null>(null);
 
@@ -161,12 +172,14 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
 
   const stopScanner = useCallback(async () => {
     setCamState("idle");
-    const s = scannerRef.current;
-    if (!s) return;
-    try {
-      await s.stop();
-      setScanStatus("Scanner stopped. Tap Start Camera Scan to try again.");
-    } catch { /* already stopped */ }
+    const cam = cameraRef.current;
+    cameraRef.current = null;
+    if (!cam) return;
+    if (cam.timer !== null) window.clearTimeout(cam.timer);
+    cam.stream.getTracks().forEach((t) => t.stop());
+    try { cam.video.pause(); } catch { /* already paused */ }
+    cam.video.remove();
+    setScanStatus("Scanner stopped. Scan from Photo, or start the camera again.");
   }, []);
 
   /** Shared success path for camera frames AND scanned photos. */
@@ -204,53 +217,92 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
 
   /**
    * Started DIRECTLY from the button tap so the browser ties its native
-   * "Allow camera?" prompt to a real user gesture (mandatory on iOS, and it
-   * makes the Allow decision a single obvious tap on Android).
+   * "Allow camera?" prompt to a real user gesture (mandatory on iOS).
+   * Raw getUserMedia + a decode loop over the SAME engines as photo scanning
+   * (native BarcodeDetector every frame, ZBar-wasm → jsQR every other frame,
+   * full-frame — no qrbox cropping). html5-qrcode's zxing build was too weak
+   * for Version-25+ Aadhaar QRs; this loop is not.
    */
   const openCamera = useCallback(async () => {
     if (camState === "starting" || camState === "running") return;
     setError("");
     setErrHelp(null);
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setErrHelp({
+        title: "Camera needs a secure (https) connection",
+        steps: ["Open the site over https — or use “Scan from Photo”, which always works."],
+      });
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setErrHelp({
+        title: "This browser can't open the camera",
+        steps: ["Use “Scan from Photo” below — it works on every browser, no permissions needed."],
+      });
+      return;
+    }
     if (!document.getElementById("qr-reader")) {
       await new Promise((r) => setTimeout(r, 80));
       if (!document.getElementById("qr-reader")) return;
     }
-    // Persistent instance - created once, reused across stop/start cycles
-    // (reference pattern: never cleared, so the element stays valid).
-    // Pin QR_CODE + prefer the native BarcodeDetector: the Aadhaar Secure QR
-    // is a huge Version-25+ code (~129+ modules/side), and skipping zxing's
-    // multi-format probing gives far more decode attempts per second.
-    if (!scannerRef.current) {
-      scannerRef.current = new Html5Qrcode("qr-reader", {
-        verbose: false,
-        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-      });
-    }
     setCamState("starting");
-    setScanStatus("Requesting camera permissions & initializing high-res focus...");
+    setScanStatus("Requesting camera permissions…");
     try {
-      await scannerRef.current.start(
-        { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
-        {
-          fps: 15,
-          // FIXED: a fixed 280px qrbox CROPS the frame to 280x280px, but
-          // Aadhaar Secure QRs are Version-25+ codes (~129-145 modules per
-          // side) — ~2 px/module is below decodable resolution, so the camera
-          // saw the QR yet could never read it. Scan ~85% of the frame so the
-          // QR itself resolves at 600+ px (~4+ px/module).
-          qrbox: (vw: number, vh: number) => {
-            const side = Math.max(200, Math.floor(Math.min(vw, vh) * 0.85));
-            return { width: side, height: side };
-          },
-        },
-        (decoded) => {
-          void handleDecoded(decoded);
-        },
-        () => { /* suppress noisy frame-by-frame misses */ }
-      );
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false,
+      });
+      const container = document.getElementById("qr-reader")!;
+      const video = document.createElement("video");
+      video.playsInline = true;
+      video.muted = true;
+      video.autoplay = true;
+      video.style.width = "100%";
+      video.style.display = "block";
+      video.style.borderRadius = "12px";
+      video.style.background = "#000";
+      container.innerHTML = "";
+      container.appendChild(video);
+      video.srcObject = stream;
+      await video.play().catch(() => { /* muted autoplay is allowed everywhere */ });
+
+      const cam: NonNullable<typeof cameraRef.current> = {
+        stream,
+        video,
+        timer: null,
+        canvas: document.createElement("canvas"),
+        tickCount: 0,
+        busy: false,
+      };
+      cameraRef.current = cam;
+
+      const tick = async () => {
+        const cur = cameraRef.current;
+        if (!cur || cur !== cam) return;
+        if (cur.busy) {
+          cur.timer = window.setTimeout(tick, 100);
+          return;
+        }
+        cur.busy = true;
+        try {
+          cur.tickCount++;
+          const hit = await decodeVideoFrame(cur.video, cur.canvas, cur.tickCount % 2 === 0);
+          if (hit) {
+            window.clearTimeout(cur.timer);
+            cur.timer = null;
+            void handleDecoded(hit.text);
+            return; // handleDecoded → stopScanner releases the camera
+          }
+        } catch { /* skip this frame */ } finally {
+          cur.busy = false;
+        }
+        if (cameraRef.current === cam) {
+          cam.timer = window.setTimeout(tick, 150);
+        }
+      };
+      cam.timer = window.setTimeout(tick, 300);
       setCamState("running");
-      setScanStatus("Camera active. Align the Aadhaar QR inside the box firmly.");
+      setScanStatus("Camera active. Hold the card 10-15 cm away, QR toward the camera, steady.");
     } catch (e: unknown) {
       setCamState("idle");
       setErrHelp(classifyCameraError(e));
@@ -265,22 +317,33 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       setPhotoBusy(true);
       let inst: Html5Qrcode | null = null;
       try {
-        // Separate hidden element for file scanning (reference format) -
-        // never fights with the live camera element.
-        // FIXED: the constructor THROWS when the element is missing, and
-        // nothing ever rendered #qr-reader-file — so every photo scan died
-        // as a silent unhandled rejection (spinner flashes, nothing else).
-        // Create the hidden element ourselves instead of waiting for one.
+        setScanStatus("Loading image…");
+        // NEW multi-engine pipeline first — native BarcodeDetector → ZBar-wasm
+        // → jsQR, over scale / Otsu-contrast / sharpen variants. This is what
+        // makes low-quality photos work.
+        const hit = await decodePhotoQr(file, (m) => setScanStatus(m));
+        if (hit) {
+          setScanStatus(`QR decoded via ${hit.engine} — verifying Aadhaar payload…`);
+          lastScanRef.current = 0;
+          await handleDecoded(hit.text);
+          return;
+        }
+        setScanStatus("Deep scan found nothing — trying the fallback engine…");
+        // Fallback: html5-qrcode file scanner (separate hidden element —
+        // never fights with the live camera element).
         if (!document.getElementById("qr-reader-file")) {
           const el = document.createElement("div");
           el.id = "qr-reader-file";
           el.style.display = "none";
           document.body.appendChild(el);
         }
-        inst = new Html5Qrcode("qr-reader-file", {
-          verbose: false,
-          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-        });
+        if (!fileScannerRef.current) {
+          fileScannerRef.current = new Html5Qrcode("qr-reader-file", {
+            verbose: false,
+            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+          });
+        }
+        inst = fileScannerRef.current;
         let text: string | null = null;
         try {
           text = await inst.scanFile(file, true);
@@ -298,7 +361,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
           } catch { /* undecodable image */ }
         }
         if (!text) {
-          setError("Failed to detect a valid QR code in this image. Upload a clearer photo of the Aadhaar QR - sharp, well-lit, no glare, QR filling the frame.");
+          setError("No QR found in this photo even after deep scanning (scales, contrast, sharpening). Retake it: fill the frame with the QR, hold steady, avoid glare — or try the live camera.");
           return;
         }
         lastScanRef.current = 0;
@@ -327,7 +390,10 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
   useEffect(() => {
     if (!visible) {
       void stopScanner();
-      scannerRef.current = null;
+      if (fileScannerRef.current) {
+        try { fileScannerRef.current.clear(); } catch { /* ignore */ }
+        fileScannerRef.current = null;
+      }
     }
   }, [visible, stopScanner]);
 
@@ -386,7 +452,10 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
 
   const resetScan = () => {
     void stopScanner();
-    scannerRef.current = null;
+    if (fileScannerRef.current) {
+      try { fileScannerRef.current.clear(); } catch { /* ignore */ }
+      fileScannerRef.current = null;
+    }
     setAadhaar(null);
     setVerify(null);
     setError("");
@@ -438,37 +507,20 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                 {/* Viewfinder */}
                 <div id="qr-reader" data-testid="qr-reader-region" className="w-full min-h-[220px] rounded-xl overflow-hidden bg-black" />
 
-                <div className="flex gap-2 mt-3">
-                  {camState !== "running" ? (
-                    <button
-                      type="button"
-                      onClick={() => void openCamera()}
-                      disabled={camState === "starting" || photoBusy}
-                      className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-sm shadow-lg hover:from-amber-500 hover:to-orange-500 active:scale-[0.99] transition disabled:opacity-40 disabled:cursor-not-allowed"
-                      data-testid="open-camera"
-                    >
-                      {camState === "starting" ? "Opening camera..." : "Start Camera Scan"}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => { void stopScanner(); }}
-                      className="flex-1 py-3.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm active:scale-[0.99] transition"
-                      data-testid="stop-camera"
-                    >
-                      Stop / Reset
-                    </button>
-                  )}
-                </div>
-
-                <div className="mt-4 text-left">
+                {/* PRIMARY — photo scan: no permissions, every browser, and
+                    the multi-engine decoder (BarcodeDetector → ZBar → jsQR)
+                    retries scales, contrast and sharpening on low-quality
+                    shots. */}
+                <div className="mt-3 text-left">
                   <label
                     htmlFor="qr-file-input"
-                    className="block border-2 border-dashed border-slate-500 rounded-xl p-6 text-center cursor-pointer bg-slate-800/50 hover:border-amber-400 transition"
+                    className="block border-2 border-dashed border-amber-400/70 bg-amber-500/10 rounded-xl p-5 text-center cursor-pointer hover:border-amber-300 hover:bg-amber-500/20 transition"
                     data-testid="photo-scan-button"
                   >
-                    <p className="text-sm font-bold text-slate-200">Or Upload Image File:</p>
-                    <p className="text-[11px] text-slate-400 mt-1">PNG, JPG, JPEG - works without camera permission</p>
+                    <p className="text-sm font-bold text-amber-200">📷 Scan from Photo — recommended</p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Photograph the Aadhaar QR (or pick an existing shot). Dim, blurry or glaring — the decoder retries every way it can.
+                    </p>
                   </label>
                   <input
                     ref={photoRef}
@@ -486,6 +538,30 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                       <div className="h-4 w-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
                       Processing uploaded image...
                     </div>
+                  )}
+                </div>
+
+                {/* SECONDARY — live camera (needs permission + https). */}
+                <div className="flex gap-2 mt-3">
+                  {camState !== "running" ? (
+                    <button
+                      type="button"
+                      onClick={() => void openCamera()}
+                      disabled={camState === "starting" || photoBusy}
+                      className="flex-1 py-3 rounded-xl border border-slate-500 bg-slate-800/60 text-slate-200 font-bold text-sm hover:border-amber-400 hover:text-amber-200 active:scale-[0.99] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      data-testid="open-camera"
+                    >
+                      {camState === "starting" ? "Opening camera..." : "Use Live Camera Instead"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { void stopScanner(); }}
+                      className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm active:scale-[0.99] transition"
+                      data-testid="stop-camera"
+                    >
+                      Stop Camera
+                    </button>
                   )}
                 </div>
 
