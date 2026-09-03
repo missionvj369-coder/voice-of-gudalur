@@ -80,7 +80,7 @@ router.post('/login', async (req: Request, res: Response) => {
     });
 
     res.json({
-      user: { uid: admin.uid, name: admin.name, email: admin.email, role: admin.role, gudalurId: admin.gudalurId },
+      user: { uid: admin.uid, name: admin.name, email: admin.email, role: admin.role, gudalurId: admin.gudalur_id },
       csrfToken: session.csrfToken,
     });
   } catch (e: any) {
