@@ -11,7 +11,6 @@ interface AuthContextType {
   loading: boolean;
   userCoords: { lat: number; lng: number } | null;
   acquireLiveLocation: () => Promise<{ lat: number; lng: number } | null>;
-  /** Register with phone number only (no password). Server issues a Gudalur ID + OTP. */
   registerResident: (data: {
     name: string;
     phone: string;
@@ -21,21 +20,15 @@ interface AuthContextType {
     pincode: string;
     lat?: number;
     lng?: number;
-    /** pyaadhaar verification result â€” QR-decoded or Verhoeff-checked number. */
     aadhaarVerified?: boolean;
     aadhaarLast4?: string;
     aadhaarRef?: string;
   }) => Promise<UserProfile>;
-  /** Login with EITHER mobile number OR Gudalur ID number. Resolves the resident + sends an OTP. */
   loginResident: (phone?: string, gudalurId?: string) => Promise<UserProfile>;
-  /** Complete the pending OTP step and establish the server session (httpOnly cookies). */
-  verifyResidentOtp: (code: string) => Promise<UserProfile>;
-  /** True when an OTP was issued but not yet verified on this device. */
-  needsOtpVerify: boolean;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateLocality: (localityId: string, customPlaceName?: string, pincode?: string) => Promise<void>;
-  /** Update an existing resident's details IN PLACE â€” same Gudalur ID, same ledger row, never a new creation. */
+  /** Update an existing resident's details IN PLACE - same Gudalur ID, same ledger row, never a new creation. */
   updateResident: (fields: {
     name?: string; phone?: string; email?: string;
     localityId?: string; customPlaceName?: string; pincode?: string;
@@ -53,15 +46,11 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   userCoords: null,
-  needsOtpVerify: false,
   acquireLiveLocation: async () => null,
   registerResident: async () => {
     throw new Error('Not implemented');
   },
   loginResident: async () => {
-    throw new Error('Not implemented');
-  },
-  verifyResidentOtp: async () => {
     throw new Error('Not implemented');
   },
   logout: async () => {},
@@ -142,8 +131,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   });
   const [loading, setLoading] = useState(true);
-  const [needsOtpVerify, setNeedsOtpVerify] = useState(false);
-  const [pendingPhone, setPendingPhone] = useState<string | null>(null);
 
   const readCachedProfile = (): UserProfile | null => {
     try {
@@ -213,12 +200,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     })();
   }, []);
 
-  /**
-   * PHONE-ONLY REGISTRATION (no password). The server issues a unique Gudalur
-   * ID (GD-YYYY-NNNNNN), persists the ledger row and dispatches an OTP. In
-   * dev/test the OTP is delivered via the devel provider and verified
-   * immediately; in production the caller completes `verifyResidentOtp`.
-   */
   const registerResident = async (data: {
     name: string;
     phone: string;
@@ -262,21 +243,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!res?.resident) throw new Error('Registration failed');
       const prof = applyPlatformAdminOverride(toUserProfile(res.resident));
       persistProfile(prof);
-      if (res.otp?.code) {
-        try {
-          await authApi.verifyOtp({ phone, code: res.otp.code, purpose: 'register' });
-          setUser(toAuthUser(prof));
-          setNeedsOtpVerify(false);
-          setPendingPhone(null);
-        } catch {
-          setNeedsOtpVerify(true);
-          setPendingPhone(phone);
-        }
-      } else {
-        // Production: the OTP is sent via SMS â€” the caller completes verifyResidentOtp.
-        setNeedsOtpVerify(true);
-        setPendingPhone(phone);
-      }
+      setUser(toAuthUser(prof));
       return prof;
     } catch (e: any) {
       const msg = String(e?.message || '');
@@ -318,12 +285,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  /**
-   * LOGIN with EITHER the mobile number OR the Gudalur ID number. Resolves the
-   * resident server-side and issues an OTP to their registered phone. In
-   * dev/test the OTP is verified immediately; otherwise the caller completes
-   * `verifyResidentOtp`. Falls back to the locally cached card when offline.
-   */
   const loginResident = async (phone?: string, gudalurId?: string): Promise<UserProfile> => {
     const p = normalizePhone(phone || '');
     const gid = (gudalurId || '').trim().toUpperCase();
@@ -340,20 +301,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       const prof = applyPlatformAdminOverride(toUserProfile(res.resident));
       persistProfile(prof);
-      if (res.otp?.code) {
-        try {
-          await authApi.verifyOtp({ phone: res.resident.phone, code: res.otp.code, purpose: 'login' });
-          setUser(toAuthUser(prof));
-          setNeedsOtpVerify(false);
-          setPendingPhone(null);
-        } catch {
-          setNeedsOtpVerify(true);
-          setPendingPhone(res.resident.phone);
-        }
-      } else {
-        setNeedsOtpVerify(true);
-        setPendingPhone(res.resident.phone);
-      }
+      setUser(toAuthUser(prof));
       return prof;
     } catch (e: any) {
       const cached = readCachedProfile();
@@ -366,30 +314,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       throw new Error('No resident found for these details. Check your mobile number / Gudalur ID, or register first.');
     }
-  };
-
-  /** Complete the pending OTP step â€” establishes the server session (httpOnly cookies). */
-  const verifyResidentOtp = async (code: string): Promise<UserProfile> => {
-    if (!pendingPhone) throw new Error('Start registration or login first (an OTP must be issued).');
-    const c = String(code || '').trim();
-    if (!/^\d{6}$/.test(c)) throw new Error('Enter the 6-digit OTP');
-    const { user: u } = await authApi.verifyOtp({ phone: pendingPhone, code: c, purpose: 'login' });
-    if (!u) throw new Error('Invalid or expired OTP');
-    setUser(u);
-    setNeedsOtpVerify(false);
-    setPendingPhone(null);
-    const cached = readCachedProfile();
-    if (cached && (cached.phone === pendingPhone || cached.gudalurId === u.gudalurId)) {
-      return cached;
-    }
-    const prof = applyPlatformAdminOverride(
-      toUserProfile({
-        uid: u.uid, phone: u.phone, gudalurId: u.gudalurId, name: u.name, role: u.role,
-        verificationLevel: u.verificationLevel, localityName: u.localityName,
-      }),
-    );
-    persistProfile(prof);
-    return prof;
   };
 
   const updateLocality = async (localityId: string, customPlaceName?: string, pincode?: string) => {
@@ -460,7 +384,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return updated;
   };
 
-  const logout = async () => {
+    const logout = async () => {
     try {
       await authApi.logout();
     } catch (e) {
@@ -468,8 +392,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setUser(null);
     persistProfile(null);
-    setNeedsOtpVerify(false);
-    setPendingPhone(null);
     // Clear all locally-pending records on logout so the next user starts fresh
     try {
       localStorage.removeItem('og_pending_signatures');
@@ -481,39 +403,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshProfile = async () => {
     if (!profile) return;
-    try {
-      const { user: u } = await authApi.me();
-      if (u && (u.gudalurId || u.phone)) {
-        const res = await authApi.lookup({ gudalurId: u.gudalurId, phone: u.phone });
-        if (res?.resident) {
-          persistProfile(applyPlatformAdminOverride(toUserProfile(res.resident)));
-          return;
-        }
-      }
-    } catch {
-      /* keep cached */
-    }
     const cached = readCachedProfile();
     if (cached) setProfile(cached);
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        loading,
-        needsOtpVerify,
-        userCoords,
-        acquireLiveLocation,
-        registerResident,
-        loginResident,
-        verifyResidentOtp,
-        logout,
-        refreshProfile,
-        updateLocality,
-        updateResident,
-      }}
+return (
+  <AuthContext.Provider
+    value={{
+      user,
+      profile,
+      loading,
+      userCoords,
+      acquireLiveLocation,
+      registerResident,
+      loginResident,
+      logout,
+      refreshProfile,
+      updateLocality,
+      updateResident,
+    }}
     >
       {children}
     </AuthContext.Provider>

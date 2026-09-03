@@ -66,20 +66,20 @@ export interface AuthUser {
 }
 
 export const authApi = {
-  /** POST /api/auth/register — create a resident (GDR-ID + OTP dispatched server-side). */
+  /** POST /api/auth/register — create a resident (issues a Gudalur ID + session). */
   register: (input: {
     name: string; phone: string; localityId: string; customPlaceName?: string;
     pincode: string; email?: string; aadhaarVerified?: boolean; aadhaarLast4?: string;
     aadhaarRef?: string; lat?: number; lng?: number;
   }) =>
-    request<{ resident: AuthUser; otp?: { id: string; code: string } }>('/api/auth/register', {
+    request<{ resident: AuthUser }>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(input),
     }),
 
-  /** POST /api/auth/lookup — resolve a resident by phone OR Gudalur ID, sends login OTP. */
+  /** POST /api/auth/lookup — resolve a resident by phone OR Gudalur ID. */
   lookup: (input: { phone?: string; gudalurId?: string }) =>
-    request<{ resident: AuthUser; otp?: { id: string; code: string } }>('/api/auth/lookup', {
+    request<{ resident: AuthUser }>('/api/auth/lookup', {
       method: 'POST',
       body: JSON.stringify(input),
     }),
