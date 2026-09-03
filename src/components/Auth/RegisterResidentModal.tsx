@@ -149,7 +149,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
   const [gdrId, setGdrId] = useState(""); // auto-issued ID, shown on the Done screen
   const [camState, setCamState] = useState<"idle" | "starting" | "running">("idle");
   const [photoBusy, setPhotoBusy] = useState(false);
-  const [scanTab, setScanTab] = useState<"camera" | "upload">("camera");
+  const [scanStatus, setScanStatus] = useState("");
   const [errHelp, setErrHelp] = useState<CameraHelp | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const lastScanRef = useRef(0);
@@ -160,12 +160,13 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
   }, []);
 
   const stopScanner = useCallback(async () => {
-    const s = scannerRef.current;
-    scannerRef.current = null;
     setCamState("idle");
+    const s = scannerRef.current;
     if (!s) return;
-    try { await s.stop(); } catch { /* already stopped */ }
-    try { s.clear(); } catch { /* ignore */ }
+    try {
+      await s.stop();
+      setScanStatus("Scanner stopped. Tap Start Camera Scan to try again.");
+    } catch { /* already stopped */ }
   }, []);
 
   /** Shared success path for camera frames AND scanned photos. */
@@ -214,51 +215,46 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       await new Promise((r) => setTimeout(r, 80));
       if (!document.getElementById("qr-reader")) return;
     }
-    setCamState("starting");
-    // Native BarcodeDetector (Chrome/Edge/Android) detects dense Version-25
-    // Aadhaar QRs far better than the JS engine at webcam resolutions.
-    const makeScanner = () =>
-      new Html5Qrcode("qr-reader", {
+    // Persistent instance - created once, reused across stop/start cycles
+    // (reference pattern: never cleared, so the element stays valid).
+    // Pin QR_CODE + prefer the native BarcodeDetector: the Aadhaar Secure QR
+    // is a huge Version-25+ code (~129+ modules/side), and skipping zxing's
+    // multi-format probing gives far more decode attempts per second.
+    if (!scannerRef.current) {
+      scannerRef.current = new Html5Qrcode("qr-reader", {
         verbose: false,
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
         formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
       });
-    const attempts: MediaTrackConstraints[] = [
-      { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
-      { facingMode: "environment" },
-      {},
-    ];
-    let lastError: unknown = null;
-    for (const constraints of attempts) {
-      const html5 = makeScanner(); // fresh instance per attempt - never reuse
-      scannerRef.current = html5;
-      try {
-        await html5.start(
-          constraints,
-          {
-            fps: 10,
-            // qrbox must cover most of the viewfinder: Aadhaar QRs are dense
-            // Version-25 codes (~129 modules per side).
-            qrbox: (vw: number, vh: number) => {
-              const side = Math.max(280, Math.min(Math.floor(vw * 0.9), Math.floor(vh * 0.9)));
-              return { width: side, height: side };
-            },
-          },
-          (decoded) => {
-            void handleDecoded(decoded);
-          },
-          () => { /* per-frame misses are normal */ }
-        );
-        setCamState("running");
-        return;
-      } catch (e: unknown) {
-        lastError = e;
-        scannerRef.current = null;
-        try { html5.clear(); } catch { /* ignore */ }
-      }
     }
-    setCamState("idle");
-    setErrHelp(classifyCameraError(lastError));
+    setCamState("starting");
+    setScanStatus("Requesting camera permissions & initializing high-res focus...");
+    try {
+      await scannerRef.current.start(
+        { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+        {
+          fps: 15,
+          // FIXED: a fixed 280px qrbox CROPS the frame to 280x280px, but
+          // Aadhaar Secure QRs are Version-25+ codes (~129-145 modules per
+          // side) — ~2 px/module is below decodable resolution, so the camera
+          // saw the QR yet could never read it. Scan ~85% of the frame so the
+          // QR itself resolves at 600+ px (~4+ px/module).
+          qrbox: (vw: number, vh: number) => {
+            const side = Math.max(200, Math.floor(Math.min(vw, vh) * 0.85));
+            return { width: side, height: side };
+          },
+        },
+        (decoded) => {
+          void handleDecoded(decoded);
+        },
+        () => { /* suppress noisy frame-by-frame misses */ }
+      );
+      setCamState("running");
+      setScanStatus("Camera active. Align the Aadhaar QR inside the box firmly.");
+    } catch (e: unknown) {
+      setCamState("idle");
+      setErrHelp(classifyCameraError(e));
+    }
   }, [camState, handleDecoded]);
 
   /** Gallery / file-picker path — no web camera permission involved at all. */
@@ -271,10 +267,20 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       try {
         // Separate hidden element for file scanning (reference format) -
         // never fights with the live camera element.
+        // FIXED: the constructor THROWS when the element is missing, and
+        // nothing ever rendered #qr-reader-file — so every photo scan died
+        // as a silent unhandled rejection (spinner flashes, nothing else).
+        // Create the hidden element ourselves instead of waiting for one.
         if (!document.getElementById("qr-reader-file")) {
-          await new Promise((r) => setTimeout(r, 80));
+          const el = document.createElement("div");
+          el.id = "qr-reader-file";
+          el.style.display = "none";
+          document.body.appendChild(el);
         }
-        inst = new Html5Qrcode("qr-reader-file");
+        inst = new Html5Qrcode("qr-reader-file", {
+          verbose: false,
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        });
         let text: string | null = null;
         try {
           text = await inst.scanFile(file, true);
@@ -297,6 +303,13 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
         }
         lastScanRef.current = 0;
         await handleDecoded(text);
+      } catch (e: unknown) {
+        // Never swallow failures silently — surface them in the scan log so
+        // the user isn't left staring at a stopped spinner.
+        const msg = typeof e === "string" ? e : e instanceof Error ? e.message : "";
+        setError(
+          `Photo scan failed${msg ? `: ${msg}` : ""}. Try a sharper, well-lit photo of the QR — or use the camera.`
+        );
       } finally {
         if (inst) {
           try { inst.clear(); } catch { /* ignore */ }
@@ -307,19 +320,15 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
     [handleDecoded]
   );
 
-  // Switching tabs tears down the camera stream (reference format).
-  const switchScanTab = useCallback(
-    (tab: "camera" | "upload") => {
-      setScanTab(tab);
-      if (tab === "upload") void stopScanner();
-    },
-    [stopScanner]
-  );
+
 
 
 
   useEffect(() => {
-    if (!visible) stopScanner();
+    if (!visible) {
+      void stopScanner();
+      scannerRef.current = null;
+    }
   }, [visible, stopScanner]);
 
   useEffect(
@@ -377,10 +386,12 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
 
   const resetScan = () => {
     void stopScanner();
+    scannerRef.current = null;
     setAadhaar(null);
     setVerify(null);
     setError("");
     setErrHelp(null);
+    setScanStatus("");
     setCamState("idle");
     setStage("scanning");
   };
@@ -424,132 +435,84 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                 <p className="text-xs text-slate-400 mb-4">
                   உங்கள் ஆதார் அட்டையில் உள்ள QR குறியீட்டை ஸ்கேன் செய்யவும்
                 </p>
-                {/* Tab controls - Scan via Camera | Upload QR Image (reference format) */}
-                <div className="flex mb-3 border-b-2 border-slate-600">
-                  <button
-                    type="button"
-                    onClick={() => switchScanTab("camera")}
-                    className={`flex-1 px-2 py-2.5 text-sm font-bold transition ${scanTab === "camera" ? "text-amber-400 border-b-[3px] border-amber-400 -mb-0.5" : "text-slate-400 hover:text-slate-200"}`}
-                    data-testid="tab-camera"
-                  >
-                    Scan via Camera
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => switchScanTab("upload")}
-                    className={`flex-1 px-2 py-2.5 text-sm font-bold transition ${scanTab === "upload" ? "text-amber-400 border-b-[3px] border-amber-400 -mb-0.5" : "text-slate-400 hover:text-slate-200"}`}
-                    data-testid="tab-upload"
-                  >
-                    Upload QR Image
-                  </button>
-                </div>
+                {/* Viewfinder */}
+                <div id="qr-reader" data-testid="qr-reader-region" className="w-full min-h-[220px] rounded-xl overflow-hidden bg-black" />
 
-                {scanTab === "camera" && (
-                  <>
-                    <div className="relative w-full mb-2 rounded-xl overflow-hidden bg-slate-800 min-h-[220px]">
-                      <div id="qr-reader" data-testid="qr-reader-region" className="w-full min-h-[220px]" />
-                      {camState === "idle" && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-6 text-center pointer-events-none">
-                          <p className="text-xs text-slate-300 font-medium">Camera is off - tap Start Camera below</p>
-                          <p className="text-[11px] text-slate-400">Your phone asks for camera access - just tap Allow</p>
-                        </div>
-                      )}
-                      {camState === "starting" && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center pointer-events-none">
-                          <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                          <p className="text-xs text-slate-300">Opening camera... tap Allow if your phone asks</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2 mt-1">
-                      {camState !== "running" ? (
-                        <button
-                          type="button"
-                          onClick={() => void openCamera()}
-                          disabled={camState === "starting"}
-                          className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-sm shadow-lg hover:from-amber-500 hover:to-orange-500 active:scale-[0.99] transition disabled:opacity-40 disabled:cursor-not-allowed"
-                          data-testid="open-camera"
-                        >
-                          {camState === "starting" ? "Opening camera..." : "Start Camera"}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => { void stopScanner(); }}
-                          className="flex-1 py-3.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-sm active:scale-[0.99] transition"
-                          data-testid="stop-camera"
-                        >
-                          Stop / Rescan
-                        </button>
-                      )}
-                    </div>
-                    {camState === "running" && (
-                      <p className="text-[11px] text-sky-300 text-center mt-2">
-                        Fill the box with the Aadhaar QR, 10-15 cm away, good light, hold steady.
-                      </p>
-                    )}
-                  </>
-                )}
-
-                {scanTab === "upload" && (
-                  <div className="text-left">
-                    <label
-                      htmlFor="qr-file-input"
-                      className="block border-2 border-dashed border-slate-500 rounded-xl p-8 text-center cursor-pointer bg-slate-800/50 hover:border-amber-400 transition"
-                      data-testid="photo-scan-button"
-                    >
-                      <p className="text-sm font-bold text-slate-200">Click to upload</p>
-                      <p className="text-[11px] text-slate-400 mt-1">Supports PNG, JPG, JPEG QR files - no camera permission needed</p>
-                    </label>
-                    <input
-                      ref={photoRef}
-                      id="qr-file-input"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files && e.target.files[0];
-                        if (f) void decodePhoto(f);
-                      }}
-                    />
-                    {photoBusy && (
-                      <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-300">
-                        <div className="h-4 w-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                        Scanning image...
-                      </div>
-                    )}
+                <div className="flex gap-2 mt-3">
+                  {camState !== "running" ? (
                     <button
                       type="button"
-                      onClick={() => { if (photoRef.current) photoRef.current.value = ""; setError(""); setErrHelp(null); }}
-                      className="w-full mt-2 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-sm transition"
+                      onClick={() => void openCamera()}
+                      disabled={camState === "starting" || photoBusy}
+                      className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-sm shadow-lg hover:from-amber-500 hover:to-orange-500 active:scale-[0.99] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      data-testid="open-camera"
                     >
-                      Reset / Go Back
+                      {camState === "starting" ? "Opening camera..." : "Start Camera Scan"}
                     </button>
-                  </div>
-                )}
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { void stopScanner(); }}
+                      className="flex-1 py-3.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm active:scale-[0.99] transition"
+                      data-testid="stop-camera"
+                    >
+                      Stop / Reset
+                    </button>
+                  )}
+                </div>
 
-                {errHelp && (
-                  <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-left" data-testid="camera-help">
-                    <p className="text-xs font-bold text-amber-300 mb-1">{errHelp.title}</p>
-                    <ol className="space-y-1 text-[11px] text-amber-200/90 list-decimal list-inside">
-                      {errHelp.steps.map((s, i) => (
-                        <li key={i}>{s}</li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
+                <div className="mt-4 text-left">
+                  <label
+                    htmlFor="qr-file-input"
+                    className="block border-2 border-dashed border-slate-500 rounded-xl p-6 text-center cursor-pointer bg-slate-800/50 hover:border-amber-400 transition"
+                    data-testid="photo-scan-button"
+                  >
+                    <p className="text-sm font-bold text-slate-200">Or Upload Image File:</p>
+                    <p className="text-[11px] text-slate-400 mt-1">PNG, JPG, JPEG - works without camera permission</p>
+                  </label>
+                  <input
+                    ref={photoRef}
+                    id="qr-file-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files && e.target.files[0];
+                      if (f) void decodePhoto(f);
+                    }}
+                  />
+                  {photoBusy && (
+                    <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-300">
+                      <div className="h-4 w-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                      Processing uploaded image...
+                    </div>
+                  )}
+                </div>
 
-                {error && (
-                  <div className="flex items-center gap-2 justify-center text-red-400 text-xs mt-2">
-                    <AlertCircle size={14} />
-                    <span>{error}</span>
-                  </div>
-                )}
+                <div
+                  className="mt-3 p-3 rounded-lg bg-slate-800/80 border border-slate-600 text-left font-mono text-[11px] leading-relaxed text-slate-200 max-h-[150px] overflow-y-auto break-words"
+                  data-testid="scan-log"
+                >
+                  {errHelp ? (
+                    <>
+                      <p className="font-bold text-amber-300 mb-1">{errHelp.title}</p>
+                      <ol className="space-y-1 text-amber-200/90 list-decimal list-inside">
+                        {errHelp.steps.map((s, i) => (
+                          <li key={i}>{s}</li>
+                        ))}
+                      </ol>
+                    </>
+                  ) : error ? (
+                    <span className="text-red-400 font-bold">{error}</span>
+                  ) : (
+                    <span className="text-emerald-400">{scanStatus || "Status: Ready. Click start or upload an image."}</span>
+                  )}
+                </div>
 
                 <button
                   type="button"
                   onClick={resetScan}
-                  className="w-full mt-2 px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm transition"
+                  className="w-full mt-3 px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm transition"
                 >
                   Scan Again
                 </button>
