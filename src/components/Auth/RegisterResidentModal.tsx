@@ -161,6 +161,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
   const stopScanner = useCallback(async () => {
     const s = scannerRef.current;
     scannerRef.current = null;
+    setCamState("idle");
     if (!s) return;
     try { await s.stop(); } catch { /* already stopped */ }
     try { s.clear(); } catch { /* ignore */ }
@@ -221,7 +222,16 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
     try {
       await html5.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        {
+          fps: 10,
+          // Aadhaar QRs are dense Version-25 codes (~129 modules/side): the
+          // qrbox must cover ~90% of the viewfinder or the library cannot
+          // resolve enough pixels per module to detect anything.
+          qrbox: (vw: number, vh: number) => {
+            const side = Math.max(280, Math.min(Math.floor(vw * 0.9), Math.floor(vh * 0.9)));
+            return { width: side, height: side };
+          },
+        },
         (decoded) => {
           void handleDecoded(decoded);
         },
@@ -239,7 +249,16 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       try {
         await retry.start(
           {},
-          { fps: 10, qrbox: { width: 250, height: 250 } },
+          {
+          fps: 10,
+          // Aadhaar QRs are dense Version-25 codes (~129 modules/side): the
+          // qrbox must cover ~90% of the viewfinder or the library cannot
+          // resolve enough pixels per module to detect anything.
+          qrbox: (vw: number, vh: number) => {
+            const side = Math.max(280, Math.min(Math.floor(vw * 0.9), Math.floor(vh * 0.9)));
+            return { width: side, height: side };
+          },
+        },
           (decoded) => {
             void handleDecoded(decoded);
           },
@@ -314,25 +333,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
     [handleDecoded]
   );
 
-  // When permission is ALREADY granted, skip the tap and go live instantly
-  // (also makes "Scan Again" resume straight into the viewfinder).
-  useEffect(() => {
-    if (!visible || stage !== "scanning" || scannerRef.current) return;
-    let cancelled = false;
-    try {
-      navigator.permissions
-        ?.query({ name: "camera" as PermissionName })
-        .then((ps) => {
-          if (!cancelled && ps.state === "granted") void openCamera();
-        })
-        .catch(() => { /* prompt/denied/unsupported → wait for the explicit tap */ });
-    } catch {
-      /* unsupported — wait for the explicit tap */
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [visible, stage, openCamera]);
+
 
   useEffect(() => {
     if (!visible) stopScanner();
@@ -471,8 +472,8 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                     📷 {camState === "starting" ? "Opening camera…" : camState === "running" ? "Camera live — scanning…" : "Open Camera & Scan"}
                   </button>
                   <button
-                    onClick={() => photoRef.current?.click()}
-                    disabled={photoBusy || camState === "starting" || camState === "running"}
+                    onClick={() => { void stopScanner(); photoRef.current?.click(); }}
+                    disabled={photoBusy}
                     className="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-sm active:scale-[0.99] transition disabled:opacity-40 disabled:cursor-not-allowed"
                     data-testid="photo-scan-button"
                   >
@@ -480,6 +481,16 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                   </button>
                 </div>
 
+                {(camState === "running" || camState === "starting") && (
+                  <button
+                    onClick={() => { void stopScanner(); }}
+                    disabled={camState === "starting"}
+                    className="w-full py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-sm active:scale-[0.99] transition"
+                    data-testid="stop-camera"
+                  >
+                    Stop Camera - Back to Options
+                  </button>
+                )}
                 {camState === "running" && (
                   <p className="text-[11px] text-sky-300 text-center mt-2">
                     Fill most of the box with the QR, 10-15 cm away, good light, hold steady.
