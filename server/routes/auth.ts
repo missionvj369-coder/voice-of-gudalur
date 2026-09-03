@@ -8,7 +8,7 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import { db } from '../db/client';
-import { createOtp, verifyOtp, registerResident, normalizePhone } from '../services/authService';
+import { registerResident, loginResident, normalizePhone } from '../services/authService';
 import {
   createSession, revokeSession, resolveSession, SessionUser,
   requireAuth,
@@ -75,45 +75,20 @@ function residentRowToProfile(row: any) {
   };
 }
 
-/** POST /api/auth/register — resident signs up with phone; OTP dispatched. */
+/** POST /api/auth/register - Aadhaar-verified resident signs up, session issued immediately. */
 router.post('/register', async (req: Request, res: Response) => {
   try {
     const created = await registerResident(req.body);
     if (!created) return res.status(400).json({ error: 'Registration failed' });
-    const devOtp = (process.env.OTP_PROVIDER || 'devel') === 'devel' ? created.otp.code : undefined;
-    res.status(201).json({ resident: created.resident, otp: devOtp ? { ...created.otp } : undefined });
+    setSessionCookies(res, created.session);
+    res.status(201).json({ user: residentRowToProfile(created.resident), csrfToken: created.session.csrfToken });
   } catch (e: any) {
     logger.error('register:', e.message);
     res.status(e.message?.includes('unique') ? 409 : 400).json({ error: e.message });
   }
 });
 
-/** POST /api/auth/verify-otp — validates OTP and creates a session. */
-router.post('/verify-otp', async (req: Request, res: Response) => {
-  try {
-    const { phone, code, purpose = 'register' } = req.body;
-    const p = normalizePhone(phone || '');
-    if (p.length !== 10 || !/^\d{6}$/.test(code || '')) {
-      return res.status(400).json({ error: 'Invalid phone or code' });
-    }
-    const identityId = await verifyOtp(p, purpose, code);
-    if (!identityId) return res.status(401).json({ error: 'Invalid or expired OTP' });
-
-    const user = await findUserByPhone(p);
-    if (!user) return res.status(401).json({ error: 'No resident found for this number' });
-
-    const sessionUser: SessionUser = {
-      uid: user.uid, phone: user.phone, gudalurId: user.gudalur_id,
-      name: user.name, role: user.role, verificationLevel: user.verification_level, kind: 'user',
-    };
-    const session = await createSession(sessionUser, req.get('user-agent'), req.ip);
-    setSessionCookies(res, session);
-    res.json({ user: sessionUser, csrfToken: session.csrfToken });
-  } catch (e: any) {
-    logger.error('verify-otp:', e.message);
-    res.status(500).json({ error: 'OTP verification failed' });
-  }
-});
+// (verify-otp route removed - sessions issued immediately on register/lookup)
 
 /** POST /api/auth/logout */
 router.post('/logout', async (req: Request, res: Response) => {
@@ -128,34 +103,19 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
   res.json({ user: req.user });
 });
 
-/** POST /api/auth/lookup — resolve a resident by phone OR Gudalur ID (login start). */
+/** POST /api/auth/lookup - passwordless login by phone OR Gudalur ID, session issued immediately. */
 router.post('/lookup', async (req: Request, res: Response) => {
   try {
-    const phone = normalizePhone(req.body?.phone || '');
-    const gid = String(req.body?.gudalurId || '').trim().toUpperCase();
-    if (!phone && !gid) return res.status(400).json({ error: 'Provide a mobile number OR a Gudalur ID' });
-    const base = `SELECT uid, phone, gudalur_id, name, email, locality_id, locality_name,
-                         custom_place_name, pincode, role, verification_level,
-                         aadhaar_verified, aadhaar_last4, aadhaar_ref, lat, lng,
-                         created_at, updated_at, issues_reported, issues_supported,
-                         representations_created, alerts_acknowledged,
-                         is_blood_donor, blood_group, avatar_url, bio
-                  FROM users`;
-    const row = phone
-      ? await db.queryOne<any>(`${base} WHERE phone = $1`, [phone])
-      : await db.queryOne<any>(`${base} WHERE gudalur_id = $1`, [gid]);
-    if (!row) return res.status(404).json({ error: 'No resident found for these details. Check your mobile number / Gudalur ID, or register first.' });
-
-    const otp = await createOtp(row.phone, 'login', 'phone');
-    res.json({
-      resident: residentRowToProfile(row),
-      ...((process.env.OTP_PROVIDER || 'devel') === 'devel'
-        ? { otp: { id: otp.id, code: otp.code } }
-        : { message: 'OTP sent to your registered mobile number' }),
-    });
+    const rawPhone = req.body?.phone;
+    const gudalurId = req.body?.gudalurId;
+    const phone = rawPhone && String(rawPhone).trim() ? normalizePhone(String(rawPhone)) : undefined;
+    const result = await loginResident(phone, gudalurId);
+    if (!result) return res.status(404).json({ error: 'No resident found for this phone or Gudalur ID. Register first.' });
+    setSessionCookies(res, result.session);
+    res.json({ user: residentRowToProfile(result.resident), csrfToken: result.session.csrfToken });
   } catch (e: any) {
     logger.error('lookup:', e.message);
-    res.status(500).json({ error: 'Login lookup failed' });
+    res.status(500).json({ error: 'Login failed' });
   }
 });
 
