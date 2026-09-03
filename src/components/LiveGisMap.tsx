@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { AlertTriangle, Volume2 } from 'lucide-react';
-import { db, supabase } from '../lib/supabase';
+import { wildlifeApi } from '../services/api';
 import { calculateDistanceKm, formatProximityWarning } from '../utils/geoUtils';
 import { useLanguage } from '../context/LanguageContext';
 import 'leaflet/dist/leaflet.css';
@@ -42,27 +42,30 @@ export const LiveGisMap: React.FC<{ userCoords?: { lat: number; lng: number } | 
   const center = userCoords || { lat: 11.5333, lng: 76.6 };
 
   useEffect(() => {
+    let cancelled = false;
     const fetchData = async () => {
       try {
-        const { data: sData } = await db.getAnimalSightings(100);
+        const { sightings: sData } = await wildlifeApi.sightings();
+        if (cancelled) return;
         // Map DB rows (animal_sightings schema) to the local Sighting model
-        const mapped: Sighting[] = (sData || []).map(r => ({
+        const mapped: Sighting[] = (sData || []).map((r: any) => ({
           id: r.id,
           species: (r.transcript || 'Wildlife').trim(),
           location: r.place_name,
           lat: r.latitude,
           lng: r.longitude,
-          reportedBy: r.user_id || 'anonymous',
-          reportedByName: r.user_id ? 'Registered Resident' : 'Community Report',
+          reportedBy: r.user_uid || 'anonymous',
+          reportedByName: r.user_uid ? 'Registered Resident' : 'Community Report',
           reportedAt: r.sighting_time ? new Date(r.sighting_time).getTime() : Date.now(),
           severity: 'HIGH',
         }));
         setSightings(mapped);
       } catch (e) { console.error(e); }
       try {
-        const { data: vData } = await db.getVoicePetitions({ limit: 100 });
+        const { petitions: vData } = await wildlifeApi.voicePetitions();
+        if (cancelled) return;
         // Map DB rows (voice_petitions schema) to the local VoicePetition model
-        const mappedVoices: VoicePetition[] = (vData || []).map(r => ({
+        const mappedVoices: VoicePetition[] = (vData || []).map((r: any) => ({
           id: r.id,
           title: (r.transcript || r.place_name || 'Voice petition').slice(0, 80),
           description: r.transcript || '',
@@ -78,9 +81,10 @@ export const LiveGisMap: React.FC<{ userCoords?: { lat: number; lng: number } | 
       } catch (e) { console.error(e); }
     };
     fetchData();
-    const ch1 = supabase.channel('animal_sightings').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'animal_sightings' }, fetchData).subscribe();
-    const ch2 = supabase.channel('voice_petitions').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'voice_petitions' }, fetchData).subscribe();
-    return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2); };
+        // Polling replaces the removed Realtime channels — map layers change slowly,
+    // so a 60s refresh is the simplest reliable update mechanism.
+    const interval = setInterval(fetchData, 60_000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
   useEffect(() => {

@@ -7,18 +7,10 @@
 [functions]
   node_bundler = "esbuild"
 
-# Voice Notification API — rewrite /api/voice/* + /api/push/* to the voice function.
-[[redirects]]
-  from = "/api/voice/*"
-  to = "/.netlify/functions/voice"
-  status = 200
-
-[[redirects]]
-  from = "/api/push/*"
-  to = "/.netlify/functions/voice"
-  status = 200
-
-# Object Storage API — rewrite /api/storage/* to the storage function (Storj presign).
+# NOTE: The canonical backend is the Express server (server.ts) talking to
+# CockroachDB — it serves ALL /api/* routes on the same origin (Cloud Run /
+# any Node host). Netlify only hosts the static PWA + the thin Storj presign
+# adapter below for static-only deploys.
 [[redirects]]
   from = "/api/storage/*"
   to = "/.netlify/functions/storage"

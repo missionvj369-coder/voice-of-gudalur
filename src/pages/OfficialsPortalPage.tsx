@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
-import { officialSignsView } from "../lib/signService";
+import { authApi, officialsApi } from "../services/api";
 import toast from "react-hot-toast";
 
 interface OfficialRow {
@@ -33,14 +32,7 @@ export const OfficialsPortalPage: React.FC = () => {
     }
     setBusy(true);
     try {
-      const { data, error } = await supabase.rpc("request_official_access", {
-        p_email: officialEmail,
-        p_full_name: fullName,
-        p_department: department || null,
-        p_designation: designation || null,
-        p_phone: phone || null,
-      });
-      if (error || !data?.ok) throw new Error(error?.message || data?.error || "Request failed");
+      await authApi.officialRequest(officialEmail, fullName, phone);
       toast.success("Request submitted to the master admin for approval.");
       setMode("otp");
     } catch (e: any) {
@@ -53,12 +45,13 @@ export const OfficialsPortalPage: React.FC = () => {
   const sendOtp = useCallback(async () => {
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: officialEmail,
-        options: { shouldCreateUser: true },
-      });
-      if (error) throw error;
+      const res = await authApi.officialOtp(officialEmail);
       toast.success("OTP sent to your official email");
+      // Dev/test provider returns the code directly; surface it so the flow is testable.
+      if (res.otp?.code) {
+        setOtp(res.otp.code);
+        toast.success(`Dev OTP: ${res.otp.code}`, { icon: "🚨" });
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "OTP send failed");
     } finally {
@@ -70,12 +63,7 @@ export const OfficialsPortalPage: React.FC = () => {
     if (otp.trim().length < 6) return toast.error("Enter the 6-digit OTP");
     setBusy(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: officialEmail,
-        token: otp.trim(),
-        type: "email",
-      });
-      if (error) throw error;
+      await authApi.officialVerify(officialEmail, otp.trim());
       toast.success("Logged in as official");
       loadView();
     } catch (e: any) {
@@ -88,11 +76,11 @@ export const OfficialsPortalPage: React.FC = () => {
   const loadView = useCallback(async () => {
     setBusy(true);
     try {
-      const rows = await officialSignsView();
-      setRows(rows);
+      const res = await officialsApi.signs();
+      setRows((res.signs ?? []) as unknown as OfficialRow[]);
       setMode("view");
     } catch (e: any) {
-      if (String(e?.message ?? "").includes("UNAUTHORIZED")) {
+      if (String(e?.message ?? "").includes("Forbidden") || e?.status === 403) {
         setAccessNote("Your email is not yet approved by the master admin.");
         setMode("otp");
       } else {
@@ -104,16 +92,21 @@ export const OfficialsPortalPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const sub = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session?.user?.email) {
-        setOfficialEmail(session.user.email);
-        loadView();
+        // No auth listener from a third-party — the session is cookie-based. If we already
+    // hold an official session, load the view directly.
+    (async () => {
+      try {
+        const { user } = await authApi.me();
+        if (user?.kind === "official") {
+          if (user.email) setOfficialEmail(user.email);
+          loadView();
+        }
+      } catch {
+        /* not signed in — stay on the request screen */
       }
-    });
-    return () => {
-      sub.data.subscription.unsubscribe();
-    };
-  }, [loadView]);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const blockCopy = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault();
@@ -152,7 +145,7 @@ export const OfficialsPortalPage: React.FC = () => {
             <input value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="Designation" className="px-4 py-3 rounded-xl border border-slate-300 text-sm" />
             <input value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))} placeholder="Official phone" className="px-4 py-3 rounded-xl border border-slate-300 text-sm" />
           </div>
-          <button onClick={requestAccess} disabled={busy} className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-700 text-white font-bold text-sm">
+          <button onClick={requestAccess} disabled={busy} className="w-full py-3 rounded-xl bg-[#2E7D32] hover:bg-[#388E3C] text-white font-bold text-sm">
             {busy ? "Submitting…" : "Submit access request"}
           </button>
         </div>
@@ -168,7 +161,7 @@ export const OfficialsPortalPage: React.FC = () => {
               Send OTP to {officialEmail}
             </button>
             <input value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} placeholder="6-digit OTP" maxLength={6} className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm text-center tracking-[0.5em]" />
-            <button onClick={verifyOtp} disabled={busy} className="w-full py-3 rounded-xl bg-slate-900 text-white font-bold text-sm">
+            <button onClick={verifyOtp} disabled={busy} className="w-full py-3 rounded-xl bg-[#2E7D32] text-white font-bold text-sm">
               {busy ? "Verifying…" : "Verify & Enter Portal"}
             </button>
           </div>

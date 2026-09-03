@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 /**
  * Enterprise security headers applied to dev + preview servers.
  * HSTS / nosniff / frame-deny / referrer & permissions policy,
- * plus a CSP tuned for this app: Google Fonts, Supabase (HTTPS+WS),
+ * plus a CSP tuned for this app: Google Fonts,
  * Hugging Face model CDN (on-device Whisper), leaflet map tiles, blob: PDFs.
  */
 const securityHeadersPlugin = (): Plugin => ({
@@ -39,7 +39,7 @@ const securityHeaders: Record<string, string> = {
     "img-src 'self' data: blob: https:",
     "media-src 'self' data: blob: https:",
     "frame-src 'self' blob:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://huggingface.co https://*.huggingface.co https://api.whatsapp.com https://gateway.storjshare.io",
+    "connect-src 'self' https://huggingface.co https://*.huggingface.co https://gateway.storjshare.io",
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
@@ -83,15 +83,6 @@ export default defineConfig(() => {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
           runtimeCaching: [
             {
-              urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'supabase-api-cache',
-                expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
-                cacheableResponse: { statuses: [0, 200] },
-              },
-            },
-            {
               urlPattern: /^https:\/\/.*\.tile\.openstreetmap\.org\/.*/i,
               handler: 'CacheFirst',
               options: {
@@ -134,8 +125,6 @@ export default defineConfig(() => {
             'vendor-react': ['react', 'react-dom', 'react-router-dom', 'motion'],
             'vendor-maps': ['leaflet', 'react-leaflet'],
             'vendor-icons': ['lucide-react'],
-            'vendor-supabase': ['@supabase/supabase-js'],
-            'vendor-firebase': ['firebase/app', 'firebase/firestore'],
             'vendor-pdf': ['jspdf'],
             'vendor-ai': ['@huggingface/transformers'],
           },

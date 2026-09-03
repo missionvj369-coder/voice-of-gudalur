@@ -60,7 +60,7 @@ export const VoiceReportButton: React.FC<VoiceReportButtonProps> = ({ localityId
     return (
       <button
         onClick={() => setShowRecorder(true)}
-        className="fixed bottom-20 right-4 z-40 flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-lg hover:shadow-amber-400/40 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-400"
+        className="fixed bottom-20 right-4 z-40 flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-[#AED581] to-[#81C784] text-[#1B5E20] shadow-lg hover:shadow-[#AED581]/40 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#AED581]"
         title={t('voiceReport') || 'Report via voice'}
       >
         <Mic size={20} />
@@ -69,7 +69,7 @@ export const VoiceReportButton: React.FC<VoiceReportButtonProps> = ({ localityId
   }
 
   return (
-    <div className="fixed bottom-20 right-4 z-40 w-72 bg-slate-900 border border-slate-700 rounded-2xl shadow-xl p-3">
+    <div className="fixed bottom-20 right-4 z-40 w-72 bg-[#2E7D32] border border-[#AED581]/30 rounded-2xl shadow-xl p-3">
       {!blob ? (
         <VoiceRecorder
           maxSeconds={MAX_SECONDS}
@@ -78,20 +78,20 @@ export const VoiceReportButton: React.FC<VoiceReportButtonProps> = ({ localityId
         />
       ) : (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-xs text-slate-300">
+          <div className="flex items-center gap-2 text-xs text-[#F5F5F5]/85">
             <span>Voice note ready</span>
           </div>
           <div className="flex gap-2">
             <button
               onClick={handleCancel}
-              className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-white transition"
+              className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-[#1B5E20] hover:bg-[#388E3C] text-white transition"
             >
               <X size={14} className="inline mr-1" />{t('cancel') || 'Cancel'}
             </button>
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50 transition"
+              className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-[#AED581] hover:bg-[#C5E1A5] text-[#1B5E20] disabled:opacity-50 transition"
             >
               {submitting ? (
                 <>⏳</>

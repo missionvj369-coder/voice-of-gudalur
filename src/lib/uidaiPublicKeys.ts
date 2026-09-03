@@ -14,8 +14,9 @@
  * site had not published a successor cert when last checked, so very recent
  * cards may report "signature key not matched (key rotation)". The embedded
  * SHA-256 integrity check still guards every scan, and newer keys can be
- * published to Supabase `app_config.uidai_spki_keys` to rotate WITHOUT a
- * new release — see refreshUidaiKeysFromDb() below.
+ * published to CockroachDB `app_config.uidai_spki_keys` (served via
+ * GET /api/config/uidai-keys) to rotate WITHOUT a new release — see
+ * refreshUidaiKeysFromServer() below.
  */
 export const UIDAI_SPKI_KEYS: readonly string[] = [
   // DS Unique Identification Authority of India 05 — valid to 2026-02-16 (EXPIRED — see docs/UIDAI_KEY_ROTATION.md)
@@ -27,26 +28,19 @@ export const UIDAI_SPKI_KEYS: readonly string[] = [
 let initialized = false;
 
 /**
- * Zero-release rotation: overlay newer UIDAI keys published to Supabase
- * `app_config.uidai_spki_keys` (see supabase/UIDAI_KEYS_SCHEMA.sql and
- * docs/UIDAI_KEY_ROTATION.md). Best-effort and fully fail-silent — offline,
- * unconfigured or missing-table builds simply keep the bundled keys.
- * Public keys are public, so anon read is intended; writes are service-role
- * only (no INSERT/UPDATE/DELETE policies granted to anon/authenticated).
+ * Zero-release rotation: overlay newer UIDAI keys published to the server's
+ * `app_config.uidai_spki_keys` (CockroachDB, exposed via GET
+ * /api/config/uidai-keys). Best-effort and fully fail-silent — offline or
+ * missing-config builds simply keep the bundled keys. Public keys are public,
+ * so the endpoint is unauthenticated; writes are server-side only.
  */
-export async function refreshUidaiKeysFromDb(): Promise<void> {
+export async function refreshUidaiKeysFromServer(): Promise<void> {
   try {
-    const { supabase, isSupabaseConfigured } = await import('./supabase');
-    if (!isSupabaseConfigured) return;
-    const { data, error } = await supabase
-      .from('app_config')
-      .select('value')
-      .eq('key', 'uidai_spki_keys')
-      .maybeSingle();
-    if (error || !data) return;
-    const remote: unknown = (data as { value?: unknown }).value;
-    if (!Array.isArray(remote)) return;
-    const remoteKeys = remote.filter(
+    const res = await fetch('/api/config/uidai-keys', { credentials: 'same-origin' });
+    if (!res.ok) return;
+    const payload = (await res.json()) as { keys?: unknown };
+    if (!Array.isArray(payload.keys)) return;
+    const remoteKeys = payload.keys.filter(
       (k): k is string => typeof k === 'string' && k.length > 100,
     );
     if (remoteKeys.length === 0) return;
@@ -54,7 +48,7 @@ export async function refreshUidaiKeysFromDb(): Promise<void> {
     const { setUidaiSpkiKeys } = await import('./aadhaarDecoder');
     setUidaiSpkiKeys(merged);
   } catch {
-    /* offline / table missing / not configured — bundled keys remain active */
+    /* offline / endpoint missing — bundled keys remain active */
   }
 }
 
@@ -66,6 +60,6 @@ export function initUidaiVerification(): void {
   import('./aadhaarDecoder').then(({ setUidaiSpkiKeys }) => {
     setUidaiSpkiKeys([...UIDAI_SPKI_KEYS]);
     // Fire-and-forget overlay of any newer keys published via app_config.
-    void refreshUidaiKeysFromDb();
+    void refreshUidaiKeysFromServer();
   });
 }

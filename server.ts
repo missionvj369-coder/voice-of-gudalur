@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -10,21 +10,31 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ── 100% open-source AI backend (no proprietary API keys) ──────────────────
-// Chat:   any OpenAI-compatible local LLM via Ollama (MIT) — llama3.2 default.
-// Speech: self-hosted Whisper (Speaches/faster-whisper, Apache-2.0) — optional;
+// â”€â”€ 100% open-source AI backend (no proprietary API keys) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Chat:   any OpenAI-compatible local LLM via Ollama (MIT) â€” llama3.2 default.
+// Speech: self-hosted Whisper (Speaches/faster-whisper, Apache-2.0) â€” optional;
 //         the browser already transcribes on-device via Transformers.js.
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://127.0.0.1:11434/v1';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
 const WHISPER_URL = process.env.WHISPER_URL || ''; // e.g. http://127.0.0.1:8000/v1/audio/transcriptions
-import { createClient } from '@supabase/supabase-js';
 import webPush from 'web-push';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { spawn } from 'child_process';
 import multer from 'multer';
+import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
+import authRoutes from './server/routes/auth';
+import petitionRoutes from './server/routes/petitions';
+import manifestoRoutes from './server/routes/manifesto';
+import wildlifeRoutes from './server/routes/wildlife';
+import officialsRoutes from './server/routes/officials';
+import adminRoutes from './server/routes/admin';
+import adminOfficialsRoutes from './server/routes/adminOfficials';
+import adminOfficialActionsRoutes from './server/routes/adminOfficialActions';
+import configRoutes from './server/routes/config';
 
-// ── Open-source AI clients (no proprietary API keys) ────────────────────────
+// â”€â”€ Open-source AI clients (no proprietary API keys) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface ChatMessage { role: 'system' | 'user' | 'assistant'; content: string; }
 
 /** Chat via any OpenAI-compatible endpoint (Ollama by default, MIT license). */
@@ -61,9 +71,15 @@ async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
-  app.use(express.json());
+    app.use(express.json());
+  app.use(cookieParser());
 
-  // Security headers
+  // â”€â”€ Rate limiting (abuse protection) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const authRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: 'Too many requests' });
+  const publicRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120, message: 'Too many requests' });
+  const writeRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: 'Too many requests' });
+
+  // Security headers (CSP updated â€” no *.supabase.co, no Realtime websocket)
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
@@ -79,7 +95,7 @@ async function startServer() {
       "font-src 'self' https://fonts.gstatic.com; " +
       "media-src 'self' blob: https: data:; " +
       "frame-src 'self' blob:; " +
-      "connect-src 'self' https://*.supabase.co https://api.open-meteo.com https://air-quality-api.open-meteo.com https://gateway.storjshare.io; " +
+      "connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://gateway.storjshare.io; " +
       "frame-ancestors 'none'; " +
       "base-uri 'self'; " +
       "form-action 'self'"
@@ -99,7 +115,7 @@ async function startServer() {
     });
   });
 
-  // Weather & Environmental Ingestion API (Gudalur, Nilgiris: 11.5034Â° N, 76.4925Â° E)
+  // Weather & Environmental Ingestion API (Gudalur, Nilgiris: 11.5034Ã‚Â° N, 76.4925Ã‚Â° E)
   app.get('/api/weather', async (req, res) => {
     try {
       const now = Date.now();
@@ -216,17 +232,16 @@ Role:
     res.json({ success: true, dispatchedAt: Date.now() });
     });
 
-  // ────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // SELF-HOSTED VOICE NOTIFICATION SYSTEM
-  // ────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  // Supabase admin client (service_role for server-side writes / reads)
-  const supabaseAdmin = createClient(
-    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '',
-  );
+    // â”€â”€ Database client (CockroachDB via pg) â€” replaces Supabase admin client â”€â”€
+  import('./server/db/client').then((m) => void m.ping().then((ok) => {
+    console[ok ? 'log' : 'warn']('[VOICE] CockroachDB: ' + (ok ? 'connected' : 'UNREACHABLE â€” check DATABASE_URL'));
+  }));
 
-  // Configure Web Push — VAPID keys generated once via `npx web-push generate`
+  // Configure Web Push â€” VAPID keys generated once via `npx web-push generate`
   if (process.env.PUSH_PRIVATE_KEY && process.env.VAPID_EMAIL) {
     webPush.setVapidDetails(
       process.env.VAPID_EMAIL,
@@ -235,7 +250,7 @@ Role:
     );
     console.log('[VOICE] Web Push configured.');
   } else {
-    console.warn('[VOICE] PUSH_PRIVATE_KEY not set — push notifications disabled.');
+    console.warn('[VOICE] PUSH_PRIVATE_KEY not set â€” push notifications disabled.');
   }
 
   // Multer: parse multipart/form-data (audio uploads)
@@ -254,122 +269,141 @@ Role:
     res.json({ key });
   });
 
-  // POST browser push subscription to Supabase
+  // POST browser push subscription â€” persisted to CockroachDB (was Supabase).
   app.post('/api/push/subscribe', express.json(), async (req, res) => {
-    const { endpoint, keys, userAgent, localityId } = req.body;
+    const { endpoint, keys } = req.body;
     if (!endpoint || !keys?.auth || !keys?.p256dh) {
       return res.status(400).json({ error: 'endpoint + keys required' });
     }
-    const { error } = await supabaseAdmin.from('push_subscriptions').upsert({
-      endpoint,
-      keys_auth: keys.auth,
-      keys_p256dh: keys.p256dh,
-      user_agent: userAgent || null,
-      locality_id: localityId || null,
-      last_seen: new Date().toISOString(),
-    }, { onConflict: 'endpoint' });
-    if (error) return res.status(500).json({ error: error.message });
-        res.json({ success: true });
+    try {
+      const { db: dbClient } = await import('./server/db/client');
+      await dbClient.withTransaction(async (tx) => {
+        await tx.query(
+          `INSERT INTO push_subscriptions(endpoint, p256dh, auth, user_uid, device_label)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (endpoint) DO UPDATE SET p256dh = EXCLUDED.p256dh,
+                                                     auth = EXCLUDED.auth,
+                                                     last_seen = now()`,
+          [endpoint, keys.p256dh, keys.auth, (req as any).user?.uid ?? null, req.body.userAgent ?? null],
+        );
+      });
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
-  // POST /api/voice/incident — receive audio, transcribe on-device or via Whisper, store + broadcast
+  // POST /api/voice/incident - record to CockroachDB + broadcast (was Supabase).
   app.post('/api/voice/incident', upload.single('audio'), async (req, res) => {
     try {
-      const { type, urgency, locality, lat, lng, description, durationMs, transcript: clientTranscript } = req.body;
-      // 1. Transcript: browser already runs Whisper on-device (Transformers.js);
-      //    server falls back to self-hosted Whisper (Apache-2.0) only if the
-      //    client could not transcribe (old client / unsupported browser).
+      const { type, urgency, locality, lat, lng, description, transcript: clientTranscript } = req.body;
+      const { upsertWildlifeIncident } = await import('./server/db/repositories/wildlifeRepository');
+      const { db: dbClient } = await import('./server/db/client');
+
       let transcript = typeof clientTranscript === 'string' && clientTranscript.trim()
         ? clientTranscript.trim()
         : (typeof description === 'string' ? description : '');
       if (!transcript && req.file && WHISPER_URL) {
         try {
           transcript = (await whisperTranscribe(req.file.buffer.toString('base64'))).trim() || transcript;
-        } catch (err: any) {
+        } catch (err) {
           console.warn('[VoiceIncident] Whisper transcription failed:', err?.message);
         }
       }
 
-      // 2. Insert into wildlife_incidents
-      const { data: incident, error: insErr } = await supabaseAdmin
-        .from('wildlife_incidents')
-        .insert({
-          type: type || 'human-wildlife',
-          locality_id: locality || 'gudalur-town',
-          generalized_area: locality || 'Gudalur',
-          lat: lat ? Number(lat) : null,
-          lng: lng ? Number(lng) : null,
-          urgency: urgency || 'MEDIUM',
-          reported_by: 'voice-note',
-          behavior_notes: transcript || description || 'Voice incident report',
-        })
-        .select('id, type, urgency, locality_id, generalized_area')
-        .single();
-      if (insErr) throw insErr;
+      const incident = await upsertWildlifeIncident({
+        type: type || 'human-wildlife',
+        localityId: locality || 'gudalur-town',
+        generalizedArea: locality || 'Gudalur',
+        lat: lat ? Number(lat) : undefined,
+        lng: lng ? Number(lng) : undefined,
+        urgency: urgency || 'MEDIUM',
+        reportedBy: 'voice-note',
+        behaviorNotes: transcript || description || 'Voice incident report',
+        idempotencyKey: 'voice-' + (req.file ? crypto.randomUUID() : (transcript?.slice(0, 40) || crypto.randomUUID())),
+      });
 
-      // 3. Fetch all subscriptions + send push
       let delivered = 0, sent = 0, failed = 0;
-      const { data: subs } = await supabaseAdmin.from('push_subscriptions')
-        .select('endpoint, keys_auth, keys_p256dh');
+      const subsRows = await dbClient.query('SELECT endpoint, p256dh, auth FROM push_subscriptions');
       const pubKey = process.env.VITE_PUSH_PUBLIC_KEY;
-      if (subs && pubKey) {
-        const title = incident.type === 'human-wildlife' ? '🐘 Wildlife Alert' : '🚨 Incident Reported';
-        const body = transcript || `${incident.type} • ${incident.urgency} in ${locality || 'Gudalur'}`;
-        for (const sub of subs) {
+      if (subsRows.rows.length && pubKey) {
+        const title = 'Wildlife Alert';
+        const body = transcript || ((type || 'incident') + ' - ' + (urgency || 'MEDIUM') + ' in ' + (locality || 'Gudalur'));
+        for (const sub of subsRows.rows) {
           sent++;
           try {
             await webPush.sendNotification(
-              { endpoint: sub.endpoint, keys: { auth: sub.keys_auth, p256dh: sub.keys_p256dh } },
-              JSON.stringify({ title, body, icon: '/favicon.svg', incident_id: incident.id, url: `/manifesto#incident-${incident.id}` }),
+              { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } },
+              JSON.stringify({ title, body, icon: '/favicon.svg', incident_id: incident.id, url: '/manifesto#incident-' + incident.id }),
             );
             delivered++;
           } catch (e) {
             failed++;
-            if ((e as any).statusCode === 410 || (e as any).statusCode === 404) {
-              await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+            if (e.statusCode === 410 || e.statusCode === 404) {
+              await dbClient.execute('DELETE FROM push_subscriptions WHERE endpoint = $1', [sub.endpoint]);
             }
           }
         }
-        await supabaseAdmin.from('push_log').insert({ title, body, sent_to: sent, delivered, failures: failed });
+        await dbClient.execute(
+          'INSERT INTO push_log(title, body, sent_count, status) VALUES ($1, $2, $3, $4)',
+          [title, body, sent, sent - failed === 0 ? 'failed' : 'partial'],
+        );
       }
 
-      res.json({ success: true, incident_id: incident.id, transcript: transcript || null, push_sent: delivered, push_total: sent, push_failed: failed });
-      console.log(`[Voice] ${incident.id} — "${transcript?.slice(0, 60) || '(no transcript)'}" — push ${delivered}/${sent}`);
-    } catch (err: any) {
+      res.json({ success: true, incident_id: incident.id, is_new: incident.isNew, transcript: transcript || null, push_sent: delivered, push_total: sent, push_failed: failed });
+      console.log('[Voice] ' + incident.id + ' - "' + (transcript?.slice(0, 60) || '(no transcript)') + '" - push ' + delivered + '/' + sent);
+    } catch (err) {
       console.error('[Voice] Error:', err.message);
       res.status(500).json({ error: err.message || 'Internal error' });
     }
   });
 
-  // Enhanced alert broadcast (now also sends push)
+  // Enhanced alert broadcast (now also sends push) - CockroachDB + web-push.
   app.post('/api/alerts/broadcast-enhanced', async (req, res) => {
     const { title, body, locality, url } = req.body;
     let delivered = 0, sent = 0;
+    const { db: dbClient } = await import('./server/db/client');
     const pubKey = process.env.VITE_PUSH_PUBLIC_KEY;
     if (pubKey) {
-      let q = supabaseAdmin.from('push_subscriptions').select('endpoint, keys_auth, keys_p256dh, locality_id');
-      if (locality) q = q.eq('locality_id', locality);
-      const { data: subs } = await q;
-      if (subs) {
-        for (const sub of subs) {
-          sent++;
-          try {
-            await webPush.sendNotification(
-              { endpoint: sub.endpoint, keys: { auth: sub.keys_auth, p256dh: sub.keys_p256dh } },
-              JSON.stringify({ title: title || 'Gudalur Alert', body: body || '', icon: '/favicon.svg', url: url || '/manifesto' }),
-            );
-            delivered++;
-          } catch {}
-        }
+      let subsRows;
+      if (locality) {
+        subsRows = await dbClient.query(
+          'SELECT ps.endpoint, ps.p256dh, ps.auth FROM push_subscriptions ps JOIN users u ON u.uid = ps.user_uid WHERE u.locality_id = $1',
+          [locality],
+        );
+      } else {
+        subsRows = await dbClient.query('SELECT endpoint, p256dh, auth FROM push_subscriptions');
+      }
+      for (const sub of subsRows.rows) {
+        sent++;
+        try {
+          await webPush.sendNotification(
+            { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } },
+            JSON.stringify({ title: title || 'Gudalur Alert', body: body || '', icon: '/favicon.svg', url: url || '/manifesto' }),
+          );
+          delivered++;
+        } catch {}
       }
     }
     res.json({ success: true, push_sent: delivered, push_total: sent });
   });
 
-// ────────────────────────────────────────────────────────────────
-  // STORJ OBJECT STORAGE — presigned browser uploads (S3-compatible)
+  // Mount the new CockroachDB-backed routers (replaces Supabase facades).
+  app.use('/api/auth', authRateLimiter, authRoutes);
+  app.use('/api/petitions', petitionRoutes);
+  app.use('/api/manifesto', manifestoRoutes);
+  app.use('/api/wildlife', wildlifeRoutes);
+  app.use('/api/offline', wildlifeRoutes);
+  app.use('/api/officials', officialsRoutes);
+  // Admin portal routes (hidden /admin — PLATFORM_ADMIN only)
+  app.use('/api/admin', adminRoutes);
+  app.use('/api/admin', adminOfficialsRoutes);
+  app.use('/api/admin', adminOfficialActionsRoutes);
+
+  app.use('/api/config', publicRateLimiter, configRoutes);
+  // STORJ OBJECT STORAGE â€” presigned browser uploads (S3-compatible)
   // (community voice recordings + verified sighting photo evidence)
-  // ────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const STORJ_ACCESS_KEY = process.env.STORJ_ACCESS_KEY || process.env.STORJ_ACCESS_KEY_ID || '';
   const STORJ_SECRET_ACCESS_KEY = process.env.STORJ_SECRET_ACCESS_KEY || '';
@@ -383,7 +417,7 @@ Role:
   //   https://link.storjshare.io/s/<access-id>[/<bucket>]    (console "Copy link")
   //   https://link.storjshare.io/raw/<access-id>[/<bucket>]
   const STORJ_PUBLIC_LINK_BASE = (process.env.STORJ_PUBLIC_LINK_BASE || '').replace(/\/+$/, '');
-  // Media tags (<audio>/<img>) need RAW object bytes, not the /s/ viewer page —
+  // Media tags (<audio>/<img>) need RAW object bytes, not the /s/ viewer page â€”
   // normalize /s/ -> /raw/, and strip the bucket name if the user included it
   // (it is re-appended per-object below).
   const STORJ_LINK_PREFIX = STORJ_PUBLIC_LINK_BASE
@@ -400,7 +434,7 @@ Role:
       endpoint: STORJ_ENDPOINT,
       forcePathStyle: true,   // Storj gateway is path-style: https://gateway.storjshare.io/<bucket>/<key>
       // Newer AWS SDK v3 defaults append x-amz-checksum-crc32 (of an empty payload) to
-      // presigned PUT URLs — Storj's S3 gateway mishandles that. Only checksum when required.
+      // presigned PUT URLs â€” Storj's S3 gateway mishandles that. Only checksum when required.
       requestChecksumCalculation: 'WHEN_REQUIRED',
       responseChecksumValidation: 'WHEN_REQUIRED',
       credentials: {
@@ -410,12 +444,12 @@ Role:
     });
     console.log('[Storj] S3-compatible object storage configured (' + STORJ_ENDPOINT + ').');
     if (!STORJ_PUBLIC_LINK_BASE) {
-      console.warn('[Storj] STORJ_PUBLIC_LINK_BASE not set — public playback URLs will 404 until a Public Access Link is created and its prefix is configured.');
+      console.warn('[Storj] STORJ_PUBLIC_LINK_BASE not set â€” public playback URLs will 404 until a Public Access Link is created and its prefix is configured.');
     } else {
       console.log('[Storj] Public link prefix: ' + (STORJ_LINK_PREFIX || '(empty)'));
     }
   } else {
-    console.warn('[Storj] STORJ_ACCESS_KEY / STORJ_SECRET_ACCESS_KEY missing — presigned uploads disabled.');
+    console.warn('[Storj] STORJ_ACCESS_KEY / STORJ_SECRET_ACCESS_KEY missing â€” presigned uploads disabled.');
   }
 
   /**
@@ -447,10 +481,10 @@ Role:
     }
   });
 
-  // ────────────────────────────────────────────────────────────────
-  // AI TRANSCRIPTION — self-hosted Whisper (Apache-2.0) converts voice reports to civic text
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // AI TRANSCRIPTION â€” self-hosted Whisper (Apache-2.0) converts voice reports to civic text
   // Accepts multipart/form-data `audio` OR JSON { audioUrl }
-  // ────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
     try {
       let b64 = '';
@@ -466,7 +500,7 @@ Role:
       if (!b64) return res.status(400).json({ error: 'An audio file or audioUrl is required.' });
 
       if (!WHISPER_URL) {
-        // No server Whisper — the recording itself remains valid civic evidence.
+        // No server Whisper â€” the recording itself remains valid civic evidence.
         // (Browsers transcribe on-device via Transformers.js before upload.)
         return res.json({ transcript: null, note: 'Server transcription not configured.' });
       }
@@ -475,15 +509,15 @@ Role:
       res.json({ transcript: text || null });
     } catch (err: any) {
       console.error('[Transcribe] Error:', err?.message);
-      res.status(500).json({ error: 'Transcription failed. Your voice recording on the map remains valid — you may retry AI text later.' });
+      res.status(500).json({ error: 'Transcription failed. Your voice recording on the map remains valid â€” you may retry AI text later.' });
     }
   });
-  // ────────────────────────────────────────────────────────────────
-  // AADHAAR VERIFICATION — real pyaadhaar decode of Aadhaar QR codes.
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // AADHAAR VERIFICATION â€” real pyaadhaar decode of Aadhaar QR codes.
   // Accepts { qrData } (raw secure/old QR string captured by the browser)
   // or { aadhaarNumber } (12-digit, Verhoeff-checked). The Python process
   // decodes OFFLINE; only masked data (last-4 digits) is ever returned.
-  // ────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const AADHAAR_SERVICE = path.join(__dirname, 'server', 'aadhaar_service.py');
   app.post('/api/aadhaar/verify', express.json(), (req, res) => {
     const { qrData, aadhaarNumber } = req.body || {};
@@ -531,8 +565,8 @@ Role:
   });
 
   // Serve the production build when deployed (NODE_ENV=production) or when
-  // explicitly requested (`npm run preview` → `tsx server.ts --serve-dist`).
-  // Everything else (npm run dev) uses Vite middleware — both modes expose the
+  // explicitly requested (`npm run preview` â†’ `tsx server.ts --serve-dist`).
+  // Everything else (npm run dev) uses Vite middleware â€” both modes expose the
   // real /api backend on the same origin.
   const serveDist = process.env.NODE_ENV === 'production' || process.argv.includes('--serve-dist');
   if (!serveDist) {

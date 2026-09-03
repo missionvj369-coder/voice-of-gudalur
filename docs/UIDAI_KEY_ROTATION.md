@@ -4,8 +4,8 @@
 > and UIDAI's site 404s the newer file, so very-recent cards may show
 > *"signature key not matched (key rotation)"*. The **SHA-256 integrity check
 > still guards every scan**, and adding the next cert is a **one-file drop
-> into `scripts/certs/`** — or, with no release at all, a single Supabase row
-> update (see [2. Zero-release rotation](#2-zero-release-rotation-supabase)).
+> into `scripts/certs/`** — or, with no release at all, a single CockroachDB row
+> update (see [2. Zero-release rotation](#2-zero-release-rotation-cockroachdb)).
 
 ## Current status
 
@@ -38,16 +38,16 @@ are still rejected. This is a degradation of assurance level, not a security hol
    `src/lib/uidaiPublicKeys.ts` (newest first — the verifier tries each in order).
 5. Note the validity window in the inline comment; ship the release.
 
-## 2. Zero-release rotation (Supabase)
+## 2. Zero-release rotation (CockroachDB)
 
 The app reads `public.app_config` row `uidai_spki_keys` once per registration
 session (`refreshUidaiKeysFromDb()`) and overlays those keys on top of the
 bundled ones — **no app release required**.
 
-One-time setup (Supabase SQL editor):
+One-time setup (CockroachDB):
 
 ```sql
--- run supabase/UIDAI_KEYS_SCHEMA.sql
+-- run server/db/migrations/001_base_schema.sql (app_config table + seed)
 ```
 
 Then to rotate:
@@ -63,7 +63,8 @@ Residents' devices pick the new key up on the next Aadhaar scan. The SHA-256
 integrity check keeps protecting scans in the meantime.
 
 **Security:** anon may SELECT (public keys are public) but has **no** write
-policies — rotations are performed via the dashboard or `service_role` key.
+policies — rotations are performed via the admin CLI or a privileged service
+role connecting to CockroachDB.
 
 ## 3. Verifying a card locally
 
@@ -80,4 +81,4 @@ Scan a real Aadhaar in the registration modal → the Verified screen lists:
 | `scripts/extract-uidai-keys.mjs` | cert → SPKI base64 extractor |
 | `src/lib/uidaiPublicKeys.ts` | bundled SPKI registry + `refreshUidaiKeysFromDb()` |
 | `src/lib/aadhaarDecoder.ts` | structural decode + SHA-256 + RSA verify |
-| `supabase/UIDAI_KEYS_SCHEMA.sql` | `app_config` table + seed (zero-release path) |
+| `server/db/migrations/001_base_schema.sql` | `app_config` table + seed (zero-release path) |

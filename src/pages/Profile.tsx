@@ -128,7 +128,7 @@ export const Profile: React.FC = () => {
                 <div className="flex items-center gap-2">
           <button
             onClick={() => setIsEditing(!isEditing)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-md transition"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2E7D32] hover:bg-[#388E3C] text-white font-bold text-xs shadow-md transition"
           >
             <Edit3 size={14} />
             <span>{isEditing ? 'Cancel Edit' : 'Edit Profile'}</span>
@@ -188,7 +188,7 @@ export const Profile: React.FC = () => {
         
         {/* Left Column: Digital ID Card */}
         <div className="lg:col-span-7 space-y-6">
-          <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 text-white shadow-2xl border border-slate-700/80 overflow-hidden">
+          <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-[#1B5E20] via-[#2E7D32] to-[#388E3C] text-white shadow-2xl border border-[#AED581]/30 overflow-hidden">
             <div className="absolute -right-8 -bottom-8 w-44 h-44 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
             <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
               <ShieldCheck size={160} />

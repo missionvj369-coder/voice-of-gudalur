@@ -16,7 +16,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { EMAIL_RECIPIENTS, EMAIL_PETITION_DATA, CAMPAIGN_SLOGAN, EmailRecipient } from '../../data/emailPetitionData';
 import { useLanguage, type Language } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
-import { db, isSupabaseConfigured, generateEmailRef } from '../../lib/supabase';
+import { manifestoApi } from '../../services/api';
+import { generateEmailRef, savePendingEmailReceipt } from '../../lib/pendingLedger';
 import toast from 'react-hot-toast';
 import { cn } from '../../lib/utils';
 
@@ -161,78 +162,23 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
 
 
   /**
-   * Records a REAL official submission in the proof ledger (manifesto_submissions).
-   * Fires automatically the moment the send action is triggered — the send action IS
-   * the record. Returns an immutable docket ref used on the signed PDF as proof.
+   * Records a REAL official submission in the proof ledger (manifesto_submissions
+   * via the API / CockroachDB). Fires automatically the moment the send action is
+   * triggered — the send action IS the record. Returns an immutable docket ref
+   * used on the signed PDF as proof. Failures keep a local pending receipt so
+   * the citizen's action is never lost.
    */
   const recordSubmission = async () => {
     if (submissionDone || recording) return;
         setRecording(true);
     try {
-      if (!isSupabaseConfigured()) {
-        // Cloud ledger offline — local docket ref so the signed PDF still proves intent.
-        const localRef = generateEmailRef();
-        const localRec = {
-          docket_ref: localRef,
-          sender_name: profile?.name?.trim() || 'Gudalur Citizen',
-          sender_phone: profile?.phone || '',
-          gudalur_id: profile?.gudalurId,
-          locality: profile?.localityName,
-          to_emails: toEmails,
-          cc_emails: ccEmails,
-          subject: content.subject,
-          lang: selectedLang,
-          sent_at: Date.now(),
-          synced: false,
-        };
-        try {
-          const existing = JSON.parse(localStorage.getItem('og_pending_emails') || '[]');
-          existing.push(localRec);
-          localStorage.setItem('og_pending_emails', JSON.stringify(existing));
-        } catch { /* best-effort */ }
-        setDocketRef(localRef);
-        setSubmissionDone(true);
-        // NOTE: device-only records never unlock the PDF — only the official
-        // cloud ledger docket does. A retry is offered in the footer.
-        return;
-      }
-      const result = await db.addManifestoSubmission({
-        senderName: profile?.name?.trim() || 'Gudalur Citizen',
-        senderPhone: profile?.phone || '',
-        gudalurId: profile?.gudalurId,
-        locality: profile?.localityName,
-        toEmails,
-        ccEmails,
+      const result = await manifestoApi.submitDocket({
         subject: content.subject,
         lang: selectedLang,
+        toEmails: toEmails.split(',').map((s) => s.trim()).filter(Boolean),
+        ccEmails: ccEmails.split(',').map((s) => s.trim()).filter(Boolean),
       });
-      if (result.error) {
-        console.error('Email submission record error:', result.error);
-        // Never lose the citizen's action: keep a local pending record with its own docket.
-        const localRef = generateEmailRef();
-        try {
-          const existing = JSON.parse(localStorage.getItem('og_pending_emails') || '[]');
-          existing.push({
-            docket_ref: localRef,
-            sender_name: profile?.name?.trim() || 'Gudalur Citizen',
-            sender_phone: profile?.phone || '',
-            gudalur_id: profile?.gudalurId,
-            locality: profile?.localityName,
-            to_emails: toEmails,
-            cc_emails: ccEmails,
-            subject: content.subject,
-            lang: selectedLang,
-            sent_at: Date.now(),
-            synced: false,
-          });
-          localStorage.setItem('og_pending_emails', JSON.stringify(existing));
-        } catch { /* best-effort */ }
-        setDocketRef(localRef);
-        setSubmissionDone(true);
-        setSubmissionError(true);
-        return localRef;
-      }
-      const ref = result.ref || '';
+      const ref = result.docketRef || '';
       setDocketRef(ref);
                           setSubmissionDone(true);
       onSubmissionRecorded?.(ref);
@@ -243,23 +189,19 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
       console.error('Email submission record flow error:', err);
       // Any unexpected failure still saves the citizen's action locally with its own docket.
       const localRef = generateEmailRef();
-      try {
-        const existing = JSON.parse(localStorage.getItem('og_pending_emails') || '[]');
-        existing.push({
-          docket_ref: localRef,
-          sender_name: profile?.name?.trim() || 'Gudalur Citizen',
-          sender_phone: profile?.phone || '',
-          gudalur_id: profile?.gudalurId,
-          locality: profile?.localityName,
-          to_emails: toEmails,
-          cc_emails: ccEmails,
-          subject: content.subject,
-          lang: selectedLang,
-          sent_at: Date.now(),
-          synced: false,
-        });
-        localStorage.setItem('og_pending_emails', JSON.stringify(existing));
-      } catch { /* best-effort */ }
+      savePendingEmailReceipt({
+        docket_ref: localRef,
+        sender_name: profile?.name?.trim() || 'Gudalur Citizen',
+        sender_phone: profile?.phone || '',
+        gudalur_id: profile?.gudalurId,
+        locality: profile?.localityName,
+        to_emails: toEmails,
+        cc_emails: ccEmails,
+        subject: content.subject,
+        lang: selectedLang,
+        sent_at: Date.now(),
+        synced: false,
+      });
       setDocketRef(localRef);
       setSubmissionDone(true);
       setSubmissionError(true);
@@ -272,7 +214,7 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#0A3D0A]/80 backdrop-blur-sm overflow-y-auto">
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -280,7 +222,7 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
         className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[95vh]"
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 text-white p-5 sm:p-6 flex items-center justify-between shrink-0 border-b border-emerald-900/50">
+        <div className="bg-gradient-to-r from-[#1B5E20] via-[#2E7D32] to-[#388E3C] text-white p-5 sm:p-6 flex items-center justify-between shrink-0 border-b border-[#AED581]/30">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-md bg-amber-600/30 text-amber-300 border border-amber-500/40 text-[10px] font-bold uppercase tracking-wider">

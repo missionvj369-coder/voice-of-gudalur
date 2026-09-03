@@ -129,7 +129,7 @@ export const Live: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         
         {/* Mudumalai Tiger Reserve Night Traffic Regulation */}
-        <div className="p-6 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white border border-slate-700 shadow-md space-y-4">
+        <div className="p-6 rounded-3xl bg-gradient-to-br from-[#2E7D32] to-[#1B5E20] text-white border border-[#AED581]/30 shadow-md space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2.5">
               <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
@@ -149,8 +149,8 @@ export const Live: React.FC = () => {
             </span>
           </div>
 
-          <div className="p-4 bg-slate-800/80 rounded-2xl border border-slate-700 text-xs space-y-2 text-slate-300 leading-relaxed">
-            <p className="font-bold text-amber-300">Mandatory Highway Closure Timings:</p>
+          <div className="p-4 bg-[#1B5E20]/80 rounded-2xl border border-[#AED581]/20 text-xs space-y-2 text-[#F5F5F5]/85 leading-relaxed">
+            <p className="font-bold text-[#AED581]">Mandatory Highway Closure Timings:</p>
             <p>• <strong>Thorapalli Checkpost to Bandipur:</strong> Vehicles not permitted between <strong>9:00 PM and 6:00 AM</strong> to ensure undisturbed animal migration.</p>
             <p>• Emergency ambulances and state-approved medical evacuations are exempted upon physical verification at Thorapalli Forest Gate.</p>
           </div>

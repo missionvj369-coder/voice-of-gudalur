@@ -5,8 +5,8 @@
  * WHAT IT DOES
  *  1. Asks the browser for push-notification permission.
  *  2. Creates a Web Push subscription and stores its endpoint + P-256 keys
- *     in Supabase (table: push_subscriptions) so the server can address this
- *     device later.
+ *     in CockroachDB (via POST /api/push/subscribe → push_subscriptions) so
+ *     the server can address this device later.
  *  3. Lets the user record a short voice note (microphone → Opus/WebM blob).
  *  4. Transcribes the recording ON-DEVICE with open-source Whisper
  *     (Transformers.js — Apache-2.0; audio never leaves the phone, works
@@ -16,7 +16,6 @@
  *     to every subscriber in the affected locality.
  */
 
-import { supabase } from '../lib/supabase';
 import { transcribeAudioBlob } from './transcriptionService';
 
 // ── 1. Web Push subscription (browser side) ──────────────────────────
@@ -43,7 +42,7 @@ export interface SavedSubscription {
   keys_p256dh: string;
 }
 
-/** Subscribe the browser to push and persist the subscription to Supabase. */
+/** Subscribe the browser to push and persist the subscription to the server (CockroachDB). */
 export async function subscribeToPush(localityId?: string): Promise<PushSubscription | null> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !PUSH_PUBLIC_KEY) {
     console.warn('[VoiceNotify] Push not supported or VAPID key missing.');
@@ -62,7 +61,8 @@ export async function subscribeToPush(localityId?: string): Promise<PushSubscrip
     applicationServerKey: urlB64ToUint8Array(PUSH_PUBLIC_KEY),
   });
 
-  // Persist to Supabase so the Express server can address this endpoint.
+  // Persist the subscription server-side so the Express server can address
+    // this endpoint (CockroachDB via /api/push/subscribe — cookie session).
   const authKey = sub.getKey('auth');
   const p256Key = sub.getKey('p256dh');
   const payload: SavedSubscription = {
@@ -71,16 +71,25 @@ export async function subscribeToPush(localityId?: string): Promise<PushSubscrip
     keys_p256dh: p256Key ? btoa(String.fromCharCode(...new Uint8Array(p256Key))) : '',
   };
 
-  const { error } = await supabase.from('push_subscriptions').upsert({
-    endpoint: payload.endpoint,
-    keys_auth: payload.keys_auth,
-    keys_p256dh: payload.keys_p256dh,
-    user_agent: navigator.userAgent,
-    locality_id: localityId || null,
-    last_seen: new Date().toISOString(),
-  }, { onConflict: 'endpoint' });
-
-    if (error) console.error('[VoiceNotify] Save subscription failed:', error.message);
+  try {
+    const res = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        endpoint: payload.endpoint,
+        keys: { auth: payload.keys_auth, p256dh: payload.keys_p256dh },
+        userAgent: navigator.userAgent,
+        localityId,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error('[VoiceNotify] Save subscription failed:', err?.error ?? res.status);
+    }
+  } catch (e) {
+    console.error('[VoiceNotify] Save subscription failed:', e);
+  }
   return sub;
 }
 

@@ -1,11 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { verifySign } from "../lib/signService";
+
+interface VerifyResult {
+  valid: boolean;
+  sign_hash?: string;
+  full_name?: string;
+  village?: string;
+  phone_last4?: string;
+  aadhaar_last4?: string;
+  batch_no?: number;
+  created_at?: string;
+}
 
 export const VerifySignPage: React.FC = () => {
   const [params] = useSearchParams();
   const hash = params.get("id");
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<VerifyResult | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,10 +25,23 @@ export const VerifySignPage: React.FC = () => {
         if (!cancelled) setLoading(false);
         return;
       }
-      const res = await verifySign(hash);
-      if (!cancelled) {
-        setData(res);
-        setLoading(false);
+      try {
+        // Public proof lookup — independent of the signing request.
+        const res = await fetch(`/api/petitions/verify/${encodeURIComponent(hash)}`, {
+          credentials: 'same-origin',
+        });
+        if (cancelled) return;
+        if (res.status === 404) {
+          setData({ valid: false });
+        } else if (!res.ok) {
+          setData({ valid: false });
+        } else {
+          setData((await res.json()) as VerifyResult);
+        }
+      } catch {
+        if (!cancelled) setData({ valid: false });
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {

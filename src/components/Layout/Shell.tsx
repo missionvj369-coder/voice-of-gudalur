@@ -54,7 +54,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
   return (
     <IdModalContext.Provider value={{ openIdModal, whenRegistered }}>
-      <div className="min-h-screen bg-transparent text-slate-100 font-sans antialiased overflow-x-hidden flex flex-col">
+      <div className="min-h-screen bg-transparent text-[#F5F5F5] font-sans antialiased overflow-x-hidden flex flex-col">
                 {/* Ambient attention layer — lightweight SVG background (no animated divs for low-end devices) */}
         <div className="og-ambient" aria-hidden="true">
           <svg
@@ -74,17 +74,17 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             </circle>
           </svg>
         </div>
-        <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-transparent border-b border-slate-700/50 flex items-center">
+        <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-[#1B5E20]/90 backdrop-blur-md border-b border-[#AED581]/30 flex items-center">
           <div className="max-w-5xl mx-auto w-full px-4 flex items-center justify-between">
             <div className="flex items-center gap-2 cursor-pointer" onClick={openIdModal}>
-              <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0">
-                <Flame size={12} className="text-amber-300" />
+              <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-[#AED581] to-[#81C784] flex items-center justify-center shrink-0">
+                <Flame size={12} className="text-[#1B5E20]" />
               </div>
-              <span className="font-black text-xs text-white tracking-wider whitespace-nowrap">VOICE OF GUDALUR</span>
+              <span className="font-black text-xs text-[#F5F5F5] tracking-wider whitespace-nowrap">VOICE OF GUDALUR</span>
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-0.5 rounded-lg bg-slate-900/60 border border-slate-700/50 p-0.5">
+              <div className="flex items-center gap-0.5 rounded-lg bg-[#2E7D32]/60 border border-[#AED581]/30 p-0.5">
                 {LANGUAGES.map((l) => (
                   <button
                     key={l.code}
@@ -93,8 +93,8 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     title={l.label}
                     className={`px-1.5 sm:px-2 py-1 rounded-md text-[9px] sm:text-[10px] font-black uppercase transition-all ${
                       lang === l.code
-                        ? 'bg-amber-500 text-slate-900 shadow'
-                        : 'text-slate-300/80 hover:text-white hover:bg-slate-700/40'
+                        ? 'bg-[#AED581] text-[#1B5E20] shadow'
+                        : 'text-[#F5F5F5]/80 hover:text-[#F5F5F5] hover:bg-[#388E3C]/40'
                     }`}
                   >
                     <span className="hidden sm:inline">{l.label}</span>
@@ -106,19 +106,19 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 type="button"
                 onClick={openIdModal}
                 title={profile ? `${profile.name} — ${profile.gudalurId} — tap for ID card` : 'Register / Login'}
-                className="flex items-center gap-1.5 rounded-full bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 transition pl-0.5 pr-1 py-0.5 shrink-0"
+                className="flex items-center gap-1.5 rounded-full bg-[#AED581]/20 border border-[#AED581]/40 hover:bg-[#AED581]/30 transition pl-0.5 pr-1 py-0.5 shrink-0"
               >
                 {profile ? (
                   <>
-                    <span className="h-6 w-6 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-[10px] font-black text-white">
+                    <span className="h-6 w-6 rounded-full bg-gradient-to-br from-[#AED581] to-[#81C784] flex items-center justify-center text-[10px] font-black text-[#1B5E20]">
                       {profile.name.trim().charAt(0).toUpperCase()}
                     </span>
-                    <span className="hidden sm:inline font-mono text-[9px] font-bold text-emerald-300 tracking-wide">
+                    <span className="hidden sm:inline font-mono text-[9px] font-bold text-[#AED581] tracking-wide">
                       {profile.gudalurId}
                     </span>
                   </>
                 ) : (
-                  <span className="h-6 w-6 rounded-full bg-amber-500/40 flex items-center justify-center text-amber-100">
+                  <span className="h-6 w-6 rounded-full bg-[#AED581]/40 flex items-center justify-center text-[#1B5E20]">
                     <User size={12} />
                   </span>
                 )}
@@ -127,7 +127,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     type="button"
                     onClick={async () => { await logout(); }}
                     title="Logout"
-                    className="ml-1 rounded-full p-1 text-slate-400 hover:text-white hover:bg-slate-700/50 transition shrink-0"
+                    className="ml-1 rounded-full p-1 text-[#F5F5F5]/60 hover:text-[#F5F5F5] hover:bg-[#388E3C]/50 transition shrink-0"
                   >
                     <LogOut size={12} />
                   </button>
@@ -138,7 +138,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                   type="button"
                   onClick={() => setLoginModalOpen(true)}
                   title="Switch account"
-                  className="ml-1 rounded-full p-1 text-slate-400 hover:text-white hover:bg-slate-700/50 transition shrink-0 hidden sm:flex"
+                  className="ml-1 rounded-full p-1 text-[#F5F5F5]/60 hover:text-[#F5F5F5] hover:bg-[#388E3C]/50 transition shrink-0 hidden sm:flex"
                 >
                   <LogIn size={12} />
                 </button>
@@ -151,21 +151,21 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           {children}
         </main>
 
-                <footer className="relative z-10 border-t border-slate-800/60 bg-transparent px-4 pt-16 pb-10">
+                <footer className="relative z-10 border-t border-[#AED581]/20 bg-[#1B5E20]/80 px-4 pt-16 pb-10">
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
             <div>
-              <div className="font-black text-sm text-white tracking-wider">VOICE OF GUDALUR</div>
-              <p className="text-xs text-slate-400 mt-1">
+              <div className="font-black text-sm text-[#F5F5F5] tracking-wider">VOICE OF GUDALUR</div>
+              <p className="text-xs text-[#AED581]/80 mt-1">
                 A citizen initiative by{' '}
-                <a href="https://ugtindia.space" target="_blank" rel="noopener noreferrer" className="font-bold text-amber-400 hover:underline">
+                <a href="https://ugtindia.space" target="_blank" rel="noopener noreferrer" className="font-bold text-[#AED581] hover:underline">
                   Universal Guard Trust
                 </a>
               </p>
             </div>
-            <div className="flex flex-col items-center sm:items-end gap-1.5 text-xs text-slate-400">
-              <a href="https://ugtindia.space" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">ugtindia.space ↗</a>
-              <a href="https://ugtglobal.space" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">ugtglobal.space ↗</a>
-              <a href="mailto:soulconnect@ugtindia.space" className="hover:text-white transition">soulconnect@ugtglobal.space</a>
+            <div className="flex flex-col items-center sm:items-end gap-1.5 text-xs text-[#AED581]/80">
+              <a href="https://ugtindia.space" target="_blank" rel="noopener noreferrer" className="hover:text-[#F5F5F5] transition">ugtindia.space ↗</a>
+              <a href="https://ugtglobal.space" target="_blank" rel="noopener noreferrer" className="hover:text-[#F5F5F5] transition">ugtglobal.space ↗</a>
+              <a href="mailto:soulconnect@ugtindia.space" className="hover:text-[#F5F5F5] transition">soulconnect@ugtglobal.space</a>
             </div>
           </div>
         </footer>

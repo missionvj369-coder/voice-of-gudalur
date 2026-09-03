@@ -5,9 +5,9 @@
  *
  * Place this component once at the app root (inside <Router>).
  */
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { wildlifeApi } from '../services/api';
 import { subscribeToPush } from '../services/voiceReportService';
 import toast from 'react-hot-toast';
 import { Bone } from 'lucide-react';
@@ -65,15 +65,26 @@ export const VoiceIncidentListener: React.FC = () => {
     return () => navigator.serviceWorker.removeEventListener('message', handler);
   }, [navigate]);
 
-  // 3. Optional: realtime listener via Supabase channel (fires on new wildlife_incidents).
+    // 3. New-incident toasts: poll the API (no WebSocket realtime needed).
+  //    Wildlife incidents are infrequent; a 60s poll is the simplest reliable
+  //    mechanism and needs no WebSocket infrastructure.
+  const seenIncidentsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    const channel = supabase
-      .channel('public:wildlife_incidents:insert')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'wildlife_incidents' },
-        (payload) => {
-          const inc = payload.new as any;
+    let cancelled = false;
+    let primed = false;
+    const poll = async () => {
+      try {
+        const { incidents } = await wildlifeApi.incidents();
+        if (cancelled || !incidents?.length) return;
+        for (const inc of incidents as any[]) {
+          if (!inc?.id) continue;
+          if (!primed) {
+            // First pass only records the baseline — no toast flood on load.
+            seenIncidentsRef.current.add(inc.id);
+            continue;
+          }
+          if (seenIncidentsRef.current.has(inc.id)) continue;
+          seenIncidentsRef.current.add(inc.id);
           toast.custom(
             <div className="flex items-start gap-2 text-xs">
               <Bone size={16} className="text-amber-500 shrink-0" />
@@ -86,13 +97,15 @@ export const VoiceIncidentListener: React.FC = () => {
             </div>,
             { duration: 6000, position: 'top-right' },
           );
-        },
-      )
-      .subscribe();
-
-        return () => {
-      supabase.removeChannel(channel);
+        }
+        primed = true;
+      } catch {
+        /* offline — next poll retries */
+      }
     };
+    poll();
+    const interval = setInterval(poll, 60_000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
   // This component renders nothing — it is purely a background listener.

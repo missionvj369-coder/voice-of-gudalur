@@ -45,7 +45,7 @@ const Welcome: React.FC = () => {
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <button 
               onClick={() => navigate('/login')}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-8 py-4 text-lg font-bold text-white transition-all hover:bg-slate-800 sm:w-auto"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#AED581] px-8 py-4 text-lg font-bold text-[#1B5E20] transition-all hover:bg-[#C5E1A5] sm:w-auto"
             >
               Get Started <ArrowRight size={20} />
             </button>

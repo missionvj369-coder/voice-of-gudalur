@@ -1,17 +1,17 @@
 ﻿import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
 import { UserProfile, Role, VerificationLevel } from '../types';
 import { GUDALUR_LOCALITIES } from '../data/gudalurMasterData';
-import { supabase, db, generateGudalurId, normalizePhone, isSupabaseConfigured } from '../lib/supabase';
+import { authApi } from '../services/api';
+import type { AuthUser } from '../services/api';
 import toast from 'react-hot-toast';
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   profile: UserProfile | null;
   loading: boolean;
   userCoords: { lat: number; lng: number } | null;
   acquireLiveLocation: () => Promise<{ lat: number; lng: number } | null>;
-  /** Register with phone number only (no password). Generates & saves a unique Gudalur ID. */
+  /** Register with phone number only (no password). Server issues a Gudalur ID + OTP. */
   registerResident: (data: {
     name: string;
     phone: string;
@@ -21,17 +21,21 @@ interface AuthContextType {
     pincode: string;
     lat?: number;
     lng?: number;
-    /** pyaadhaar verification result — QR-decoded or Verhoeff-checked number. */
+    /** pyaadhaar verification result â€” QR-decoded or Verhoeff-checked number. */
     aadhaarVerified?: boolean;
     aadhaarLast4?: string;
     aadhaarRef?: string;
   }) => Promise<UserProfile>;
-  /** Login with EITHER mobile number OR Gudalur ID number (no password — either identifier alone works). */
+  /** Login with EITHER mobile number OR Gudalur ID number. Resolves the resident + sends an OTP. */
   loginResident: (phone?: string, gudalurId?: string) => Promise<UserProfile>;
+  /** Complete the pending OTP step and establish the server session (httpOnly cookies). */
+  verifyResidentOtp: (code: string) => Promise<UserProfile>;
+  /** True when an OTP was issued but not yet verified on this device. */
+  needsOtpVerify: boolean;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateLocality: (localityId: string, customPlaceName?: string, pincode?: string) => Promise<void>;
-  /** Update an existing resident's details IN PLACE — same Gudalur ID, same ledger row, never a new creation. */
+  /** Update an existing resident's details IN PLACE â€” same Gudalur ID, same ledger row, never a new creation. */
   updateResident: (fields: {
     name?: string; phone?: string; email?: string;
     localityId?: string; customPlaceName?: string; pincode?: string;
@@ -42,17 +46,22 @@ interface AuthContextType {
 export const DUPLICATE_PHONE_ERROR = 'DUPLICATE_PHONE';
 
 const PROFILE_KEY = 'VoiceOfGudalur_resident_profile';
+const PLATFORM_ADMIN_EMAIL = 'vijaybalakrishnanshanmugam@gmail.com';
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   loading: true,
   userCoords: null,
+  needsOtpVerify: false,
   acquireLiveLocation: async () => null,
   registerResident: async () => {
     throw new Error('Not implemented');
   },
   loginResident: async () => {
+    throw new Error('Not implemented');
+  },
+  verifyResidentOtp: async () => {
     throw new Error('Not implemented');
   },
   logout: async () => {},
@@ -63,8 +72,66 @@ const AuthContext = createContext<AuthContextType>({
   },
 });
 
+/** Normalize a phone number to 10 digits (drops an optional leading +91). */
+function normalizePhone(raw: string): string {
+  const digits = String(raw || '').replace(/\D/g, '');
+  return digits.startsWith('91') && digits.length === 12 ? digits.slice(2) : digits;
+}
+
+/** Map a server resident/session payload (camelCase) to the app's UserProfile. */
+function toUserProfile(r: any): UserProfile {
+  return {
+    uid: r.uid,
+    name: r.name,
+    phone: r.phone,
+    email: r.email || undefined,
+    localityId: r.localityId,
+    localityName: r.localityName,
+    customPlaceName: r.customPlaceName || undefined,
+    pincode: r.pincode,
+    gudalurId: r.gudalurId,
+    role: (r.role as Role) || 'LOCAL_MEMBER',
+    verificationLevel: (r.verificationLevel as VerificationLevel) || 'REGISTERED',
+    isBloodDonor: r.isBloodDonor || false,
+    bloodGroup: r.bloodGroup || undefined,
+    avatarUrl: r.avatarUrl || undefined,
+    bio: r.bio || undefined,
+    lat: r.lat || undefined,
+    lng: r.lng || undefined,
+    aadhaarVerified: r.aadhaarVerified || undefined,
+    aadhaarLast4: r.aadhaarLast4 || undefined,
+    aadhaarRef: r.aadhaarRef || undefined,
+    createdAt: r.createdAt ? new Date(r.createdAt).getTime() : Date.now(),
+    updatedAt: r.updatedAt ? new Date(r.updatedAt).getTime() : Date.now(),
+    issuesReported: r.issuesReported || 0,
+    issuesSupported: r.issuesSupported || 0,
+    representationsCreated: r.representationsCreated || 0,
+    alertsAcknowledged: r.alertsAcknowledged || 0,
+  };
+}
+
+/** Derive the AuthUser shape (set in state/cookies) from a full UserProfile. */
+function toAuthUser(p: UserProfile): AuthUser {
+  return {
+    uid: p.uid,
+    id: p.uid,
+    phone: p.phone,
+    gudalurId: p.gudalurId,
+    name: p.name,
+    role: p.role,
+    kind: 'user',
+    localityName: p.localityName,
+    localityId: p.localityId,
+    customPlaceName: p.customPlaceName,
+    pincode: p.pincode,
+    email: p.email,
+    aadhaarVerified: p.aadhaarVerified,
+    aadhaarLast4: p.aadhaarLast4,
+  };
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(() => {
     try {
@@ -75,6 +142,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   });
   const [loading, setLoading] = useState(true);
+  const [needsOtpVerify, setNeedsOtpVerify] = useState(false);
+  const [pendingPhone, setPendingPhone] = useState<string | null>(null);
 
   const readCachedProfile = (): UserProfile | null => {
     try {
@@ -94,69 +163,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const rowToProfile = (data: any): UserProfile => ({
-    uid: data.uid,
-    name: data.name,
-    phone: data.phone,
-    email: data.email || undefined,
-    localityId: data.locality_id,
-    localityName: data.locality_name,
-    customPlaceName: data.custom_place_name || undefined,
-    pincode: data.pincode,
-    gudalurId: data.gudalur_id,
-    role: (data.role as Role) || 'LOCAL_MEMBER',
-    verificationLevel: (data.verification_level as VerificationLevel) || 'REGISTERED',
-    isBloodDonor: data.is_blood_donor,
-    bloodGroup: data.blood_group || undefined,
-    avatarUrl: data.avatar_url || undefined,
-    bio: data.bio || undefined,
-    lat: data.lat || undefined,
-    lng: data.lng || undefined,
-    aadhaarVerified: data.aadhaar_verified || undefined,
-    aadhaarLast4: data.aadhaar_last4 || undefined,
-    aadhaarRef: data.aadhaar_ref || undefined,
-    createdAt: data.created_at ? new Date(data.created_at).getTime() : Date.now(),
-    updatedAt: data.updated_at ? new Date(data.updated_at).getTime() : Date.now(),
-    issuesReported: data.issues_reported || 0,
-    issuesSupported: data.issues_supported || 0,
-    representationsCreated: data.representations_created || 0,
-    alertsAcknowledged: data.alerts_acknowledged || 0,
-  });
-
-  const rowToUpsertPayload = (p: UserProfile) => ({
-    uid: p.uid,
-    name: p.name,
-    phone: p.phone,
-    email: p.email || null,
-    locality_id: p.localityId,
-    locality_name: p.localityName,
-    custom_place_name: p.customPlaceName || null,
-    pincode: p.pincode,
-    gudalur_id: p.gudalurId,
-    role: p.role,
-    verification_level: p.verificationLevel,
-    is_blood_donor: p.isBloodDonor,
-    blood_group: p.bloodGroup || null,
-    avatar_url: p.avatarUrl || null,
-    bio: p.bio || null,
-    lat: p.lat || null,
-    lng: p.lng || null,
-    aadhaar_verified: p.aadhaarVerified || false,
-    aadhaar_last4: p.aadhaarLast4 || null,
-    aadhaar_ref: p.aadhaarRef || null,
-    issues_reported: p.issuesReported,
-    issues_supported: p.issuesSupported,
-    representations_created: p.representationsCreated,
-    alerts_acknowledged: p.alertsAcknowledged,
-  });
-
-  const applyPlatformAdminOverride = (p: UserProfile): UserProfile => {
-    // Preserve elevated role for the platform owner account
-    if ((user as any)?.email === 'vijaybalakrishnanshanmugam@gmail.com') {
-      return { ...p, role: 'PLATFORM_ADMIN', verificationLevel: 'PLATFORM_ADMIN' };
-    }
-    return p;
-  };
+  const applyPlatformAdminOverride = (p: UserProfile): UserProfile =>
+    p.email?.toLowerCase() === PLATFORM_ADMIN_EMAIL
+      ? { ...p, role: 'PLATFORM_ADMIN' as Role, verificationLevel: 'PLATFORM_ADMIN' as VerificationLevel }
+      : p;
 
   const acquireLiveLocation = (): Promise<{ lat: number; lng: number } | null> =>
     new Promise((resolve) => {
@@ -180,50 +190,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
     });
 
+    /** Restore a server session on boot (httpOnly cookies only). */
   useEffect(() => {
-    acquireLiveLocation();
-
-    try {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        if (session?.user) {
-          setUser(session.user);
-          try {
-            const { data } = await db.getUserProfile(session.user.id);
-            if (data) {
-              persistProfile(applyPlatformAdminOverride(rowToProfile(data)));
-            }
-          } catch {
-            /* keep cached profile */
-          }
-        } else {
-          setUser(null);
-          // Keep the cached resident card so registered residents stay logged in locally
+    void acquireLiveLocation();
+    (async () => {
+      try {
+        const { user: u } = await authApi.me();
+        if (u && u.kind === 'user') {
+          setUser(u);
           const cached = readCachedProfile();
-          if (cached) setProfile(cached);
+          if (cached && (cached.gudalurId === u.gudalurId || cached.phone === u.phone)) {
+            persistProfile(applyPlatformAdminOverride(cached));
+          }
         }
+      } catch {
+        // Offline â€” keep the cached resident card so the app stays usable.
+        const cached = readCachedProfile();
+        if (cached) setProfile(cached);
+      } finally {
         setLoading(false);
-      });
-
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (!session?.user) setLoading(false);
-      }).catch(() => setLoading(false));
-
-      // Never block the app on auth boot — phone auth works without Supabase sessions
-      const bootTimer = setTimeout(() => setLoading(false), 2500);
-      return () => {
-        clearTimeout(bootTimer);
-        subscription.unsubscribe();
-      };
-    } catch (err) {
-      console.warn('Auth initialization fallback:', err);
-      setLoading(false);
-    }
+      }
+    })();
   }, []);
 
   /**
-   * PHONE-ONLY REGISTRATION (no password).
-   * Generates a unique Gudalur ID (GD-YYYY-NNNNNN), verifies uniqueness against the Supabase
-   * ledger, saves the resident record in the cloud, and caches it locally for offline login.
+   * PHONE-ONLY REGISTRATION (no password). The server issues a unique Gudalur
+   * ID (GD-YYYY-NNNNNN), persists the ledger row and dispatches an OTP. In
+   * dev/test the OTP is delivered via the devel provider and verified
+   * immediately; in production the caller completes `verifyResidentOtp`.
    */
   const registerResident = async (data: {
     name: string;
@@ -234,7 +228,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     pincode: string;
     lat?: number;
     lng?: number;
-    /** pyaadhaar verification result — QR-decoded or Verhoeff-checked number. */
     aadhaarVerified?: boolean;
     aadhaarLast4?: string;
     aadhaarRef?: string;
@@ -242,41 +235,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const loc = GUDALUR_LOCALITIES.find((l) => l.id === data.localityId);
     const locName = data.customPlaceName?.trim() || loc?.name || 'Gudalur Taluk';
     const phone = normalizePhone(data.phone);
-
     if (phone.length !== 10) {
       throw new Error('A valid 10-digit mobile number is required');
     }
-
-    const uid = user?.id || `res_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-    const buildProfile = (gudalurId: string): UserProfile => ({
-      uid,
-      name: data.name.trim(),
-      phone,
-      localityId: data.localityId,
-      localityName: locName,
-      customPlaceName: data.customPlaceName?.trim() || undefined,
-      pincode: data.pincode.trim() || loc?.pincode || '643212',
-      email: data.email?.trim() || undefined,
-      gudalurId,
-      role: (user as any)?.email === 'vijaybalakrishnanshanmugam@gmail.com' ? 'PLATFORM_ADMIN' : 'LOCAL_MEMBER',
-      verificationLevel: 'PHONE_VERIFIED',
-      isBloodDonor: profile?.isBloodDonor || false,
-      bloodGroup: profile?.bloodGroup,
-      avatarUrl: profile?.avatarUrl,
-      bio: profile?.bio,
-      lat: data.lat || userCoords?.lat || loc?.lat,
-      lng: data.lng || userCoords?.lng || loc?.lng,
-      aadhaarVerified: data.aadhaarVerified || false,
-      aadhaarLast4: data.aadhaarLast4,
-      aadhaarRef: data.aadhaarRef,
-      createdAt: profile?.createdAt || Date.now(),
-      updatedAt: Date.now(),
-      issuesReported: profile?.issuesReported || 0,
-      issuesSupported: profile?.issuesSupported || 0,
-      representationsCreated: profile?.representationsCreated || 0,
-      alertsAcknowledged: profile?.alertsAcknowledged || 0,
-    });
 
     const duplicateError = () => {
       const err = new Error('This phone number is already registered. Please login with your mobile number or Gudalur ID.') as Error & { code?: string };
@@ -284,53 +245,84 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return err;
     };
 
-    if (isSupabaseConfigured()) {
-      // 1. Prevent duplicate registrations on the same phone number
-      const { data: existing } = await db.getResidentByPhone(phone);
-      if (existing && existing.gudalur_id) {
+    try {
+      const res = await authApi.register({
+        name: data.name.trim(),
+        phone,
+        localityId: data.localityId,
+        customPlaceName: data.customPlaceName,
+        pincode: data.pincode.trim() || loc?.pincode || '643212',
+        email: data.email,
+        aadhaarVerified: data.aadhaarVerified,
+        aadhaarLast4: data.aadhaarLast4,
+        aadhaarRef: data.aadhaarRef,
+        lat: data.lat ?? userCoords?.lat ?? loc?.lat,
+        lng: data.lng ?? userCoords?.lng ?? loc?.lng,
+      });
+      if (!res?.resident) throw new Error('Registration failed');
+      const prof = applyPlatformAdminOverride(toUserProfile(res.resident));
+      persistProfile(prof);
+      if (res.otp?.code) {
+        try {
+          await authApi.verifyOtp({ phone, code: res.otp.code, purpose: 'register' });
+          setUser(toAuthUser(prof));
+          setNeedsOtpVerify(false);
+          setPendingPhone(null);
+        } catch {
+          setNeedsOtpVerify(true);
+          setPendingPhone(phone);
+        }
+      } else {
+        // Production: the OTP is sent via SMS â€” the caller completes verifyResidentOtp.
+        setNeedsOtpVerify(true);
+        setPendingPhone(phone);
+      }
+      return prof;
+    } catch (e: any) {
+      const msg = String(e?.message || '');
+      if (e?.status === 409 || /duplicate|already registered|unique key/i.test(msg)) {
         throw duplicateError();
       }
-
-      // 2. Issue the NEXT sequential Gudalur ID (GDR000001, GDR000002, …) —
-      //    verified unique in the cloud ledger. When the 6-digit range is
-      //    exhausted, it continues at 7 digits (GDR0000000, GDR0000001, …).
-      const gudalurId = profile?.gudalurId || (await db.nextGudalurId());
-
-      // 3. Save the resident record (create-only so conflicts surface clearly)
-      const newProfile = buildProfile(gudalurId);
-      const { error } = await db.insertResident(rowToUpsertPayload(newProfile));
-      if (error) {
-        const msg = (error as any)?.message || '';
-        if (/users_phone_key|users_gudalur_id_key|duplicate key/i.test(msg)) {
-          throw duplicateError();
-        }
-        console.warn('Could not save to Supabase, saving locally:', error);
-        // NEVER fail silently — the resident must know this ID is not yet in the public ledger
-        // and that Phone + Gudalur ID login will not work on other devices until cloud save succeeds.
-        const saveMsg = (error as any)?.message || '';
-        if (/row-level security|42501|permission denied/i.test(saveMsg)) {
-          // Ledger access policies are not enabled yet — tell the owner the exact fix.
-          toast.error('Saved on this device — the official ledger needs its registration policies enabled (owner: run supabase/FIX_RESIDENT_ACCESS.sql once in the Supabase SQL Editor).', { duration: 8000 });
-        } else {
-          toast.error('Cloud ledger unreachable — your ID is saved on this device only. Please try registering again later.', { duration: 6000 });
-        }
-        persistProfile(newProfile);
-        return newProfile;
+      if (e?.status === undefined || /failed to fetch|networkerror|load failed/i.test(msg)) {
+        // Offline fallback: still issue a local unique ID and cache the card.
+        const fallback: UserProfile = {
+          uid: `res_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          name: data.name.trim(),
+          phone,
+          localityId: data.localityId,
+          localityName: locName,
+          customPlaceName: data.customPlaceName?.trim() || undefined,
+          pincode: data.pincode.trim() || loc?.pincode || '643212',
+          email: data.email?.trim() || undefined,
+          gudalurId: `OFFLINE-${Date.now().toString(36).toUpperCase()}`,
+          role: 'LOCAL_MEMBER',
+          verificationLevel: 'REGISTERED',
+          isBloodDonor: false,
+          bloodGroup: undefined,
+          lat: data.lat || userCoords?.lat || loc?.lat,
+          lng: data.lng || userCoords?.lng || loc?.lng,
+          aadhaarVerified: data.aadhaarVerified || false,
+          aadhaarLast4: data.aadhaarLast4,
+          aadhaarRef: data.aadhaarRef,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          issuesReported: 0,
+          issuesSupported: 0,
+          representationsCreated: 0,
+          alertsAcknowledged: 0,
+        };
+        persistProfile(fallback);
+        return fallback;
       }
-      persistProfile(applyPlatformAdminOverride(newProfile));
-      return newProfile;
+      throw e;
     }
-
-    // Offline / unconfigured fallback: still issue a local unique ID and cache the card
-    const fallbackProfile = buildProfile(profile?.gudalurId || generateGudalurId());
-    persistProfile(fallbackProfile);
-    return fallbackProfile;
   };
 
   /**
-   * LOGIN with EITHER the mobile number OR the Gudalur ID number (no password).
-   * When both are provided they must match the same resident; either one alone
-   * is enough to sign in. Falls back to the locally cached card when offline.
+   * LOGIN with EITHER the mobile number OR the Gudalur ID number. Resolves the
+   * resident server-side and issues an OTP to their registered phone. In
+   * dev/test the OTP is verified immediately; otherwise the caller completes
+   * `verifyResidentOtp`. Falls back to the locally cached card when offline.
    */
   const loginResident = async (phone?: string, gudalurId?: string): Promise<UserProfile> => {
     const p = normalizePhone(phone || '');
@@ -341,36 +333,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('Enter your registered mobile number OR your Gudalur ID to continue');
     }
 
-    if (isSupabaseConfigured()) {
-      const { data, error } = await db.findResidentByLogin(hasPhone ? p : '', hasId ? gid : '');
-      if (error) {
-        console.warn('Login lookup error, trying local cache:', error);
+    try {
+      const res = await authApi.lookup({ phone: hasPhone ? p : undefined, gudalurId: hasId ? gid : undefined });
+      if (!res?.resident) {
+        throw new Error('No resident found for these details. Check your mobile number / Gudalur ID, or register first.');
       }
-      if (data) {
-        const resident = applyPlatformAdminOverride(rowToProfile(data));
-        persistProfile(resident);
-        return resident;
+      const prof = applyPlatformAdminOverride(toUserProfile(res.resident));
+      persistProfile(prof);
+      if (res.otp?.code) {
+        try {
+          await authApi.verifyOtp({ phone: res.resident.phone, code: res.otp.code, purpose: 'login' });
+          setUser(toAuthUser(prof));
+          setNeedsOtpVerify(false);
+          setPendingPhone(null);
+        } catch {
+          setNeedsOtpVerify(true);
+          setPendingPhone(res.resident.phone);
+        }
+      } else {
+        setNeedsOtpVerify(true);
+        setPendingPhone(res.resident.phone);
       }
-      // Not found in cloud — allow matching the offline cache before failing
+      return prof;
+    } catch (e: any) {
       const cached = readCachedProfile();
       const phoneMatch = hasPhone && cached?.phone === p;
       const idMatch = hasId && cached?.gudalurId?.toUpperCase() === gid;
-      if (cached && (phoneMatch || idMatch)) {
+      const offline = e?.status === undefined || /failed to fetch|networkerror|load failed/i.test(String(e?.message || ''));
+      if (offline && cached && (phoneMatch || idMatch)) {
         persistProfile(cached);
         return cached;
       }
       throw new Error('No resident found for these details. Check your mobile number / Gudalur ID, or register first.');
     }
+  };
 
-    // Offline fallback against the locally cached resident card
+  /** Complete the pending OTP step â€” establishes the server session (httpOnly cookies). */
+  const verifyResidentOtp = async (code: string): Promise<UserProfile> => {
+    if (!pendingPhone) throw new Error('Start registration or login first (an OTP must be issued).');
+    const c = String(code || '').trim();
+    if (!/^\d{6}$/.test(c)) throw new Error('Enter the 6-digit OTP');
+    const { user: u } = await authApi.verifyOtp({ phone: pendingPhone, code: c, purpose: 'login' });
+    if (!u) throw new Error('Invalid or expired OTP');
+    setUser(u);
+    setNeedsOtpVerify(false);
+    setPendingPhone(null);
     const cached = readCachedProfile();
-    const phoneMatch = hasPhone && cached?.phone === p;
-    const idMatch = hasId && cached?.gudalurId?.toUpperCase() === gid;
-    if (cached && (phoneMatch || idMatch)) {
-      persistProfile(cached);
+    if (cached && (cached.phone === pendingPhone || cached.gudalurId === u.gudalurId)) {
       return cached;
     }
-    throw new Error('Offline: no matching resident card cached on this device');
+    const prof = applyPlatformAdminOverride(
+      toUserProfile({
+        uid: u.uid, phone: u.phone, gudalurId: u.gudalurId, name: u.name, role: u.role,
+        verificationLevel: u.verificationLevel, localityName: u.localityName,
+      }),
+    );
+    persistProfile(prof);
+    return prof;
   };
 
   const updateLocality = async (localityId: string, customPlaceName?: string, pincode?: string) => {
@@ -385,25 +404,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       pincode: pincode || loc?.pincode || profile.pincode,
       updatedAt: Date.now(),
     };
-
-    if (isSupabaseConfigured()) {
-      try {
-        await db.upsertUserProfile(rowToUpsertPayload(updated));
-      } catch (e) {
-        console.warn('Supabase locality update error:', e);
-      }
-    }
-
     persistProfile(updated);
+    try {
+      await authApi.updateProfile({ localityId, customPlaceName, pincode: updated.pincode });
+    } catch (e) {
+      console.warn('Resident locality update error:', e);
+    }
   };
 
   /**
-   * Update an existing resident's details IN PLACE — same gudalur_id, same ledger row.
-   * Called from the ID-card Edit screen. Never creates a new registration.
+   * Update an existing resident's details IN PLACE â€” same gudalur_id, same
+   * ledger row. Called from the ID-card Edit screen. Never creates a new
+   * registration.
    */
   const updateResident = async (fields: {
     name?: string; phone?: string; email?: string;
     localityId?: string; customPlaceName?: string; pincode?: string;
+    lat?: number; lng?: number;
   }): Promise<UserProfile> => {
     if (!profile?.gudalurId) throw new Error('No registered resident to update');
     const loc = GUDALUR_LOCALITIES.find((l) => l.id === (fields.localityId ?? profile.localityId));
@@ -416,42 +433,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localityName: fields.customPlaceName || loc?.name || profile.localityName,
       customPlaceName: fields.customPlaceName ?? profile.customPlaceName,
       pincode: fields.pincode?.trim() || loc?.pincode || profile.pincode,
+      lat: fields.lat ?? profile.lat,
+      lng: fields.lng ?? profile.lng,
       updatedAt: Date.now(),
     };
-
-    let cloudSaved = false;
-    if (isSupabaseConfigured()) {
-      try {
-        const { error } = await db.updateResidentProfile(profile.gudalurId, {
-          name: updated.name,
-          phone: updated.phone,
-          email: updated.email || null,
-          locality_id: updated.localityId,
-          locality_name: updated.localityName,
-          custom_place_name: updated.customPlaceName || null,
-          pincode: updated.pincode,
-        });
-        cloudSaved = !error;
-        if (error) console.warn('Supabase resident update error:', error);
-      } catch (e) {
-        console.warn('Supabase resident update exception:', e);
-      }
-    }
     persistProfile(updated);
-    if (!cloudSaved && isSupabaseConfigured()) {
-      throw new Error('Saved on this device — the official ledger could not be reached. Please try again.');
+    let cloudSaved = false;
+    try {
+      await authApi.updateProfile({
+        name: updated.name,
+        phone: updated.phone,
+        email: updated.email ?? null,
+        localityId: updated.localityId,
+        customPlaceName: updated.customPlaceName ?? null,
+        pincode: updated.pincode,
+        lat: updated.lat ?? null,
+        lng: updated.lng ?? null,
+      });
+      cloudSaved = true;
+    } catch (e) {
+      console.warn('Resident update exception:', e);
+    }
+    if (!cloudSaved) {
+      throw new Error('Saved on this device â€” the official ledger could not be reached. Please try again.');
     }
     return updated;
   };
 
-    const logout = async () => {
+  const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      await authApi.logout();
     } catch (e) {
       console.warn('Sign out error:', e);
     }
     setUser(null);
     persistProfile(null);
+    setNeedsOtpVerify(false);
+    setPendingPhone(null);
     // Clear all locally-pending records on logout so the next user starts fresh
     try {
       localStorage.removeItem('og_pending_signatures');
@@ -463,16 +481,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshProfile = async () => {
     if (!profile) return;
-    if (isSupabaseConfigured()) {
-      try {
-        const { data } = await db.getResidentByPhone(profile.phone);
-        if (data) {
-          persistProfile(applyPlatformAdminOverride(rowToProfile(data)));
+    try {
+      const { user: u } = await authApi.me();
+      if (u && (u.gudalurId || u.phone)) {
+        const res = await authApi.lookup({ gudalurId: u.gudalurId, phone: u.phone });
+        if (res?.resident) {
+          persistProfile(applyPlatformAdminOverride(toUserProfile(res.resident)));
           return;
         }
-      } catch {
-        /* keep cached */
       }
+    } catch {
+      /* keep cached */
     }
     const cached = readCachedProfile();
     if (cached) setProfile(cached);
@@ -484,14 +503,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         profile,
         loading,
+        needsOtpVerify,
         userCoords,
         acquireLiveLocation,
         registerResident,
         loginResident,
+        verifyResidentOtp,
         logout,
         refreshProfile,
         updateLocality,
-    updateResident,
+        updateResident,
       }}
     >
       {children}

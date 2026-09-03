@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { supabase } from "../lib/supabase";
+import { wildlifeApi } from "../services/api";
 import toast from "react-hot-toast";
 import { uploadToStorj, audioBlobMeta } from "../lib/storj";
 import { recordVoiceNote } from "../services/voiceRecordService";
@@ -54,19 +54,30 @@ export const NewSightingPage: React.FC = () => {
         navigator.geolocation.getCurrentPosition(res, rej)
       );
 
-      const { error } = await supabase.from("animal_sightings").insert([
-        {
-          place_name: place,
-          sighting_time: new Date(time).toISOString(),
-          image_url: photoUrl,
-          audio_url: audioUrl,
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          // you may add transcript via a later background job
-        },
-      ]);
+      // GPS is best-effort; sighting integrity relies on the citizen's confirmation.
+      let lat: number | undefined;
+      let lng: number | undefined;
+      try {
+        const pos = await new Promise<GeolocationPosition>((res, rej) =>
+          navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }),
+        );
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+      } catch {
+        // proceed without GPS
+      }
 
-      if (error) throw error;
+      await wildlifeApi.reportSighting({
+        placeName: place,
+        sightingTime: new Date(time).toISOString(),
+        imageUrl: photoUrl ?? undefined,
+        audioUrl: audioUrl ?? undefined,
+        lat,
+        lng,
+        // Idempotency key: repeated submissions of the same report never duplicate.
+        idempotencyKey: `sighting-${place}-${time}-${Date.now()}`,
+      });
+
       toast.success("Sighting reported!");
       // reset form
       setPlace("");
@@ -75,7 +86,7 @@ export const NewSightingPage: React.FC = () => {
       setAudioBlob(null);
     } catch (e: any) {
       console.error(e);
-      toast.error(e.message ?? "Submission failed");
+      toast.error(e?.error ?? e?.message ?? "Submission failed");
     } finally {
       setSubmitting(false);
     }

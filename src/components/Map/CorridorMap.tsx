@@ -112,14 +112,14 @@ export const CorridorMap: React.FC<{ height?: string }> = ({ height = '420px' })
             ? 'Switch back to the dark thematic map'
             : 'Map not loading? Switch to the standard map'
         }
-        className="absolute top-3 right-3 z-[500] rounded-xl border border-white/[0.12] bg-[#12161A]/92 backdrop-blur-md px-3.5 py-2 min-h-[44px] text-[9px] font-black uppercase tracking-[0.18em] text-[#D4AF37] hover:text-[#F4F1EA] shadow-lg shadow-black/40 transition"
+        className="absolute top-3 right-3 z-[500] rounded-xl border border-[#AED581]/20 bg-[#2E7D32]/92 backdrop-blur-md px-3.5 py-2 min-h-[44px] text-[9px] font-black uppercase tracking-[0.18em] text-[#AED581] hover:text-[#F5F5F5] shadow-lg shadow-black/40 transition"
       >
         {standardTiles ? 'Dark map' : 'Standard map'}
       </button>
 
       {/* Legend overlay — earthy glass panel */}
       <div className="absolute bottom-3 left-3 z-[500] rounded-xl border border-white/[0.12] bg-[#12161A]/92 backdrop-blur-md px-3 py-2.5 space-y-1.5 shadow-lg shadow-black/40">
-        <p className="text-[8px] font-black uppercase tracking-[0.22em] text-[#D4AF37]">
+        <p className="text-[8px] font-black uppercase tracking-[0.22em] text-[#AED581]">
           11 Migratory Corridors · Conflict Zones
         </p>
         <p className="flex items-center gap-2 text-[10px] font-bold text-stone-300">

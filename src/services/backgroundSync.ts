@@ -1,11 +1,12 @@
 // ============================================
 // Voice of Gudalur — Background Sync Service
-// Queues offline reports and syncs when online
+// Queues offline reports/sightings in IndexedDB and syncs them when online.
+// All writes go through the CockroachDB-backed API (no Supabase). Repeated
+// syncs are idempotent — the API dedupes via client idempotency keys.
 // ============================================
 
-import { getUnsyncedReports, markReportSynced, updateReportSyncError, getUnsyncedSightings, markSightingSynced, getUnsyncedRecordings, gudalurDB } from '../lib/db';
-import { supabase, db as supabaseDb } from '../lib/supabase';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { getUnsyncedReports, markReportSynced, updateReportSyncError, getUnsyncedSightings, markSightingSynced } from '../lib/db';
+import { wildlifeApi } from './api';
 
 export interface SyncResult {
   success: boolean;
@@ -18,7 +19,7 @@ export interface SyncResult {
 // Register a sync event with the Service Worker
 export async function registerBackgroundSync(tag: string = 'sync-reports'): Promise<void> {
   if (!('serviceWorker' in navigator)) return;
-  
+
   try {
     const registration = await navigator.serviceWorker.ready;
     if ('sync' in registration) {
@@ -37,7 +38,6 @@ export function setupBackgroundSyncListeners(): void {
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event.data?.type === 'SYNC_COMPLETE') {
       console.log('[BackgroundSync] Sync completed:', event.data.result);
-      // Dispatch custom event for UI updates
       window.dispatchEvent(new CustomEvent('vog-sync-complete', { detail: event.data.result }));
     }
     if (event.data?.type === 'SYNC_ERROR') {
@@ -57,13 +57,7 @@ export async function syncAllData(): Promise<SyncResult> {
     errors: [],
   };
 
-  if (!isSupabaseConfigured()) {
-    result.success = false;
-    result.errors.push('Supabase not configured');
-    return result;
-  }
-
-  // Sync reports
+  // Sync reports → wildlife incidents (idempotent)
   try {
     const unsyncedReports = await getUnsyncedReports();
     for (const report of unsyncedReports) {
@@ -80,7 +74,7 @@ export async function syncAllData(): Promise<SyncResult> {
     result.errors.push(`Reports sync: ${err.message}`);
   }
 
-  // Sync sightings
+  // Sync sightings (idempotent)
   try {
     const unsyncedSightings = await getUnsyncedSightings();
     for (const sighting of unsyncedSightings) {
@@ -101,36 +95,31 @@ export async function syncAllData(): Promise<SyncResult> {
 }
 
 async function syncSingleReport(report: any): Promise<void> {
-  const { error } = await supabase.from('reports').insert({
-    type: report.type,
-    title: report.title,
-    description: report.description,
+  await wildlifeApi.reportIncident({
+    type: report.type || 'other',
+    generalizedArea: report.localityName,
     lat: report.lat,
     lng: report.lng,
-    locality_name: report.localityName,
-    user_id: report.userId,
-    metadata: report.metadata,
-    created_at: new Date(report.timestamp).toISOString(),
+    behaviorNotes: report.description,
+    reportedBy: report.userId ? 'citizen' : 'anonymous',
+    idempotencyKey: `report-${report.id || `ts-${report.timestamp}`}`,
   });
-  if (error) throw error;
 }
 
 async function syncSingleSighting(sighting: any): Promise<void> {
   // Map OfflineSighting → AnimalSightingRow schema (place_name/latitude/longitude/transcript)
-  const transcriptParts = [sighting.animalType.toUpperCase()];
+  const transcriptParts = [String(sighting.animalType || 'animal').toUpperCase()];
   if (sighting.count && sighting.count > 1) transcriptParts.push(`count: ${sighting.count}`);
   if (sighting.behavior) transcriptParts.push(`behavior: ${sighting.behavior}`);
   if (sighting.habitat) transcriptParts.push(`habitat: ${sighting.habitat}`);
-  const { error } = await supabaseDb.addAnimalSighting({
-    place_name: sighting.locationName,
-    latitude: sighting.lat,
-    longitude: sighting.lng,
-    sighting_time: new Date(sighting.sightingTime || sighting.timestamp).toISOString(),
+  await wildlifeApi.reportSighting({
+    placeName: sighting.locationName || 'Gudalur',
+    sightingTime: new Date(sighting.sightingTime || sighting.timestamp).toISOString(),
+    lat: sighting.lat,
+    lng: sighting.lng,
     transcript: transcriptParts.join(' | '),
-    is_verified: !!sighting.verified,
-    user_id: sighting.userId,
+    idempotencyKey: `sighting-${sighting.id || `ts-${sighting.timestamp}`}`,
   });
-  if (error) throw error;
 }
 
 // Network status detection

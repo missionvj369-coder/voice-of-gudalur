@@ -107,7 +107,7 @@ export const Admin: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-bold mb-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#2E7D32] text-white text-xs font-bold mb-2">
             <ShieldCheck size={14} className="text-emerald-400" />
             <span>PLATFORM MODERATION CONSOLE</span>
           </div>

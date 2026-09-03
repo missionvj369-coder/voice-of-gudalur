@@ -57,7 +57,7 @@ export const GrievanceTrackerModal: React.FC<GrievanceTrackerModalProps> = ({ is
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A3D0A]/70 backdrop-blur-sm overflow-y-auto">
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 15 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -100,7 +100,7 @@ export const GrievanceTrackerModal: React.FC<GrievanceTrackerModalProps> = ({ is
                   </div>
                   <button
                     onClick={handleReset}
-                    className="w-full py-3 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition"
+                    className="w-full py-3 px-4 rounded-2xl bg-[#2E7D32] hover:bg-[#388E3C] text-white font-bold text-sm transition"
                   >
                     View My Tracker
                   </button>

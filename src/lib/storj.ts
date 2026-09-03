@@ -4,7 +4,7 @@
  *
  * Flow:  1. Ask the Express server for a short-lived PRESIGNED PUT URL.
  *        2. Stream the blob DIRECTLY to Storj (media never touches our server).
- *        3. Persist only the permanent public URL in Supabase.
+  *        3. Persist only the permanent public URL via the Express API (CockroachDB).
  *
  * Uploads go to the S3 gateway:    https://gateway.storjshare.io/<bucket>/<key>
  * Public playback uses Linkshare:  https://link.storjshare.io/raw/<access-id>/<bucket>/<key>

@@ -99,7 +99,7 @@ export const AIGuide: React.FC = () => {
         
         {messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center space-y-6 p-6 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-900 to-emerald-950 text-emerald-400 flex items-center justify-center shadow-lg">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2E7D32] to-[#388E3C] text-[#AED581] flex items-center justify-center shadow-lg">
               <Bot size={32} />
             </div>
 

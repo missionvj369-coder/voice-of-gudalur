@@ -7,7 +7,7 @@ import { Mic, Play, Pause, Upload, MapPin, Users, Award, Volume2 } from 'lucide-
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { db, supabase } from '../lib/supabase';
+import { wildlifeApi } from '../services/api';
 import { uploadToStorj, audioBlobMeta } from '../lib/storj';
 import { recordVoiceNote } from '../services/voiceRecordService';
 import { calculateDistanceKm } from '../utils/geoUtils';
@@ -36,9 +36,9 @@ export const VoiceSoundboard: React.FC<{ userCoords?: { lat: number; lng: number
   const fetchPetitions = async () => {
     setLoading(true);
     try {
-      const { data } = await db.getVoicePetitions({ limit: 50 });
+      const { petitions } = await wildlifeApi.voicePetitions();
       // Map DB rows (voice_petitions schema) to the local VoicePetition model
-      const mapped: VoicePetition[] = (data || []).map(r => ({
+      const mapped: VoicePetition[] = (petitions || []).map((r: any) => ({
         id: r.id,
         title: (r.transcript || r.place_name || 'Voice petition').slice(0, 80),
         description: r.transcript || '',
@@ -47,7 +47,7 @@ export const VoiceSoundboard: React.FC<{ userCoords?: { lat: number; lng: number
         localityName: r.place_name,
         lat: r.latitude,
         lng: r.longitude,
-        createdBy: r.docket_id || '',
+        createdBy: '',
         createdByName: r.speaker_name || 'Resident',
         createdByGudalurId: '',
         createdAt: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
@@ -62,10 +62,10 @@ export const VoiceSoundboard: React.FC<{ userCoords?: { lat: number; lng: number
 
   useEffect(() => {
     fetchPetitions();
-    const ch = supabase.channel('voice_petitions')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'voice_petitions' }, () => fetchPetitions())
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+        // Polling replaces the removed realtime channel — a 60s refresh keeps the soundboard
+    // current without WebSocket infrastructure.
+    const interval = setInterval(fetchPetitions, 60_000);
+    return () => { clearInterval(interval); };
   }, []);
 
   const handleRecord = async () => {
@@ -86,18 +86,16 @@ export const VoiceSoundboard: React.FC<{ userCoords?: { lat: number; lng: number
       const transcript = newDescription.trim()
         ? `${newTitle.trim()} — ${newDescription.trim()} [${newCategory}]`
         : `${newTitle.trim()} [${newCategory}]`;
-      const { error } = await db.addVoicePetition({
-        place_name: profile.localityName || newTitle.trim(),
+      await wildlifeApi.addVoicePetition({
+        placeName: profile.localityName || newTitle.trim(),
         language: navigator.language?.toLowerCase().startsWith('ta') ? 'ta' : 'en',
-        audio_url: url,
+        audioUrl: url,
         transcript,
-        speaker_name: profile.name,
-        latitude: profile.lat || 0,
-        longitude: profile.lng || 0,
+        lat: profile.lat || 0,
+        lng: profile.lng || 0,
       });
-      if (error) throw error;
       toast.success('Published!'); setShowRecorder(false); setNewTitle(''); setNewDescription(''); currentAudioBlob.current = null; fetchPetitions();
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { toast.error(e?.error ?? e?.message ?? 'Publish failed'); }
     finally { setUploading(false); }
   };
 

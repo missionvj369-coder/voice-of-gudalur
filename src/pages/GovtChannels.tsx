@@ -131,7 +131,7 @@ export const GovtChannels: React.FC = () => {
                 href={channel.onlineUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-2xs whitespace-nowrap"
+                className="px-4 py-2 bg-[#2E7D32] hover:bg-[#388E3C] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-2xs whitespace-nowrap"
               >
                 <span>{lang === 'ta' ? 'தளத்திற்கு செல்' : 'Visit Official Portal'}</span>
                 <ExternalLink size={13} />

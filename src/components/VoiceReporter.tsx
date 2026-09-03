@@ -82,8 +82,8 @@ export const VoiceReporter: React.FC<VoiceReporterProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-t-2xl sm:rounded-2xl shadow-2xl m-0 sm:m-4">
-        <div className="flex items-center justify-between p-4 border-b border-slate-700">
+      <div className="w-full max-w-md bg-[#2E7D32] border border-[#AED581]/30 rounded-t-2xl sm:rounded-2xl shadow-2xl m-0 sm:m-4">
+        <div className="flex items-center justify-between p-4 border-b border-[#AED581]/20">
           <h3 className="font-black text-sm text-white uppercase tracking-wider">
             {t('voiceReport') || 'Voice Report'}
           </h3>

@@ -426,7 +426,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-slate-900 rounded-2xl shadow-xl w-full max-w-md border border-slate-700 relative overflow-hidden"
+          className="bg-[#2E7D32] rounded-2xl shadow-xl w-full max-w-md border border-[#AED581]/30 relative overflow-hidden"
         >
           <button
             onClick={() => { stopScanner(); onClose(); }}

@@ -172,7 +172,7 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A3D0A]/70 backdrop-blur-sm overflow-y-auto">
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 15 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -202,7 +202,7 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
               {profile && !isRegistering && !isLoggingIn ? (
                 /* The Digital ID Card */
                 <div className="space-y-4">
-                  <div className="relative rounded-3xl p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 text-white shadow-xl border border-slate-700/80 overflow-hidden">
+                  <div className="relative rounded-3xl p-6 bg-gradient-to-br from-[#2E7D32] via-[#1B5E20] to-[#388E3C] text-white shadow-xl border border-[#AED581]/30 overflow-hidden">
                     <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-emerald-500/10 blur-xl pointer-events-none" />
                     
                     {/* Card Top */}

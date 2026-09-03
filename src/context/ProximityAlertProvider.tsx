@@ -4,7 +4,7 @@
  */
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { calculateDistanceKm, formatProximityWarning, playEmergencyAlertSound, sendBrowserWildlifeNotification } from '../utils/geoUtils';
-import { supabase } from '../lib/supabase';
+import { wildlifeApi } from '../services/api';
 import { useLanguage } from './LanguageContext';
 import { useAuth } from './AuthContext';
 
@@ -46,22 +46,31 @@ export const ProximityAlertProvider: React.FC<{ children: React.ReactNode }> = (
   const fetchAndCheckProximity = useCallback(async () => {
     if (!userCoords) return;
     try {
-      const { data } = await supabase.from('animal_sightings').select('*').order('reported_at', { ascending: false }).limit(50);
-      if (!data) return;
+      // Server-side bounding-box + haversine filter (CockroachDB) — the browser
+      // never queries the database directly.
+      const { sightings } = await wildlifeApi.nearbySightings(userCoords.lat, userCoords.lng, 10);
+      if (!sightings?.length) {
+        setLastChecked(Date.now());
+        return;
+      }
       const newAlerts: ProximityAlert[] = [];
-      data.forEach(s => {
-        const dist = calculateDistanceKm(userCoords.lat, userCoords.lng, s.lat, s.lng);
+      sightings.forEach((s: any) => {
+        const lat = Number(s.latitude);
+        const lng = Number(s.longitude);
+        if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+        const dist = calculateDistanceKm(userCoords.lat, userCoords.lng, lat, lng);
         if (dist <= 10) {
           const warning = formatProximityWarning(dist, lang === 'ta' ? 'ta' : 'en');
+          const species = (s.transcript || '').slice(0, 24) || 'Wildlife';
           const alert: ProximityAlert = {
             id: s.id,
-            species: s.species,
-            location: s.location_name || `${dist.toFixed(1)} km away`,
+            species,
+            location: s.place_name || `${dist.toFixed(1)} km away`,
             distanceKm: dist,
             severity: warning.severity,
             label: warning.label,
             color: warning.color,
-            reportedAt: s.reported_at,
+            reportedAt: s.sighting_time ? new Date(s.sighting_time).getTime() : Date.now(),
           };
           if (!acknowledgedRef.current.has(s.id)) {
             newAlerts.push(alert);
@@ -69,7 +78,7 @@ export const ProximityAlertProvider: React.FC<{ children: React.ReactNode }> = (
             if (dist <= 3 && warning.severity !== 'SAFE') {
               playEmergencyAlertSound();
               sendBrowserWildlifeNotification(
-                `🚨 ${s.species} Sighting Nearby`,
+                `🚨 ${species} Sighting Nearby`,
                 `${dist.toFixed(1)} km from your location — ${warning.label}`,
                 `wildlife-${s.id}`
               );
@@ -89,9 +98,10 @@ export const ProximityAlertProvider: React.FC<{ children: React.ReactNode }> = (
     if (!userCoords) return;
     setIsMonitoring(true);
     fetchAndCheckProximity();
+        // Polling replaces the removed realtime channel — sightings change rarely and the
+    // provider already refreshed on a timer; no WebSocket complexity needed.
     const interval = setInterval(fetchAndCheckProximity, 30000); // Check every 30s
-    const ch = supabase.channel('proximity_alerts').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'animal_sightings' }, fetchAndCheckProximity).subscribe();
-    return () => { supabase.removeChannel(ch); clearInterval(interval); setIsMonitoring(false); };
+    return () => { clearInterval(interval); setIsMonitoring(false); };
   }, [userCoords, fetchAndCheckProximity]);
 
   const acknowledgeAlert = useCallback((id: string) => {

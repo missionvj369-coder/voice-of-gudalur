@@ -12,7 +12,7 @@
  *
  * The browser uploads the blob DIRECTLY to Storj's S3 gateway using the
  * presigned PUT URL (media never transits our server). Playback uses the
- * permanent Linkshare raw URL persisted in Supabase.
+ * permanent Linkshare raw URL persisted in CockroachDB.
  */
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';

@@ -1,7 +1,7 @@
 /**
  * Client-side security utilities for civic actions.
  * The authoritative validation always happens server-side
- * (Supabase RLS + constraints); these guard the client layer
+  * (CockroachDB constraints + server-side authorization); these guard the client layer
  * against XSS payloads, spam bursts, and malformed identity data.
  */
 

@@ -37,9 +37,9 @@ jobs:
       - name: Production build (vite)
         run: npm run build
         env:
-          # Placeholder-safe env so CI builds succeed without secrets.
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
+                    # Placeholder-safe env so CI builds succeed without secrets.
+          DATABASE_URL: ${{ secrets.DATABASE_URL || '' }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET || 'ci-placeholder-session-secret-change-me' }}
 
       # Optional: Playwright smoke test against the built app.
       # Un-comment once E2E suites are expanded and servers are available in CI.

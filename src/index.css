@@ -9,7 +9,7 @@
 
 @layer base {
   body {
-    @apply bg-[#0D1310] text-[#E7E4DC] antialiased;
+    @apply bg-[#1B5E20] text-[#F5F5F5] antialiased;
   }
   #root {
     min-height: 100vh;
@@ -17,21 +17,19 @@
 }
 
 /* ============================================================
-   VOICE OF GUDALUR — NILGIRI EARTH PRESENTATION
-   Deep Forest Obsidian (#0D1310) → Charcoal Pine (#121614)
-   → Pine Mist (#1B241E). Warm Ivory (#F4F1EA) headlines,
-   Earthy Gold (#D4AF37) accents, Alert Amber (#E67E22) for
-   crisis focus. Reflects the high-altitude Gudalur landscape
-   with calm, dignified authority for the official submission
-   to the Chief Minister of Tamil Nadu.
+   VOICE OF GUDALUR — BLISSFUL GREEN PRESENTATION
+   Deep Blissful Green (#1B5E20) → Forest Green (#2E7D32)
+   → Light Green (#388E3C). Blissful White (#F5F5F5) text,
+   Greenish Yellow (#AED581) accents for tabs and highlights.
+   A calming, nature-inspired blissful appearance.
    ============================================================ */
 @theme {
-  --color-stone-950: #0D1310;
-  --color-stone-900: #121614;
-  --color-black: #0A0E0C;
-  --color-ivory: #F4F1EA;
-  --color-earth-gold: #D4AF37;
-  --color-alert-amber: #E67E22;
+  --color-stone-950: #1B5E20;
+  --color-stone-900: #2E7D32;
+  --color-black: #0A3D0A;
+  --color-ivory: #F5F5F5;
+  --color-earth-gold: #AED581;
+  --color-alert-amber: #81C784;
 }
 
 body::before {
@@ -41,19 +39,19 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(80vw 40vh at 50% -10%, rgba(212, 175, 55, 0.05), rgba(212, 175, 55, 0) 70%),
-    radial-gradient(60vw 30vh at 100% 100%, rgba(27, 36, 30, 0.9), rgba(27, 36, 30, 0) 70%),
-    radial-gradient(50vw 25vh at 0% 100%, rgba(13, 19, 16, 0.85), rgba(13, 19, 16, 0) 70%),
-    linear-gradient(180deg, #0D1310 0%, #121614 45%, #1B241E 100%);
+    radial-gradient(80vw 40vh at 50% -10%, rgba(174, 213, 129, 0.08), rgba(174, 213, 129, 0) 70%),
+    radial-gradient(60vw 30vh at 100% 100%, rgba(46, 125, 50, 0.6), rgba(46, 125, 50, 0) 70%),
+    radial-gradient(50vw 25vh at 0% 100%, rgba(27, 94, 32, 0.5), rgba(27, 94, 32, 0) 70%),
+    linear-gradient(180deg, #1B5E20 0%, #2E7D32 45%, #388E3C 100%);
 }
 
 @layer components {
   .glass-card {
     @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
   }
-  /* Warm Ivory editorial headline — no harsh halation on long reads */
+  /* Warm Blissful White editorial headline — no harsh halation on long reads */
   .headline-ivory {
-    color: #F4F1EA;
+    color: #F5F5F5;
   }
   /* Subtle narrative → facts → action section separation */
   .section-divider {
@@ -62,10 +60,10 @@ body::before {
     max-width: 56rem;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09) 20%, rgba(255, 255, 255, 0.09) 80%, transparent);
   }
-  /* Pull-quote card: translucent, Alert Amber left-border focus */
+  /* Pull-quote card: translucent, Greenish-Yellow left-border focus */
   .quote-card {
     background: rgba(255, 255, 255, 0.04);
-    border-left: 4px solid #E67E22;
+    border-left: 4px solid #AED581;
     border-radius: 0.75rem;
     padding: 1.75rem 1.5rem;
   }

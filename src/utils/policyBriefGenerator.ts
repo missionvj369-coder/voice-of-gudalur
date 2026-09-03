@@ -1,8 +1,8 @@
-import { jsPDF } from 'jspdf';
+﻿import { jsPDF } from 'jspdf';
 import { CORRIDORS, HOTSPOTS } from '../data/corridorData';
 
 /**
- * "Voice of Gudalur — Human-Wildlife Conflict Situation Report" generator.
+ * "Voice of Gudalur â€” Human-Wildlife Conflict Situation Report" generator.
  * A client-side, zero-server official briefing document that compiles the live
  * movement ledger (signatures, dockets), the 11 blockaded migratory corridors,
  * and the documented frontline conflict zones into a printable government-grade
@@ -70,10 +70,10 @@ export function generatePolicyBriefPdf(input: PolicyBriefInput): jsPDF {
   doc.setFontSize(17);
   doc.text('VOICE OF GUDALUR', M, 15);
   doc.setFontSize(11.5);
-  doc.text('Human-Wildlife Conflict — Official Situation Report', M, 23);
+  doc.text('Human-Wildlife Conflict â€” Official Situation Report', M, 23);
   doc.setFontSize(8);
   doc.setTextColor(200, 205, 212);
-  doc.text('Gudalur Taluk, The Nilgiris District, Tamil Nadu · Voice of Gudalur (Universal Guard Trust)', M, 30);
+  doc.text('Gudalur Taluk, The Nilgiris District, Tamil Nadu Â· Voice of Gudalur (Universal Guard Trust)', M, 30);
 
   y = 44;
   const now = new Date();
@@ -87,12 +87,12 @@ export function generatePolicyBriefPdf(input: PolicyBriefInput): jsPDF {
   );
   y += 4.6;
   doc.text(
-    `Generated: ${now.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}${input.generatedBy ? ` · by ${input.generatedBy}` : ''}`,
+    `Generated: ${now.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}${input.generatedBy ? ` Â· by ${input.generatedBy}` : ''}`,
     M,
     y
   );
   y += 4.6;
-  doc.text('Data source: live public movement ledger (Supabase) + verified locality registry.', M, y);
+  doc.text('Data source: live public movement ledger (CockroachDB) + verified locality registry.', M, y);
   y += 6;
 
   // ---------- Executive snapshot ----------
@@ -183,7 +183,7 @@ export function generatePolicyBriefPdf(input: PolicyBriefInput): jsPDF {
   doc.line(M, y, pageW - M, y);
   y += 5;
   body(
-    'This report is an advocacy compilation generated from the live public ledger of the Voice of Gudalur movement. Corridor paths are advocacy-mapping approximations between verified locality coordinates; official demarcation remains with the Forest Survey of India and the Tamil Nadu Forest Department. Article 21 of the Constitution of India guarantees the Right to Life — of citizens and of wildlife.',
+    'This report is an advocacy compilation generated from the live public ledger of the Voice of Gudalur movement. Corridor paths are advocacy-mapping approximations between verified locality coordinates; official demarcation remains with the Forest Survey of India and the Tamil Nadu Forest Department. Article 21 of the Constitution of India guarantees the Right to Life â€” of citizens and of wildlife.',
     7.5,
     MUTED,
     3.8
@@ -197,7 +197,7 @@ export function generatePolicyBriefPdf(input: PolicyBriefInput): jsPDF {
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
     doc.text(
-      `Voice of Gudalur · Human-Wildlife Conflict Situation Report · ${now.toISOString().slice(0, 10)}`,
+      `Voice of Gudalur Â· Human-Wildlife Conflict Situation Report Â· ${now.toISOString().slice(0, 10)}`,
       M,
       pageH - 8
     );

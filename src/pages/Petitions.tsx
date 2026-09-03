@@ -24,8 +24,8 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Petition, SupporterInfo } from '../types';
 import { CITIZEN_PETITIONS } from '../data/gudalurMasterData';
-import { db, isSupabaseConfigured, savePendingSignature } from '../lib/supabase';
-import type { PetitionRow, SupporterInfoJson } from '../lib/supabase';
+import { petitionApi } from '../services/api';
+import { savePendingSignature } from '../lib/pendingLedger';
 import { RegisterResidentModal } from '../components/Auth/RegisterResidentModal';
 import { generatePetitionPDF } from '../utils/pdfGenerator';
 import { PetitionProgressBar } from '../components/Petition/PetitionProgressBar';
@@ -42,78 +42,45 @@ export const Petitions: React.FC = () => {
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [signing, setSigning] = useState(false);
 
-  // Synchronize live petitions from Supabase (seeds master citizen demands on first run)
+  // Synchronize live petitions from the server (CockroachDB; the server seeds
+  // the canonical citizen demands on first read).
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
-      if (!isSupabaseConfigured()) return;
+      try {
+        const { petitions: rows } = await petitionApi.list();
+        if (cancelled) return;
+        if (!rows || rows.length === 0) return;
 
-      const { data, error } = await db.getPetitions();
-      if (cancelled) return;
-      if (error) {
-        console.warn('Supabase petitions sync notice:', error);
-        return;
+      const mapped: Petition[] = rows.map((row: any) => ({
+          id: row.id,
+          title: row.title,
+          titleTa: row.title_ta || row.title,
+          problem: row.problem,
+          problemTa: row.problem_ta || row.problem,
+          demand: row.demand,
+          demandTa: row.demand_ta || row.demand,
+          targetAuthority: row.target_authority,
+          targetAuthorityTa: row.target_authority_ta || row.target_authority,
+          evidenceSummary: row.evidence_summary,
+          evidenceSummaryTa: row.evidence_summary_ta || row.evidence_summary,
+          targetSignatures: row.target_signatures ?? undefined,
+          supportCount: row.support_count || 0,
+          supporters: (row.supporters_json || []) as unknown as SupporterInfo[],
+          deadline: row.deadline ?? undefined,
+          status: row.status as Petition['status'],
+          createdBy: row.created_by,
+          createdByName: row.created_by_name,
+          createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+        }));
+
+        setPetitions(mapped);
+        const current = mapped.find((p) => p.id === selectedPetition.id) || mapped[0];
+        if (current) setSelectedPetition(current);
+      } catch (e) {
+        console.warn('Petitions sync notice:', e);
       }
-
-      if (!data || data.length === 0) {
-        // Seed the master citizen demands into Supabase if the table is empty
-        for (const pet of CITIZEN_PETITIONS) {
-          try {
-            await db.upsertPetition({
-              id: pet.id,
-              title: pet.title,
-              title_ta: pet.titleTa,
-              problem: pet.problem,
-              problem_ta: pet.problemTa,
-              demand: pet.demand,
-              demand_ta: pet.demandTa,
-              target_authority: pet.targetAuthority,
-              target_authority_ta: pet.targetAuthorityTa,
-              evidence_summary: pet.evidenceSummary,
-              evidence_summary_ta: pet.evidenceSummaryTa,
-              support_count: pet.supportCount || 0,
-              supporters_json: (pet.supporters || []) as SupporterInfoJson[],
-              target_signatures: pet.targetSignatures ?? null,
-              deadline: pet.deadline ?? null,
-              status: pet.status,
-              created_by: pet.createdBy,
-              created_by_name: pet.createdByName,
-              created_at: new Date(pet.createdAt).toISOString(),
-              updated_at: new Date().toISOString(),
-            });
-          } catch (e) {
-            console.warn('Seed petition error:', e);
-          }
-        }
-        return;
-      }
-
-      const mapped: Petition[] = data.map((row: PetitionRow) => ({
-        id: row.id,
-        title: row.title,
-        titleTa: row.title_ta || row.title,
-        problem: row.problem,
-        problemTa: row.problem_ta || row.problem,
-        demand: row.demand,
-        demandTa: row.demand_ta || row.demand,
-        targetAuthority: row.target_authority,
-        targetAuthorityTa: row.target_authority_ta || row.target_authority,
-        evidenceSummary: row.evidence_summary,
-        evidenceSummaryTa: row.evidence_summary_ta || row.evidence_summary,
-        targetSignatures: row.target_signatures ?? undefined,
-        supportCount: row.support_count || 0,
-        supporters: (row.supporters_json || []) as unknown as SupporterInfo[],
-        deadline: row.deadline ?? undefined,
-        status: row.status as Petition['status'],
-        createdBy: row.created_by,
-        createdByName: row.created_by_name,
-        createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
-      }));
-
-      setPetitions(mapped);
-      const current = mapped.find((p) => p.id === selectedPetition.id) || mapped[0];
-      if (current) setSelectedPetition(current);
     };
 
     load();
@@ -121,6 +88,7 @@ export const Petitions: React.FC = () => {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPetition.id]);
 
   const hasUserSupported = (petition: Petition): boolean => {
@@ -156,63 +124,65 @@ export const Petitions: React.FC = () => {
     };
 
         try {
-      if (!isSupabaseConfigured()) {
-        // Cloud ledger not yet live — save intent locally so signatures are never lost.
-        const saved = savePendingSignature({
-          name: profile.name,
-          locality: profile.localityName || 'Gudalur',
-          contact: profile.phone,
-          gudalur_id: profile.gudalurId,
-          signed_at: Date.now(),
-          source: 'petition',
-          petitionId: petition.id,
+      try {
+        // Server-side transaction: atomic duplicate check + counter increment
+        // + supporter append (CockroachDB). The client sends nothing sensitive.
+        const result = await petitionApi.support(petition.id, `support-${petition.id}-${profile.gudalurId}`);
+        if (result.isDuplicate) {
+          toast(lang === 'ta' ? 'நீங்கள் ஏற்கனவே ஆதரவளித்துள்ளீர்கள்!' : 'You have already signed this demand!');
+          return;
+        }
+
+        // DB confirmed → reflect the genuine record locally.
+        const updatedPetitions = petitions.map((p) => {
+          if (p.id === petition.id) {
+            const updatedSupporters = [newSupporter, ...(p.supporters || [])];
+            return {
+              ...p,
+              supportCount: (p.supportCount || 0) + 1,
+              supporters: updatedSupporters
+            };
+          }
+          return p;
         });
-        if (saved) {
-          const updatedPetitions = petitions.map((p) => {
-            if (p.id === petition.id) {
-              const updatedSupporters = [newSupporter, ...(p.supporters || [])];
-              return {
-                ...p,
-                supportCount: (p.supportCount || 0) + 1,
-                supporters: updatedSupporters
-              };
-            }
-            return p;
-          });
-          setPetitions(updatedPetitions);
-          const updatedSelected = updatedPetitions.find((p) => p.id === petition.id);
-          if (updatedSelected) setSelectedPetition(updatedSelected);
-        }
-        toast(saved
-          ? lang === 'ta' ? 'உங்கள் ஆதரவு பதிவு செய்யப்பட்டது 📋 — வேலைநர்மை வாழைவாக்கி இணக்கம் பெறும் வரை சேமிக்கப்பட்டுள்ளது.' : 'Your support is recorded on your device 📋 — it will sync to the official ledger once the platform goes live.'
-          : lang === 'ta' ? 'நீங்கள் ஏற்கனவே ஆதரவளித்துள்ளீர்கள்!' : 'You have already signed this demand!');
-        return;
+
+        setPetitions(updatedPetitions);
+        const updatedSelected = updatedPetitions.find((p) => p.id === petition.id);
+        if (updatedSelected) setSelectedPetition(updatedSelected);
+
+        toast.success(lang === 'ta' ? 'உங்கள் குரல் பதிவு செய்யப்பட்டது!' : 'Your signature is registered as a real, verifiable record.');
+      } catch (apiErr: any) {
+        // API unreachable — record the intent locally so support is never lost.
+        savePendingSignature({
+          kind: 'signature',
+          payload: {
+            name: profile.name,
+            locality: profile.localityName || 'Gudalur',
+            contact: profile.phone,
+            gudalur_id: profile.gudalurId,
+            signed_at: Date.now(),
+            source: 'petition',
+            petitionId: petition.id,
+          },
+        });
+        const updatedPetitions = petitions.map((p) => {
+          if (p.id === petition.id) {
+            const updatedSupporters = [newSupporter, ...(p.supporters || [])];
+            return {
+              ...p,
+              supportCount: (p.supportCount || 0) + 1,
+              supporters: updatedSupporters
+            };
+          }
+          return p;
+        });
+        setPetitions(updatedPetitions);
+        const updatedSelected = updatedPetitions.find((p) => p.id === petition.id);
+        if (updatedSelected) setSelectedPetition(updatedSelected);
+        toast(lang === 'ta'
+          ? 'உங்கள் ஆதரவு பதிவு செய்யப்பட்டது 📋 — நெடியத் தொடர்பு கிடைக்கும் போது ஒத்திசைக்கப்படும்.'
+          : 'Your support is recorded on your device 📋 — it will sync to the official ledger when you are back online.');
       }
-      const { error: dbError } = await db.supportPetition(petition.id, newSupporter as SupporterInfoJson);
-      if (dbError) {
-        console.error('Petition support DB error:', dbError);
-        toast.error('Could not register your signature. Please check your connection and try again.');
-        return;
-      }
-
-      // DB confirmed → reflect the genuine record locally.
-      const updatedPetitions = petitions.map((p) => {
-        if (p.id === petition.id) {
-          const updatedSupporters = [newSupporter, ...(p.supporters || [])];
-          return {
-            ...p,
-            supportCount: (p.supportCount || 0) + 1,
-            supporters: updatedSupporters
-          };
-        }
-        return p;
-      });
-
-      setPetitions(updatedPetitions);
-      const updatedSelected = updatedPetitions.find((p) => p.id === petition.id);
-      if (updatedSelected) setSelectedPetition(updatedSelected);
-
-      toast.success(lang === 'ta' ? 'உங்கள் குரல் பதிவு செய்யப்பட்டது!' : 'Your signature is registered as a real, verifiable record.');
     } catch (err) {
       console.error('Error signing petition:', err);
       toast.error(lang === 'ta' ? 'கையொப்பம் பதிவு செய்ய முடியவில்லை.' : 'Could not register your signature. Please try again.');
@@ -329,7 +299,7 @@ export const Petitions: React.FC = () => {
 
           <button
             onClick={() => setIsRegisterModalOpen(true)}
-            className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition self-start sm:self-auto"
+            className="px-4 py-2.5 bg-[#2E7D32] hover:bg-[#388E3C] text-white text-xs font-bold rounded-xl transition self-start sm:self-auto"
           >
             {profile ? (lang === 'ta' ? 'எனது அட்டை விவரம்' : 'My Citizen Card') : (lang === 'ta' ? 'இப்போதே பதிவு செய் →' : 'Register Now →')}
           </button>
@@ -465,7 +435,7 @@ export const Petitions: React.FC = () => {
             {/* Official PDF Download Button */}
             <button
               onClick={() => handleDownloadPDF(selectedPetition)}
-              className="px-4 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl transition flex items-center gap-2 text-xs font-bold shadow-xs"
+              className="px-4 py-3 bg-[#2E7D32] hover:bg-[#388E3C] text-white rounded-2xl transition flex items-center gap-2 text-xs font-bold shadow-xs"
               title={lang === 'ta' ? 'அதிகாரப்பூர்வ மனு கடிதம் PDF தரவிறக்கம்' : 'Download Official Representation Letter (PDF)'}
             >
               <Download size={16} />
@@ -518,7 +488,7 @@ export const Petitions: React.FC = () => {
               </p>
             </div>
             {/* Human Impact - Voice From The Ground */}
-            <div className="p-6 rounded-2xl bg-slate-900 border-l-4 border-red-600">
+            <div className="p-6 rounded-2xl bg-[#2E7D32] border-l-4 border-red-600">
               <p className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-2">Voice From The Ground</p>
               <blockquote className="text-sm sm:text-base text-slate-100 leading-relaxed font-serif italic">
                 "We live in constant fear during evening hours. Our children cannot walk home safely after school without thermal detection and early warning."

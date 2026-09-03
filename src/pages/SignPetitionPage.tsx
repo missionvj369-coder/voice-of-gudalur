@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { recordPetitionSign } from "../lib/signService";
+import { petitionApi } from "../services/api";
 import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal";
 import toast from "react-hot-toast";
 
@@ -25,23 +25,24 @@ export const SignPetitionPage: React.FC = () => {
     }
     setBusy(true);
     try {
-      const res = await recordPetitionSign({
-        gdrId: profile.gudalurId,
-        fullName: profile.name,
-        village: profile.customPlaceName || profile.localityName,
-        phone: profile.phone,
-        aadhaarLast4: profile.aadhaarLast4,
-        aadhaarRef: profile.aadhaarRef,
+      // The server derives identity, Aadhaar metadata, hash and batch from the
+      // authenticated session — the client sends nothing sensitive.
+      const res = await petitionApi.sign({
+        idempotencyKey: `petition-sign-${profile.uid}`,
       });
-      if (!res.ok) {
-        toast.error(res.alreadySigned ? "You have already signed this petition." : (res.error || "Sign failed"));
-        if (res.alreadySigned) setResult(null);
+      const verifyUrl =
+        res.verifyUrl
+          ? new URL(res.verifyUrl, window.location.origin).toString()
+          : `${window.location.origin}/verify-sign?id=${encodeURIComponent(res.signHash)}`;
+      if (res.isDuplicate) {
+        toast.error("You have already signed this petition.");
+        setResult({ hash: res.signHash, verifyUrl, batchNo: res.batchNo ?? 1 });
         return;
       }
-      setResult({ hash: res.signHash!, verifyUrl: res.verifyUrl!, batchNo: res.batchNo! });
+      setResult({ hash: res.signHash, verifyUrl, batchNo: res.batchNo ?? 1 });
       toast.success("Signature recorded. Thank you!");
     } catch (e: any) {
-      toast.error(e?.message ?? "Sign failed");
+      toast.error(e?.error ?? e?.message ?? "Sign failed");
     } finally {
       setBusy(false);
     }

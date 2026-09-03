@@ -10,7 +10,6 @@ import {
   FileSearch,
   AlertTriangle,
 } from 'lucide-react';
-import { db, isSupabaseConfigured } from '../lib/supabase';
 import { checkRateLimit } from '../lib/security';
 
 // Public docket verification — officials & supporters confirm an official
@@ -62,7 +61,9 @@ const VerifyDocket: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [ref, setRef] = useState<string>(((searchParams.get('ref') || searchParams.get('id') || '') as string).toUpperCase());
   const [state, setState] = useState<VerifyState>({ kind: 'idle' });
-  const ledgerOnline = isSupabaseConfigured();
+  // The proof ledger is served by our own API (same origin) — always available
+  // when the app is reachable; individual failures are handled per request.
+  const ledgerOnline = true;
 
   const runVerify = async () => {
     const clean = ref.trim().toUpperCase();
@@ -77,16 +78,22 @@ const VerifyDocket: React.FC = () => {
     }
     setState({ kind: 'verifying' });
     try {
-      const { data, error } = await db.getSubmissionByDocket(clean);
-      if (error) {
-        setState({
-          kind: 'error',
-          message: 'The verification ledger could not be reached. Please try again shortly.',
-        });
+      const res = await fetch(`/api/manifesto/submission/${encodeURIComponent(clean)}`, {
+        credentials: 'same-origin',
+      });
+      if (!res.ok) {
+        if (res.status === 404) {
+          setState({ kind: 'missing', ref: clean });
+        } else {
+          setState({
+            kind: 'error',
+            message: 'The verification ledger could not be reached. Please try again shortly.',
+          });
+        }
         return;
       }
-      if (data) setState({ kind: 'found', record: data as DocketRecord });
-      else setState({ kind: 'missing', ref: clean });
+      const data = (await res.json()) as DocketRecord;
+      setState({ kind: 'found', record: data });
     } catch {
       setState({
         kind: 'error',
@@ -104,17 +111,17 @@ const VerifyDocket: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0D1310] via-[#121614] to-[#1B241E] px-3 py-8 sm:py-12">
+    <div className="min-h-screen bg-gradient-to-b from-[#1B5E20] via-[#2E7D32] to-[#388E3C] px-3 py-8 sm:py-12">
       <div className="mx-auto max-w-lg space-y-5">
         {/* Header */}
         <div className="text-center space-y-2">
-          <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-[#D4AF37]/30 bg-[#D4AF37]/10">
-            <ShieldCheck size={26} className="text-[#D4AF37]" />
+          <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-[#AED581]/30 bg-[#AED581]/10">
+            <ShieldCheck size={26} className="text-[#AED581]" />
           </span>
-          <h1 className="font-serif text-2xl sm:text-3xl font-black text-[#F4F1EA] tracking-tight">
+          <h1 className="font-serif text-2xl sm:text-3xl font-black text-[#F5F5F5] tracking-tight">
             Docket Verification
           </h1>
-          <p className="text-xs text-stone-400 leading-relaxed max-w-sm mx-auto">
+          <p className="text-xs text-[#F5F5F5]/70 leading-relaxed max-w-sm mx-auto">
             Public authenticity check for official submissions of the Voice of Gudalur movement.
             Enter a docket reference exactly as printed on a petition PDF or submission receipt.
           </p>
@@ -126,11 +133,11 @@ const VerifyDocket: React.FC = () => {
             e.preventDefault();
             if (ledgerOnline) runVerify();
           }}
-          className="rounded-3xl border border-white/[0.08] bg-[#12161A] p-4 sm:p-5 shadow-xl space-y-3"
+          className="rounded-3xl border border-[#AED581]/20 bg-[#2E7D32] p-4 sm:p-5 shadow-xl space-y-3"
         >
           <label
             htmlFor="docket-ref"
-            className="block text-[10px] font-black uppercase tracking-[0.22em] text-[#D4AF37]"
+            className="block text-[10px] font-black uppercase tracking-[0.22em] text-[#AED581]"
           >
             Official docket number
           </label>
@@ -141,12 +148,12 @@ const VerifyDocket: React.FC = () => {
             placeholder="VG-20260831-0042"
             autoComplete="off"
             spellCheck={false}
-            className="w-full min-h-[48px] rounded-xl border border-white/10 bg-black/30 px-4 font-mono text-sm font-bold text-[#F4F1EA] placeholder:text-stone-600 focus:outline-none focus:border-[#D4AF37]/60 focus:ring-1 focus:ring-[#D4AF37]/40"
+            className="w-full min-h-[48px] rounded-xl border border-white/10 bg-black/30 px-4 font-mono text-sm font-bold text-[#F5F5F5] placeholder:text-[#F5F5F5]/40 focus:outline-none focus:border-[#AED581]/60 focus:ring-1 focus:ring-[#AED581]/40"
           />
           <button
             type="submit"
             disabled={!ledgerOnline || state.kind === 'verifying' || !ref.trim()}
-            className="w-full min-h-[48px] rounded-xl bg-[#D4AF37] hover:bg-[#e0bd4c] disabled:opacity-40 disabled:cursor-not-allowed text-[#1a1a10] font-black text-sm uppercase tracking-wide flex items-center justify-center gap-2 transition"
+            className="w-full min-h-[48px] rounded-xl bg-[#AED581] hover:bg-[#C5E1A5] disabled:opacity-40 disabled:cursor-not-allowed text-[#1B5E20] font-black text-sm uppercase tracking-wide flex items-center justify-center gap-2 transition"
           >
             {state.kind === 'verifying' ? (
               <>
@@ -199,7 +206,7 @@ const VerifyDocket: React.FC = () => {
               ] as [string, string][]).map(([label, value]) => (
                 <div key={label} className="flex items-start justify-between gap-4 px-3.5 py-2.5">
                   <span className="text-[10px] font-black uppercase tracking-[0.18em] text-stone-500 pt-0.5">{label}</span>
-                  <span className="text-right font-semibold text-[#F4F1EA] text-xs leading-relaxed max-w-[60%]">{value}</span>
+                  <span className="text-right font-semibold text-[#F5F5F5] text-xs leading-relaxed max-w-[60%]">{value}</span>
                 </div>
               ))}
             </div>
@@ -239,7 +246,7 @@ const VerifyDocket: React.FC = () => {
 
         {/* What is a docket? */}
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4 flex items-start gap-3">
-          <FileSearch size={18} className="text-[#D4AF37] shrink-0 mt-0.5" />
+          <FileSearch size={18} className="text-[#AED581] shrink-0 mt-0.5" />
           <p className="text-[11px] text-stone-400 leading-relaxed">
             <span className="font-black text-stone-300">What is a docket?</span> Every resident who
             signs the Right to Life petition and dispatches the official email to the Hon'ble
@@ -251,7 +258,7 @@ const VerifyDocket: React.FC = () => {
         <div className="text-center pt-1">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 min-h-[48px] px-4 text-xs font-bold text-[#D4AF37] hover:text-[#F4F1EA] transition"
+            className="inline-flex items-center gap-2 min-h-[48px] px-4 text-xs font-bold text-[#AED581] hover:text-[#F5F5F5] transition"
           >
             <ArrowLeft size={14} /> Back to the Right to Life petition
           </Link>
