@@ -260,9 +260,11 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       // Legacy iOS (<15) needs the attribute, not just the property.
       video.setAttribute("playsinline", "true");
       video.setAttribute("webkit-playsinline", "true");
+      video.style.position = "absolute";
+      video.style.inset = "0";
       video.style.width = "100%";
+      video.style.height = "100%";
       video.style.display = "block";
-      video.style.borderRadius = "12px";
       video.style.background = "#000";
       video.style.objectFit = "cover";
       container.innerHTML = "";
@@ -492,73 +494,96 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-[#2E7D32] rounded-2xl shadow-xl w-full max-w-md border border-[#AED581]/30 relative overflow-hidden"
+          className="bg-[#2E7D32] shadow-xl w-full h-full min-h-0 rounded-none sm:rounded-2xl sm:h-auto sm:max-w-md border border-[#AED581]/30 relative overflow-hidden"
         >
           <button
             onClick={() => { stopScanner(); onClose(); }}
-            className="absolute top-3 right-3 text-slate-400 hover:text-white transition z-10"
+            className="absolute top-3 right-3 z-20 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition sm:bg-transparent sm:text-slate-400 sm:hover:bg-black/10"
             aria-label="Close"
           >
             <X size={20} />
           </button>
 
-          <div className="p-6">
+          <div className="h-full">
             {/* Scanning Stage */}
             {stage === "scanning" && (
-              <div className="text-center">
-                <Shield size={32} className="text-amber-400 mx-auto mb-3" />
-                <h3 className="text-xl font-bold text-white mb-2">Register as Gudalur Resident</h3>
-                <p className="text-sm text-slate-300 mb-1">
-                  Scan the QR code on your Aadhaar card.
-                </p>
-                <p className="text-xs text-slate-400 mb-4">
-                  உங்கள் ஆதார் அட்டையில் உள்ள QR குறியீட்டை ஸ்கேன் செய்யவும்
-                </p>
-                {/* Viewfinder */}
-                <div id="qr-reader" data-testid="qr-reader-region" className="w-full min-h-[220px] rounded-xl overflow-hidden bg-black" />
+              <div className="flex flex-col h-full text-center gap-2 px-4 pt-14 sm:pt-6 pb-4 overflow-y-auto">
+                {/* Desktop header */}
+                <div className="hidden sm:block">
+                  <Shield size={32} className="text-amber-400 mx-auto mb-3" />
+                  <h3 className="text-xl font-bold text-white mb-2">Register as Gudalur Resident</h3>
+                  <p className="text-sm text-slate-300 mb-1">Scan the QR code on your Aadhaar card.</p>
+                  <p className="text-xs text-slate-400 mb-4">உங்கள் ஆதார் அட்டையில் உள்ள QR குறியீட்டை ஸ்கேன் செய்யவும்</p>
+                </div>
+                {/* Compact header for the full-screen mobile layout */}
+                <div className="sm:hidden">
+                  <Shield size={26} className="text-amber-400 mx-auto mb-1" />
+                  <h3 className="text-lg font-bold text-white leading-tight">Register as Gudalur Resident</h3>
+                  <p className="text-[11px] text-slate-300 mt-1">Scan the QR on your Aadhaar card</p>
+                </div>
 
-                {/* PRIMARY — photo scan: no permissions, every browser, and
-                    the multi-engine decoder (BarcodeDetector → ZBar → jsQR)
-                    retries scales, contrast and sharpening on low-quality
-                    shots. */}
-                <div className="mt-3 text-left">
-                  <label
-                    htmlFor="qr-file-input"
-                    className="block border-2 border-dashed border-amber-400/70 bg-amber-500/10 rounded-xl p-5 text-center cursor-pointer hover:border-amber-300 hover:bg-amber-500/20 transition"
-                    data-testid="photo-scan-button"
-                  >
-                    <p className="text-sm font-bold text-amber-200">📷 Scan from Photo — recommended</p>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Photograph the Aadhaar QR (or pick an existing shot). Dim, blurry or glaring — the decoder retries every way it can.
-                    </p>
-                  </label>
-                  <input
-                    ref={photoRef}
-                    id="qr-file-input"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files && e.target.files[0];
-                      if (f) void decodePhoto(f);
-                    }}
-                  />
-                  {photoBusy && (
-                    <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-300">
-                      <div className="h-4 w-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                      Processing uploaded image...
+                {/* Viewfinder — landscape camera feed that fills the screen on mobile */}
+                <div className="relative flex-1 min-h-0 w-full sm:flex-none sm:aspect-video rounded-xl overflow-hidden bg-black">
+                  <div id="qr-reader" data-testid="qr-reader-region" className="absolute inset-0" />
+
+                  {camState === "idle" && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 text-center bg-black">
+                      <p className="text-[11px] text-slate-500">Landscape view — hold the card sideways, flat, QR toward camera.</p>
+                      <label
+                        htmlFor="qr-file-input"
+                        className="block w-full max-w-[280px] border-2 border-dashed border-amber-400/70 bg-amber-500/10 rounded-xl p-4 text-center cursor-pointer hover:border-amber-300 hover:bg-amber-500/20 transition"
+                        data-testid="photo-scan-button"
+                      >
+                        <p className="text-sm font-bold text-amber-200">📷 Scan from Photo — recommended</p>
+                        <p className="text-[11px] text-slate-400 mt-1">Photograph the Aadhaar QR (or pick an existing shot).</p>
+                      </label>
+                      {photoBusy && (
+                        <div className="flex items-center justify-center gap-2 text-xs text-slate-300">
+                          <div className="h-4 w-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                          Processing uploaded image...
+                        </div>
+                      )}
+                      {errHelp && (
+                        <div className="w-full max-w-[300px] text-left rounded-lg bg-slate-800/90 border border-slate-600 p-3 max-h-28 overflow-y-auto">
+                          <p className="font-bold text-amber-300 text-xs mb-1">{errHelp.title}</p>
+                          <ol className="text-[11px] text-amber-200/90 list-decimal list-inside space-y-1">
+                            {errHelp.steps.map((s, i) => (
+                              <li key={i}>{s}</li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+                      {!photoBusy && error && !errHelp && (
+                        <p className="text-red-400 text-xs font-bold max-w-[300px]">{error}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {camState === "running" && (
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-[92%] px-3 py-2 rounded-lg bg-black/70 backdrop-blur text-center">
+                      <span
+                        className={`block text-[11px] font-medium break-words ${error ? "text-red-400" : "text-emerald-300"}`}
+                      >
+                        {error || scanStatus}
+                      </span>
                     </div>
                   )}
                 </div>
 
-                {/* SECONDARY — live camera (needs permission + https). */}
-                <div className="flex gap-2 mt-3">
+                {/* Footer controls */}
+                <div className="flex gap-2 pt-1">
+                  <label
+                    htmlFor="qr-file-input"
+                    className="sm:hidden flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-amber-400/70 bg-amber-500/10 text-amber-200 font-bold text-sm cursor-pointer active:scale-[0.99] transition"
+                  >
+                    📷 Photo
+                  </label>
                   {camState !== "running" ? (
                     <button
                       type="button"
@@ -567,7 +592,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                       className="flex-1 py-3 rounded-xl border border-slate-500 bg-slate-800/60 text-slate-200 font-bold text-sm hover:border-amber-400 hover:text-amber-200 active:scale-[0.99] transition disabled:opacity-40 disabled:cursor-not-allowed"
                       data-testid="open-camera"
                     >
-                      {camState === "starting" ? "Opening camera..." : "Use Live Camera Instead"}
+                      {camState === "starting" ? "Opening camera..." : "Use Live Camera"}
                     </button>
                   ) : (
                     <button
@@ -581,8 +606,9 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                   )}
                 </div>
 
+                {/* Desktop-only detail log + reset */}
                 <div
-                  className="mt-3 p-3 rounded-lg bg-slate-800/80 border border-slate-600 text-left font-mono text-[11px] leading-relaxed text-slate-200 max-h-[150px] overflow-y-auto break-words"
+                  className="hidden sm:block mt-2 p-3 rounded-lg bg-slate-800/80 border border-slate-600 text-left font-mono text-[11px] leading-relaxed text-slate-200 max-h-[150px] overflow-y-auto break-words"
                   data-testid="scan-log"
                 >
                   {errHelp ? (
@@ -604,16 +630,28 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                 <button
                   type="button"
                   onClick={resetScan}
-                  className="w-full mt-3 px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm transition"
+                  className="hidden sm:block mt-2 px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm transition"
                 >
                   Scan Again
                 </button>
+
+                <input
+                  ref={photoRef}
+                  id="qr-file-input"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files && e.target.files[0];
+                    if (f) void decodePhoto(f);
+                  }}
+                />
               </div>
             )}
 
             {/* Registering Stage */}
             {stage === "registering" && (
-              <div className="text-center py-8">
+              <div className="text-center py-8 p-6">
                 <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
                 <p className="text-sm text-slate-300">Creating your GDR ID and registering…</p>
               </div>
@@ -621,7 +659,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
 
             {/* Done Stage */}
             {stage === "done" && (
-              <div className="text-center py-6">
+              <div className="text-center py-6 p-6">
                 <CheckCircle size={48} className="text-emerald-400 mx-auto mb-3" />
                 <h3 className="text-xl font-bold text-white mb-2">Registration Complete!</h3>
                 <p className="text-sm text-slate-300 mb-4">
