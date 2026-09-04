@@ -360,14 +360,6 @@ export const configApi = {
   localities: () => request<{ localities: Array<Record<string, unknown>> }>('/api/config/localities'),
 };
 
-/** Fetch a presigned Storj upload URL (media never transits our server). */
-export const storageApi = {
-  presign: (type: 'voice' | 'image', ext: string, contentType: string) =>
-    request<{ uploadUrl: string; publicUrl: string; contentType: string; expiresIn: number }>(
-      `/api/storage/presign?type=${type}&ext=${encodeURIComponent(ext)}&contentType=${encodeURIComponent(contentType)}`,
-    ),
-};
-
 export default {
   auth: authApi,
   petitions: petitionApi,
@@ -375,5 +367,4 @@ export default {
   wildlife: wildlifeApi,
   officials: officialsApi,
   config: configApi,
-  storage: storageApi,
 };

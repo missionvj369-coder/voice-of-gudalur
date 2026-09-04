@@ -13,12 +13,9 @@
 
 # NOTE: The canonical backend is the Express server (server.ts) talking to
 # CockroachDB — it serves ALL /api/* routes on the same origin (Cloud Run /
-# any Node host). Netlify only hosts the static PWA + the thin Storj presign
-# adapter below for static-only deploys.
-[[redirects]]
-  from = "/api/storage/*"
-  to = "/.netlify/functions/storage"
-  status = 200
+# any Node host). Netlify hosts the static PWA and the thin Express backend
+# via the serverless function. No external object storage (Storj removed —
+# CockroachDB is the only datastore).
 
 # ── API (Netlify Function — the Express backend itself) ─────────────────────
 # server.ts#createApp() is wrapped with serverless-http in

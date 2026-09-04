@@ -18,6 +18,25 @@ import { logger } from '../utils/logger';
 
 const router = Router();
 
+/** GET /api/auth/check-phone?phone=9876543210 — pre-registration duplicate check. */
+router.get('/check-phone', async (req: Request, res: Response) => {
+  try {
+    const phone = normalizePhone(String(req.query.phone || ''));
+    if (phone.length !== 10) {
+      return res.status(400).json({ error: 'Provide a 10-digit phone number.', exists: false });
+    }
+    const existing = await db.queryOne<{ uid: string; gudalur_id: string }>(
+      'SELECT uid, gudalur_id FROM users WHERE phone = $1',
+      [phone],
+    );
+    res.json({ exists: Boolean(existing), gudalurId: existing?.gudalur_id ?? null });
+  } catch (e: any) {
+    logger.error('check-phone:', e.message);
+    // Fail-open: let the registration proceed and let the UNIQUE index enforce it.
+    res.json({ exists: false });
+  }
+});
+
 const COOKIE_OPTS: Record<string, any> = {
   httpOnly: true, sameSite: 'strict' as const,
   secure: process.env.NODE_ENV === 'production', path: '/',

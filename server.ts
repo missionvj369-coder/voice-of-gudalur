@@ -17,8 +17,6 @@ const OLLAMA_URL = process.env.OLLAMA_URL || 'http://127.0.0.1:11434/v1';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
 const WHISPER_URL = process.env.WHISPER_URL || ''; // e.g. http://127.0.0.1:8000/v1/audio/transcriptions
 import webPush from 'web-push';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { spawn } from 'child_process';
 import multer from 'multer';
 import cookieParser from 'cookie-parser';
@@ -112,7 +110,7 @@ export async function createApp() {
       "font-src 'self' https://fonts.gstatic.com; " +
       "media-src 'self' blob: https: data:; " +
       "frame-src 'self' blob: https://cmhelpline.tnega.org; " +
-      "connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://gateway.storjshare.io; " +
+      "connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com; " +
       "frame-ancestors 'none'; " +
       "base-uri 'self'; " +
       "form-action 'self'"
@@ -418,85 +416,7 @@ Role:
   app.use('/api/admin', adminOfficialActionsRoutes);
 
   app.use('/api/config', publicRateLimiter, configRoutes);
-  // STORJ OBJECT STORAGE â€” presigned browser uploads (S3-compatible)
-  // (community voice recordings + verified sighting photo evidence)
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-  const STORJ_ACCESS_KEY = process.env.STORJ_ACCESS_KEY || process.env.STORJ_ACCESS_KEY_ID || '';
-  const STORJ_SECRET_ACCESS_KEY = process.env.STORJ_SECRET_ACCESS_KEY || '';
-  const STORJ_BUCKET = process.env.STORJ_BUCKET || 'voice-of-gudalur';
-  const STORJ_ENDPOINT = (process.env.STORJ_ENDPOINT || 'https://gateway.storjshare.io').replace(/\/+$/, '');
-  // The Storj gateway always signs in us-east-1, even though storage is globally distributed.
-  const STORJ_REGION = process.env.STORJ_REGION || 'us-east-1';
-  // Public anonymous reads go through Storj Linkshare. In the Storj web console:
-  // Objects -> <bucket> -> "Create Public Access Link", then set STORJ_PUBLIC_LINK_BASE
-  // to the generated link. Accepts either form:
-  //   https://link.storjshare.io/s/<access-id>[/<bucket>]    (console "Copy link")
-  //   https://link.storjshare.io/raw/<access-id>[/<bucket>]
-  const STORJ_PUBLIC_LINK_BASE = (process.env.STORJ_PUBLIC_LINK_BASE || '').replace(/\/+$/, '');
-  // Media tags (<audio>/<img>) need RAW object bytes, not the /s/ viewer page â€”
-  // normalize /s/ -> /raw/, and strip the bucket name if the user included it
-  // (it is re-appended per-object below).
-  const STORJ_LINK_PREFIX = STORJ_PUBLIC_LINK_BASE
-    ? STORJ_PUBLIC_LINK_BASE
-        .replace(/^https:\/\/link\.storjshare\.io\/s\//, 'https://link.storjshare.io/raw/')
-        .replace(new RegExp(`/${STORJ_BUCKET.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`), '')
-    : '';
-
-  const storjConfigured = Boolean(STORJ_ACCESS_KEY && STORJ_SECRET_ACCESS_KEY);
-  let storageClient: S3Client | null = null;
-  if (storjConfigured) {
-    storageClient = new S3Client({
-      region: STORJ_REGION,
-      endpoint: STORJ_ENDPOINT,
-      forcePathStyle: true,   // Storj gateway is path-style: https://gateway.storjshare.io/<bucket>/<key>
-      // Newer AWS SDK v3 defaults append x-amz-checksum-crc32 (of an empty payload) to
-      // presigned PUT URLs â€” Storj's S3 gateway mishandles that. Only checksum when required.
-      requestChecksumCalculation: 'WHEN_REQUIRED',
-      responseChecksumValidation: 'WHEN_REQUIRED',
-      credentials: {
-        accessKeyId: STORJ_ACCESS_KEY,
-        secretAccessKey: STORJ_SECRET_ACCESS_KEY,
-      },
-    });
-    console.log('[Storj] S3-compatible object storage configured (' + STORJ_ENDPOINT + ').');
-    if (!STORJ_PUBLIC_LINK_BASE) {
-      console.warn('[Storj] STORJ_PUBLIC_LINK_BASE not set â€” public playback URLs will 404 until a Public Access Link is created and its prefix is configured.');
-    } else {
-      console.log('[Storj] Public link prefix: ' + (STORJ_LINK_PREFIX || '(empty)'));
-    }
-  } else {
-    console.warn('[Storj] STORJ_ACCESS_KEY / STORJ_SECRET_ACCESS_KEY missing â€” presigned uploads disabled.');
-  }
-
-  /**
-   * GET /api/storage/presign?type=voice|image&ext=webm|jpg&contentType=audio/webm
-   * Issues a short-lived presigned PUT URL + permanent public object URL.
-   * The browser uploads the blob DIRECTLY to Storj (media never transits our server).
-   */
-  app.get('/api/storage/presign', async (req, res) => {
-    try {
-      const type: 'voice' | 'image' = req.query.type === 'image' ? 'image' : 'voice';
-      const ext = String(req.query.ext || (type === 'image' ? 'jpg' : 'webm'))
-        .replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || (type === 'image' ? 'jpg' : 'webm');
-      const contentType = String(req.query.contentType || (type === 'image' ? 'image/jpeg' : 'audio/webm'));
-      if (!storageClient) {
-        return res.status(503).json({ error: 'Object storage is not configured on this server.' });
-      }
-      const key = `${type}/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.${ext}`;
-      const command = new PutObjectCommand({ Bucket: STORJ_BUCKET, Key: key, ContentType: contentType });
-      const uploadUrl = await getSignedUrl(storageClient, command, { expiresIn: 60 * 5 }); // 5 minutes
-      // Public anonymous reads use Storj Linkshare raw form:
-      //   https://link.storjshare.io/raw/<access-id>/<bucket>/<key>
-      const publicUrl = STORJ_LINK_PREFIX
-        ? `${STORJ_LINK_PREFIX}/${STORJ_BUCKET}/${key}`
-        : `https://link.storjshare.io/raw/${STORJ_BUCKET}/${key}`;
-      res.json({ uploadUrl, publicUrl, contentType, expiresIn: 300 });
-    } catch (err: any) {
-      console.error('[Storj] Presign error:', err?.message);
-      res.status(500).json({ error: 'Could not issue an upload URL. Please try again shortly.' });
-    }
-  });
+  // Media storage: using CockroachDB only (Storj object storage removed).
 
   // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // AI TRANSCRIPTION â€” self-hosted Whisper (Apache-2.0) converts voice reports to civic text
