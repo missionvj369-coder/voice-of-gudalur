@@ -3,7 +3,7 @@ import { useLanguage, type Language } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { Flame, User, LogIn, LogOut } from 'lucide-react';
 import { GudalurIdModal } from '../GudalurIdModal';
-import { OfflineIndicator } from '../OfflineIndicator';
+
 import { LoginResidentModal } from '../Auth/LoginResidentModal';
 import { RegisterResidentModal } from '../Auth/RegisterResidentModal';
 
@@ -173,7 +173,6 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         <GudalurIdModal isOpen={idModalOpen} onClose={() => setIdModalOpen(false)} />
         <LoginResidentModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onNeedRegister={() => { setLoginModalOpen(false); setRegisterModalOpen(true); }} />
         <RegisterResidentModal isOpen={registerModalOpen} onClose={() => setRegisterModalOpen(false)} onSuccess={() => { setRegisterModalOpen(false); }} />
-        <OfflineIndicator />
       </div>
     </IdModalContext.Provider>
   );

@@ -85,7 +85,7 @@ export default defineConfig(() => {
           // (23+ MB) is loaded on-demand at runtime — exclude it from
           // precache (it also exceeds workbox's default 2 MiB limit).
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,wasm}'],
-          globIgnores: ['**/ort-wasm*'],
+          globIgnores: ['**/ort-wasm*', '**/qrDecode/*.worker.*', '**/qrDecode/cameraFusion.*'],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/.*\.tile\.openstreetmap\.org\/.*/i,
@@ -120,6 +120,9 @@ export default defineConfig(() => {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
+    },
+    worker: {
+      format: 'es' as const,
     },
     build: {
       target: 'es2020',

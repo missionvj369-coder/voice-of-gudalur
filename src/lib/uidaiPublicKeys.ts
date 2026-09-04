@@ -9,19 +9,31 @@
  *
  * Newest first — verification tries each in order until one succeeds.
  *
- * ⚠️ KNOWN ISSUE (documented honestly in docs/UIDAI_KEY_ROTATION.md):
- * both bundled keys have expired (2024-02-27 and 2026-02-16) and UIDAI's
- * site had not published a successor cert when last checked, so very recent
- * cards may report "signature key not matched (key rotation)". The embedded
- * SHA-256 integrity check still guards every scan, and newer keys can be
- * published to CockroachDB `app_config.uidai_spki_keys` (served via
- * GET /api/config/uidai-keys) to rotate WITHOUT a new release — see
- * refreshUidaiKeysFromServer() below.
+ * ⚠️ KEY EXPIRATION NOTICE:
+ * The bundled keys below have expired. RSA signature verification will fail
+ * for cards signed with newer keys. The SHA-256 integrity check (which does
+ * NOT depend on these keys) still guards every scan against tampering.
+ *
+ * To add the current UIDAI key:
+ *   1. Download the current "Offline Aadhaar Verification" certificate from
+ *      UIDAI's official portal (https://uidai.gov.in → QR Code / Offline Verification)
+ *   2. Save it as scripts/certs/uidai_offline_publickey_<DDMMYYYY>.pem
+ *   3. Run: node scripts/extract-uidai-keys.mjs
+ *   4. Add the printed SPKI base64 to the TOP of the array below (newest first)
+ *
+ * Alternatively, publish the key to CockroachDB app_config.uidai_spki_keys
+ * (served via GET /api/config/uidai-keys) to rotate WITHOUT a new release.
  */
 export const UIDAI_SPKI_KEYS: readonly string[] = [
-  // DS Unique Identification Authority of India 05 — valid to 2026-02-16 (EXPIRED — see docs/UIDAI_KEY_ROTATION.md)
+  // ── CURRENT KEY GOES HERE ──────────────────────────────────────────────
+  // Download the current UIDAI Offline e-KYC public key certificate and
+  // extract its SPKI using scripts/extract-uidai-keys.mjs, then paste the
+  // base64 DER here. This is the ONLY key needed for new cards.
+  // ──────────────────────────────────────────────────────────────────────
+
+  // DS Unique Identification Authority of India 05 — valid to 2026-02-16 (EXPIRED — kept for older cards)
   'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmMIJKj28JcTN1B72p2/pgzDCoguhs/rbIXgN/ybNNh0NVOrZV2KllrmT5VOYlMrABpvIp7JU/n6hma3/O14n7nvngJ/y3colh8rk7msDwVAO7ZuVD+GCzfaYPLLkUS+wqH7M7FOHIn/pyJo1Rkxm98lO3dyox5RuLG2Uqm7JfVIomm0t7QKJoM5rf8JNvPXdwsxN89eWlT2Bf7BF//G3FKiF7ZHfvIyyqte/3orRRG/M80QqLrDP1RIeOa53ZTgILXcyQOb2yZOqNH3iN2uSKRsusNO17To5FOb2J9Hd5wIMuDv3zw4MWTrKAWuTYon90QSeGRKv1d5AQNRt0x5dSwIDAQAB',
-  // DS UNIQUE IDENTIFICATION AUTHORITY OF INDIA 05 — valid to 2024-02-27 (EXPIRED)
+  // DS UNIQUE IDENTIFICATION AUTHORITY OF INDIA 05 — valid to 2024-02-27 (EXPIRED — kept for older cards)
   'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAonIsDl8t5bpwftk/A27CsfC5VZMjkPrMDwvL8gyAoVwIi0iGhmty6yWrC/VaL+Brae29XMg7dMdwnbIUHmwHxovN+FnT2vfz/O0kHQcgVdwVSIR0tFwsmC+pVKpSqm//skgYYcZQhdhLZBWOn0PZ81ymm0jOkwBSIQKkyuCTv/1HSwjTLR0EBvaH9+Vb0iaiOEv1ikHDhMOXTxx8URWBnJJt463z7LuZBMSG8fXVMDl3vqY1hDZzKbXBaK/clRIXMff0jUOvfPMfabHju+eUnceosQwL3eurq96+oHahz4FmrfBqikHe3xQ7/4NdvSvVuwth0kcsI0ptRBG8m1NglQIDAQAB',
 ];
 

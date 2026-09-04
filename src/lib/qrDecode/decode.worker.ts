@@ -8,10 +8,8 @@
 // engines over them. Falls back to main-thread processing if no Worker.
 
 /* eslint-disable no-restricted-globals */
-const ctx = self as unknown as DedicatedWorkerGlobalScope & {
-  onmessage: (e: MessageEvent) => void;
-  postMessage: (msg: unknown, transfer?: Transferable[]) => void;
-};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ctx = self as any;
 
 ctx.onmessage = async (e: MessageEvent) => {
   const { id, width, height, pixels, strategies } = e.data as {

@@ -18,7 +18,7 @@ export const NavBar: React.FC = () => (
         isActive ? 'flex items-center gap-1 font-bold bg-[#1B5E20] text-[#AED581] px-3 py-1 rounded-lg' : 'flex items-center gap-1 hover:bg-[#1B5E20]/20 px-3 py-1 rounded-lg transition-colors'
       }
     >
-      <Mic size={18} /> Soundboard
+      <Mic size={18} /> Rise Voice
     </NavLink>
     <NavLink
       to="/live-gis-map"

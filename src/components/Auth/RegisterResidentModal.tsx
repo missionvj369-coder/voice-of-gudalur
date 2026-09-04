@@ -198,10 +198,17 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
     setCamState("starting");
     setScanStatus("Requesting camera permissions…");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: false,
-      });
+      let stream: MediaStream;
+      try {
+        // Prefer rear camera, but don't fail on devices that can't satisfy it.
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        });
+      } catch {
+        // Fallback: any available camera.
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
       const container = document.getElementById("qr-reader")!;
       const video = document.createElement("video");
       video.playsInline = true;

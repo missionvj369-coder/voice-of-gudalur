@@ -30,11 +30,21 @@ export const cameraFusion = new CameraFusion(4);
 export async function loadPhotoBitmap(file: File): Promise<PhotoBitmap> {
   if (typeof createImageBitmap === "function") {
     try {
-      return await Promise.race([
-        createImageBitmap(file),
+      // Respect EXIF orientation so photos taken sideways aren't processed rotated.
+      const bmp = await Promise.race([
+        createImageBitmap(file, { imageOrientation: "from-image" }),
         new Promise<never>((_, rej) => window.setTimeout(() => rej(new Error("timeout")), 3000)),
       ]);
-    } catch { /* fall through */ }
+      return bmp;
+    } catch {
+      // Fallback without EXIF handling if the option isn't supported.
+      try {
+        return await Promise.race([
+          createImageBitmap(file),
+          new Promise<never>((_, rej) => window.setTimeout(() => rej(new Error("timeout")), 3000)),
+        ]);
+      } catch { /* fall through to Image */ }
+    }
   }
   const url = URL.createObjectURL(file);
   try {
