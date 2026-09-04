@@ -9,8 +9,8 @@ import {
   type AadhaarVerification,
 } from "../../lib/aadhaarDecoder";
 import { initUidaiVerification } from "../../lib/uidaiPublicKeys";
-import { decodePhotoQr, decodeVideoFrame } from "../../lib/qrDecode";
-import { Shield, ShieldCheck, ShieldAlert, ShieldQuestion, AlertCircle, CheckCircle, X } from "lucide-react";
+import { decodePhotoQr, decodeVideoFrame, getStageMessage } from "../../lib/qrDecode";
+import { Shield, ShieldCheck, ShieldAlert, CheckCircle, X, Camera } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -22,9 +22,24 @@ interface Props {
 
 type Stage = "scanning" | "verified" | "registering" | "done";
 
+type DiagnosticStage =
+  | "IMAGE_LOADED"
+  | "QR_NOT_DETECTED"
+  | "QR_DETECTED_NOT_DECODED"
+  | "QR_DECODED_INVALID"
+  | "QR_DECODED_VALID"
+  | "SIGNATURE_VERIFIED";
+
 interface CameraHelp {
   title: string;
   steps: string[];
+}
+
+interface DiagnosticInfo {
+  stage: DiagnosticStage;
+  engine?: string;
+  attempts: number;
+  processingMs?: number;
 }
 
 const isMobileDevice = (): boolean =>
@@ -96,12 +111,15 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
   const [aadhaar, setAadhaar] = useState<AadhaarDecodeResult | null>(null);
   const [verify, setVerify] = useState<AadhaarVerification | null>(null);
   const [error, setError] = useState("");
-  const [phone, setPhone] = useState(""); // secure QRs carry no phone — collected here
-  const [gdrId, setGdrId] = useState(""); // auto-issued ID, shown on the Done screen
+  const [diagnosticStage, setDiagnosticStage] = useState<DiagnosticStage | null>(null);
+  const [diagnosticEngine, setDiagnosticEngine] = useState<string>("");
+  const [phone, setPhone] = useState("");
+  const [gdrId, setGdrId] = useState("");
   const [camState, setCamState] = useState<"idle" | "starting" | "running">("idle");
   const [photoBusy, setPhotoBusy] = useState(false);
   const [scanStatus, setScanStatus] = useState("");
   const [errHelp, setErrHelp] = useState<CameraHelp | null>(null);
+  const [cameraUnsupported, setCameraUnsupported] = useState(false);
   // Live camera resources — raw getUserMedia, no scanner library in the loop.
   const cameraRef = useRef<{
     stream: MediaStream;
@@ -132,15 +150,15 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
 
   /** Shared success path for camera frames AND scanned photos. */
   const handleDecoded = useCallback(
-    async (decoded: string) => {
+    async (decoded: string, engine?: string) => {
       const now = Date.now();
-      if (now - lastScanRef.current < 1200) return; // debounce same-frame hits
+      if (now - lastScanRef.current < 1200) return;
       lastScanRef.current = now;
+      if (engine) setDiagnosticEngine(engine);
+      setDiagnosticStage("QR_DECODED_VALID");
       const data = await decodeAadhaarAsync(decoded);
       if (!data || !data.ok || !data.name) {
-        // Keep the camera running for the next frame. Distinguish a noisy read
-        // from a captured-but-unparseable payload — the fixes differ (steadier
-        // hands vs. browser too old to inflate the 2022 gzip format).
+        setDiagnosticStage(looksLikeAadhaarSecureQr(decoded) ? "QR_DETECTED_NOT_DECODED" : "QR_DECODED_INVALID");
         setError(
           looksLikeAadhaarSecureQr(decoded)
             ? (data?.error ||
@@ -156,8 +174,9 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       setCamState("idle");
       const v = await verifyAadhaarSecureQr(data);
       setVerify(v);
-      // Legacy XML QRs may carry a phone — prefill. Modern secure QRs
-      // never do; the user types it on the Verified screen.
+      if (v.integrityOk || v.signatureOk) {
+        setDiagnosticStage("SIGNATURE_VERIFIED");
+      }
       setPhone(data.phone || "");
       setAadhaar(data);
       setStage("verified");
@@ -185,6 +204,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraUnsupported(true);
       setErrHelp({
         title: "This browser can't open the camera",
         steps: ["Use “Scan from Photo” below — it works on every browser, no permissions needed."],
@@ -265,7 +285,7 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
           if (hit) {
             window.clearTimeout(cur.timer);
             cur.timer = null;
-            void handleDecoded(hit.text);
+            void handleDecoded(hit.text, hit.engine);
             return; // handleDecoded → stopScanner releases the camera
           }
         } catch { /* skip this frame */ } finally {
@@ -299,9 +319,10 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
         if (hit) {
           setScanStatus(`QR decoded via ${hit.engine} — verifying Aadhaar payload…`);
           lastScanRef.current = 0;
-          await handleDecoded(hit.text);
+          await handleDecoded(hit.text, hit.engine);
           return;
         }
+        setDiagnosticStage("QR_NOT_DETECTED");
         setScanStatus("");
         setError("No QR found in this photo even after deep scanning (scales, contrast, sharpening). Retake it: fill the frame with the QR, hold steady, avoid glare — or try the live camera.");
       } catch (e: unknown) {
@@ -318,9 +339,48 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
     [handleDecoded]
   );
 
-
-
-
+/** "Take Photo & Scan" — capture a still from the live camera and run the
+   *  full multi-pass photo pipeline. This is the universal fallback for slow
+   *  phones where continuous live decoding can't keep up. */
+  const captureFrame = useCallback(async () => {
+    const cam = cameraRef.current;
+    if (!cam) return;
+    setPhotoBusy(true);
+    setScanStatus("Capturing photo… running deep scan");
+    try {
+      const video = cam.video;
+      const vw = video.videoWidth || 1280;
+      const vh = video.videoHeight || 720;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.min(vw, 2560);
+      canvas.height = Math.max(1, Math.round((canvas.width / vw) * vh));
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) throw new Error("canvas 2d unavailable");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.92));
+      if (!blob) throw new Error("could not capture frame");
+      const file = new File([blob], `aadhaar-capture-${Date.now()}.jpg`, { type: "image/jpeg" });
+      await stopScanner();
+      setCamState("idle");
+      setError("");
+      const hit = await decodePhotoQr(file, (m) => setScanStatus(m));
+      if (hit) {
+        setScanStatus(`QR decoded via ${hit.engine} — verifying…`);
+        lastScanRef.current = 0;
+        await handleDecoded(hit.text, hit.engine);
+        return;
+      }
+      setDiagnosticStage("QR_NOT_DETECTED");
+      setError(
+        "Couldn't read the QR from the captured photo either. Move closer, avoid glare, and try again — or pick an existing photo."
+      );
+    } catch (e: unknown) {
+      const msg = typeof e === "string" ? e : e instanceof Error ? e.message : "";
+      setError(`Capture failed${msg ? `: ${msg}` : ""}. Try Scan from Photo instead.`);
+    } finally {
+      setPhotoBusy(false);
+    }
+  }, [handleDecoded, stopScanner]);
 
   useEffect(() => {
         if (!visible) {
@@ -390,6 +450,9 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
     setScanStatus("");
     setCamState("idle");
     setStage("scanning");
+    setDiagnosticStage(null);
+    setDiagnosticEngine("");
+    setCameraUnsupported(false);
   };
 
   const phoneDigits = phone.replace(/\D/g, "");
@@ -481,9 +544,35 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                       >
                         {error || scanStatus}
                       </span>
+                      {photoBusy ? (
+                        <span className="block mt-1 text-[11px] text-amber-300">Processing captured photo…</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void captureFrame()}
+                          className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-[11px] font-bold transition active:scale-[0.98]"
+                          data-testid="capture-photo-scan"
+                        >
+                          <Camera size={12} /> Can't read? Take Photo & Scan
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
+
+                {/* Diagnostic stage feedback — tells users exactly which layer failed */}
+                {diagnosticStage && !errHelp && !error && camState !== "running" && (
+                  <div
+                    className="w-full rounded-lg bg-slate-800/90 border border-slate-600 px-3 py-2 text-left sm:hidden"
+                    data-testid="diagnostic-panel"
+                  >
+                    <p className="text-[11px] font-bold text-amber-300">{getStageMessage(diagnosticStage).title}</p>
+                    <p className="text-[10px] text-slate-300 mt-0.5">{getStageMessage(diagnosticStage).hint}</p>
+                    {diagnosticEngine && (
+                      <p className="text-[9px] font-mono text-slate-500 mt-0.5">engine: {diagnosticEngine}</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Footer controls */}
                 <div className="flex gap-2 pt-1">
@@ -531,6 +620,11 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                     </>
                   ) : error ? (
                     <span className="text-red-400 font-bold">{error}</span>
+                  ) : diagnosticStage && diagnosticStage !== "IMAGE_LOADED" ? (
+                    <span className="text-amber-300">
+                      <span className="font-bold">{getStageMessage(diagnosticStage).title}</span>
+                      {diagnosticEngine ? ` (${diagnosticEngine})` : ""} — {diagnosticStage}
+                    </span>
                   ) : (
                     <span className="text-emerald-400">{scanStatus || "Status: Ready. Click start or upload an image."}</span>
                   )}
@@ -555,6 +649,28 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                     if (f) void decodePhoto(f);
                   }}
                 />
+                {/* Mobile camera-capture enhancement — opens the rear camera directly
+                    on phones, while the plain picker above still allows Gallery/Files. */}
+                <input
+                  id="qr-capture-input"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files && e.target.files[0];
+                    if (f) void decodePhoto(f);
+                  }}
+                />
+                {cameraUnsupported && (
+                  <label
+                    htmlFor="qr-capture-input"
+                    className="sm:hidden flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm cursor-pointer active:scale-[0.99] transition"
+                    data-testid="mobile-capture-fallback"
+                  >
+                    <Camera size={16} /> Take Photo & Scan
+                  </label>
+                )}
               </div>
             )}
 
@@ -735,3 +851,4 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
     </AnimatePresence>
   );
 };
+

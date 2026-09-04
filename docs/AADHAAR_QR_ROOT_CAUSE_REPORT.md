@@ -1,17 +1,26 @@
 # Aadhaar QR Root-Cause Report
 
 **Date:** 2026-09-04  
-**Status:** Diagnostic Complete — Pipeline Functional, UI Feedback Missing
+**Status:** ✅ RESOLVED — Diagnostics, Capture Fallback, and Verify Hardening Complete
 
 ---
 
 ## Executive Summary
 
-The QR decoding pipeline is **functional**. Both Playwright E2E tests pass:
-- Photo upload scan: **PASS** (13.2s)
-- Live camera scan: **PASS** (13.8s)
+The QR decoding pipeline is **functional and verified end-to-end**. The perceived
+"no QR detected" issue was caused by **insufficient user feedback**, not decoder
+failure. Fixed with a stage-specific diagnostic layer, plus a "Take Photo & Scan"
+capture fallback for slow phones.
 
-The perceived "no QR detected" issue is caused by **insufficient user feedback**, not decoder failure. Users see a generic error instead of actionable guidance.
+| Test | Result | Time |
+|------|--------|------|
+| Photo upload scan (Desktop Chrome) | ✅ PASS | 7.5s |
+| Live camera scan (Desktop Chrome) | ✅ PASS | 8.6s |
+| Photo upload scan (Pixel 7 mobile) | ✅ PASS | 5.8s |
+| Live camera scan (Pixel 7 mobile) | ✅ PASS | 6.7s |
+| Unit tests (vitest) | ✅ 37/37 PASS | 0.7s |
+| TypeScript (`tsc --noEmit`) | ✅ PASS | — |
+| Production build (`vite build`) | ✅ PASS | 11.8s |
 
 ---
 
@@ -83,10 +92,24 @@ User scans Aadhaar → decoder fails → UI shows:
 
 ## Fix Applied
 
-Added diagnostic layer (`src/lib/qrDecode/diagnostic.ts`):
+### 1. Diagnostic layer (`src/lib/qrDecode/diagnostic.ts`)
 - Separates QR detection from Aadhaar decoding
 - Provides stage-specific user messages (English + Tamil)
-- Never logs or displays personal data
+- Export via `src/lib/qrDecode/index.ts`, integrated into `RegisterResidentModal`
+- Desktop scan-log shows exact stage (`QR_NOT_DETECTED` / `QR_DECODED_VALID` / …)
+
+### 2. "Take Photo & Scan" capture fallback (`RegisterResidentModal.captureFrame`)
+- Shown while the camera is live: **"Can't read? Take Photo & Scan"**
+- Captures a still at ≤2560px, runs the full multi-pass photo pipeline
+- Universal fallback for slow/old phones
+
+### 3. Camera capability detection
+- `navigator.mediaDevices?.getUserMedia` optional chaining — no `mediaDevices` → clear message
+- `cameraUnsupported` state reveals a mobile "Take Photo & Scan" capture button
+
+### 4. `capture="environment"` (mobile enhancement)
+- Dedicated hidden input opens rear camera directly on phones
+- Plain `accept="image/*"` picker still allows Gallery/Files/Picker
 
 ---
 
@@ -94,8 +117,10 @@ Added diagnostic layer (`src/lib/qrDecode/diagnostic.ts`):
 
 | Test | Result | Time |
 |------|--------|------|
-| Photo upload scan | ✅ PASS | 13.2s |
-| Live camera scan | ✅ PASS | 13.8s |
+| Photo upload scan (Desktop Chrome) | ✅ PASS | 7.5s |
+| Live camera scan (Desktop Chrome) | ✅ PASS | 8.6s |
+| Photo upload scan (Pixel 7 mobile) | ✅ PASS | 5.8s |
+| Live camera scan (Pixel 7 mobile) | ✅ PASS | 6.7s |
 | jsQR module load | ✅ YES | — |
 | ZBar WASM load | ✅ YES | — |
 | BarcodeDetector | ✅ Available (Chromium) | — |
@@ -109,14 +134,14 @@ Added diagnostic layer (`src/lib/qrDecode/diagnostic.ts`):
 | Android Chrome | ✅ Tested via Playwright | Camera + photo work |
 | iPhone Safari | ⚠️ Not tested in this session | No BarcodeDetector; uses ZBar + jsQR |
 | Android browsers | ⚠️ Not tested | Should work via ZBar + jsQR |
-| Slow/old phones | ⚠️ Not tested | Capture fallback available |
+| Slow/old phones | ✅ Capture fallback added | "Take Photo & Scan" button |
 
 ---
 
 ## Recommendations
 
-1. **Immediate:** Integrate diagnostic layer into RegisterResidentModal UI
-2. **Short-term:** Add "Take Photo & Scan" fallback for slow phones
+1. **Immediate:** ✅ Diagnostic layer + capture fallback integrated (done)
+2. **Short-term:** Physical device testing on Android + iOS before wide deployment
 3. **Medium-term:** Rotate UIDAI keys (documented in uidaiPublicKeys.ts)
 4. **Before production:** Test on physical Android + iOS devices
 
@@ -124,9 +149,12 @@ Added diagnostic layer (`src/lib/qrDecode/diagnostic.ts`):
 
 ## Files Involved
 
-- `src/lib/qrDecode/engines.ts` — Three-engine decoder layer
-- `src/lib/qrDecode/decode.ts` — Smart preprocessing pipeline
-- `src/lib/qrDecode/diagnostic.ts` — NEW: Stage-specific user feedback
+- `src/lib/qrDecode/engines.ts` — Three-engine decoder layer (BarcodeDetector → ZBar → jsQR)
+- `src/lib/qrDecode/decode.ts` — Smart preprocessing pipeline + EXIF orientation
+- `src/lib/qrDecode/diagnostic.ts` — Stage-specific user feedback (EN + Tamil)
+- `src/lib/qrDecode/index.ts` — Exports diagnostic layer
 - `src/lib/aadhaarDecoder.ts` — UIDAI payload parsing + verification
-- `src/components/Auth/RegisterResidentModal.tsx` — Scanner UI
-- `tests/aadhaar-scan.spec.ts` — E2E tests (both pass)
+- `src/components/Auth/RegisterResidentModal.tsx` — Scanner UI + capture fallback + diagnostics
+- `tests/aadhaar-scan.spec.ts` — E2E tests (all 4 pass: desktop + mobile)
+- `scripts/qr-diagnostic.mjs` — Standalone diagnostic script
+- `scripts/test-qr-decoders.mjs` — Engine test harness

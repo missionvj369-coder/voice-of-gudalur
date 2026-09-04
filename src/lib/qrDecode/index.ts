@@ -12,4 +12,6 @@ export {
 export { getNativeDetector } from "./engines";
 export { getScannerCapabilities, recommendDecodeParams } from "./capabilities";
 export type { ScannerCapabilities } from "./capabilities";
+export { getStageMessage } from "./diagnostic";
+export type { DiagnosticStage, DiagnosticResult } from "./diagnostic";
 export type { QrDecodeHit, DecodeProgress, QualityMetrics, DecodeResult, DecodeFailureReason } from "./types";
