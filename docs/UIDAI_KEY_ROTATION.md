@@ -2,8 +2,8 @@
 
 > **Honest note (known limitation):** the 2026 UIDAI cert expired **Feb 2026**
 > and UIDAI's site 404s the newer file, so very-recent cards may show
-> *"signature key not matched (key rotation)"*. The **SHA-256 integrity check
-> still guards every scan**, and adding the next cert is a **one-file drop
+> *"Details read — digital signature not yet confirmable (UIDAI key rotation)"*.
+> The **SHA-256 integrity check still guards every scan**, and adding the next cert is a **one-file drop
 > into `scripts/certs/`** — or, with no release at all, a single CockroachDB row
 > update (see [2. Zero-release rotation](#2-zero-release-rotation-cockroachdb)).
 
@@ -15,11 +15,45 @@
 | `uidai_offline_publickey_17022026.pem` | 2026-02-16 | ✅ (newest) | ✅ |
 | next UIDAI cert | — | ❌ not yet published by UIDAI | ❌ |
 
-**Impact while all bundled keys are expired:** signature verification reports
-`signatureOk: false/null` and the UI shows *"signature key not matched (key
-rotation)"*. Structural decode, last-4 extraction and the embedded
+**What was verified during the final-hardening audit (2026-09):**
+
+- The maintained open-source mirror of UIDAI's published QR certs
+  ([anon-aadhaar](https://github.com/anon-aadhaar/anon-aadhaar),
+  `packages/react/src/publicKeys.ts`, last touched Jul 2024, npm `@anon-aadhaar/core@2.4.3`)
+  bundles **exactly the same two certificates** we already carry — no newer key exists there.
+- UIDAI's official portal publishes **no directly downloadable** Offline e-KYC
+  public-key certificate (the old offline-verification page 404s; the homepage
+  links no cert asset).
+- Because no verifiable official 2026+ certificate could be obtained, **no new
+  key was invented or added** — guessing a key would be worse than honest
+  "unverified".
+
+**Impact while all bundled keys are expired:** `verifyAadhaarSecureQr` reports
+`signatureStatus: "unverified"` (and `signatureOk: false/null`) and the UI shows
+*"Details read — digital signature not yet confirmable (UIDAI key rotation)"*.
+Structural decode, last-4 extraction and the embedded
 **SHA-256 integrity check remain fully effective** — tampered or forged QRs
 are still rejected. This is a degradation of assurance level, not a security hole.
+
+## Explicit signature states (honest, never faked)
+
+`verifyAadhaarSecureQr` now returns a `signatureStatus` alongside the legacy
+`signatureOk` flag:
+
+| `signatureStatus` | Meaning | UI shows |
+|---|---|---|
+| `verified` | Signature matched a trusted key **whose validity window has not passed** | ✓ Aadhaar Secure QR Verified (green) |
+| `invalid` | A **current** trusted key was imported and the signature did **not** match it | Signature did not match — treat with caution (red) |
+| `unverified` | No key, only expired keys, or import failed (key rotation) | Details read — authenticity unverified (amber) |
+
+An expired key that happens to match is **still reported as `unverified`** — a
+lapsed key's authority cannot vouch for the signature, even when the math works.
+A signature is *never* reported "verified" on the strength of the SHA-256
+integrity check alone.
+
+Regression tests (`src/lib/__tests__/aadhaarDecoder.test.ts`, "signature path"
+test) prove all three states with a **test-generated RSA keypair** — no UIDAI
+key material is fabricated anywhere.
 
 ## What still protects every scan (defence in depth)
 

@@ -28,7 +28,9 @@ type DiagnosticStage =
   | "QR_DETECTED_NOT_DECODED"
   | "QR_DECODED_INVALID"
   | "QR_DECODED_VALID"
-  | "SIGNATURE_VERIFIED";
+  | "SIGNATURE_VERIFIED"
+  | "SIGNATURE_UNVERIFIED"
+  | "SIGNATURE_INVALID";
 
 interface CameraHelp {
   title: string;
@@ -174,8 +176,13 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
       setCamState("idle");
       const v = await verifyAadhaarSecureQr(data);
       setVerify(v);
-      if (v.integrityOk || v.signatureOk) {
+      // Honest verification state — never "verified" on integrity-only.
+      if (v.signatureStatus === "verified") {
         setDiagnosticStage("SIGNATURE_VERIFIED");
+      } else if (v.signatureStatus === "invalid") {
+        setDiagnosticStage("SIGNATURE_INVALID");
+      } else {
+        setDiagnosticStage("SIGNATURE_UNVERIFIED");
       }
       setPhone(data.phone || "");
       setAadhaar(data);
@@ -678,10 +685,19 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
             {stage === "verified" && (
               <div className="flex flex-col h-full gap-3 px-4 pt-14 sm:pt-6 pb-4 overflow-y-auto">
                 <div className="text-center">
-                  <div className="inline-flex items-center gap-2 bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 rounded-full px-3 py-1 mb-2">
-                    <CheckCircle size={15} />
-                    <span className="text-[11px] font-bold uppercase tracking-wider">Aadhaar Verified On-Device</span>
-                  </div>
+                  {verify?.signatureStatus === "verified" ? (
+                    <div className="inline-flex items-center gap-2 bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 rounded-full px-3 py-1 mb-2">
+                      <CheckCircle size={15} />
+                      <span className="text-[11px] font-bold uppercase tracking-wider" data-testid="verified-badge">✓ Aadhaar Secure QR Verified</span>
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-2 bg-amber-500/15 border border-amber-400/40 text-amber-300 rounded-full px-3 py-1 mb-2">
+                      <ShieldAlert size={15} />
+                      <span className="text-[11px] font-bold uppercase tracking-wider" data-testid="read-badge">
+                        {verify?.signatureStatus === "invalid" ? "Signature Invalid — Caution" : "Details Read From Document"}
+                      </span>
+                    </div>
+                  )}
                   <h3
                     className="text-xl font-bold text-white leading-tight"
                     data-testid="decoded-name"
@@ -694,21 +710,39 @@ export const RegisterResidentModal: React.FC<Props> = ({ open, isOpen, onClose, 
                   </p>
                 </div>
 
-                {(verify?.integrityOk === true || verify?.signatureOk === true) && (
+                {(verify?.integrityOk !== null || verify?.signatureStatus !== "unverified") && (
                   <div className="flex flex-wrap justify-center gap-2">
                     {verify.integrityOk === true && (
                       <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-2.5 py-1">
                         <ShieldCheck size={12} /> Tamper check passed
                       </span>
                     )}
-                    {verify.signatureOk === true && (
+                    {verify?.signatureStatus === "verified" && (
                       <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-2.5 py-1">
-                        <ShieldCheck size={12} /> Signed by UIDAI
+                        <ShieldCheck size={12} /> Digitally signed by UIDAI (current key)
+                      </span>
+                    )}
+                    {verify?.signatureStatus === "unverified" && verify?.integrityOk !== false && (
+                      <span
+                        className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-full px-2.5 py-1"
+                        data-testid="signature-unverified-badge"
+                      >
+                        <ShieldAlert size={12} /> Details read — digital signature not yet confirmable (UIDAI key rotation)
+                      </span>
+                    )}
+                    {verify?.signatureStatus === "invalid" && (
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-red-300 bg-red-500/10 border border-red-500/30 rounded-full px-2.5 py-1">
+                        <ShieldAlert size={12} /> Signature did not match a current UIDAI key — treat with caution
                       </span>
                     )}
                     {verify?.integrityOk === false && (
-                      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-full px-2.5 py-1">
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-red-300 bg-red-500/10 border border-red-500/30 rounded-full px-2.5 py-1">
                         <ShieldAlert size={12} /> Integrity hash not matched — treat with caution
+                      </span>
+                    )}
+                    {verify?.integrityOk === null && verify?.signatureStatus !== "verified" && (
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-slate-300 bg-slate-500/10 border border-slate-500/30 rounded-full px-2.5 py-1">
+                        <ShieldAlert size={12} /> Legacy QR — no cryptographic check possible
                       </span>
                     )}
                   </div>

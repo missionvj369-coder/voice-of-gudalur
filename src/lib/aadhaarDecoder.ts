@@ -392,6 +392,14 @@ export interface AadhaarVerification {
   integrityOk: boolean | null;
   /** UIDAI RSA-2048 signature result; null = no key/legacy QR/crypto unavailable. */
   signatureOk: boolean | null;
+  /**
+   * Honest signature state — NEVER "verified" unless a trusted UIDAI key with a
+   * valid (non-expired) validity window matched the signature.
+   *   - "verified"   → current trusted key cryptographically matched
+   *   - "invalid"    → a current trusted key was tried and the signature did NOT match
+   *   - "unverified" → no key, only expired keys, or import failed (key rotation)
+   */
+  signatureStatus: "verified" | "invalid" | "unverified";
 }
 
 /**
@@ -401,30 +409,52 @@ export interface AadhaarVerification {
  */
 let uidaiSpkiKeys: string[] = [];
 
+/** Validity end-date (ISO yyyy-mm-dd) per SPKI — keys past their window can
+ *  still decode/verify integrity but NEVER count as a "verified" signature. */
+let uidaiKeyValidity: Record<string, string> = {};
+
 /** Register UIDAI SPKI public keys (base64 DER) for signature verification. */
 export function setUidaiSpkiKeys(keys: string[]): void {
   uidaiSpkiKeys = keys.filter((k) => k.length > 100);
+}
+
+/** Register the validity window (ISO yyyy-mm-dd) for each registered SPKI. */
+export function setUidaiKeyValidity(validity: Record<string, string>): void {
+  uidaiKeyValidity = validity || {};
+}
+
+function isKeyCurrentlyValid(spkiB64: string): boolean {
+  const validTo = uidaiKeyValidity[spkiB64];
+  if (!validTo) return true; // unknown window → treat as possibly current (don't fabricate an expiry)
+  const ok = Date.parse(`${validTo}T23:59:59.999Z`);
+  if (Number.isNaN(ok)) return true;
+  return Date.now() <= ok;
 }
 
 /** Async verification pass — call right after a successful structural decode. */
 export async function verifyAadhaarSecureQr(r: AadhaarDecodeResult): Promise<AadhaarVerification> {
   const sd = r as SecureQrBytes;
   if (!sd._fieldBytes || !sd._hashBytes) {
-    return { integrityOk: null, signatureOk: null }; // legacy XML path — nothing to verify
+    return { integrityOk: null, signatureOk: null, signatureStatus: "unverified" }; // legacy XML path — nothing to verify
   }
   const subtle = globalThis.crypto?.subtle;
-  if (!subtle) return { integrityOk: null, signatureOk: null };
+  if (!subtle) return { integrityOk: null, signatureOk: null, signatureStatus: "unverified" };
   try {
     const digest = await subtle.digest("SHA-256", sd._fieldBytes);
     const got = new Uint8Array(digest);
     const integrityOk =
       got.length === sd._hashBytes.length && got.every((b, i) => b === sd._hashBytes![i]);
     let signatureOk: boolean | null = null;
+    let signatureStatus: AadhaarVerification["signatureStatus"] = "unverified";
     if (uidaiSpkiKeys.length > 0 && sd._sigBytes) {
       const signed = new Uint8Array(sd._fieldBytes.length + sd._hashBytes.length);
       signed.set(sd._fieldBytes);
       signed.set(sd._hashBytes, sd._fieldBytes.length);
+      let importedAny = false;
+      let verifiedWithCurrent = false;
+      let rejectedByCurrent = false;
       for (const spkiB64 of uidaiSpkiKeys) {
+        const keyCurrent = isKeyCurrentlyValid(spkiB64);
         try {
           const der = Uint8Array.from(atob(spkiB64), (c) => c.charCodeAt(0));
           const key = await subtle.importKey(
@@ -434,18 +464,25 @@ export async function verifyAadhaarSecureQr(r: AadhaarDecodeResult): Promise<Aad
             false,
             ["verify"],
           );
+          importedAny = true;
           if (await subtle.verify("RSASSA-PKCS1-v1_5", key, sd._sigBytes, signed)) {
-            signatureOk = true;
-            break;
+            if (keyCurrent) { verifiedWithCurrent = true; break; }
+            // matched an EXPIRED key → signature is genuinely from UIDAI's old
+            // key, but that key's authority has lapsed → stays "unverified".
+          } else if (keyCurrent) {
+            rejectedByCurrent = true;
           }
-          signatureOk = false;
         } catch {
-          signatureOk = null; // try next key
+          /* import failed for this key — try next */
         }
       }
+      if (verifiedWithCurrent) { signatureOk = true; signatureStatus = "verified"; }
+      else if (rejectedByCurrent) { signatureOk = false; signatureStatus = "invalid"; }
+      else if (importedAny) { signatureOk = false; signatureStatus = "unverified"; } // matched only expired keys or no match
+      else { signatureOk = null; signatureStatus = "unverified"; } // no key could be imported
     }
-    return { integrityOk, signatureOk };
+    return { integrityOk, signatureOk, signatureStatus };
   } catch {
-    return { integrityOk: false, signatureOk: null };
+    return { integrityOk: false, signatureOk: null, signatureStatus: "unverified" };
   }
 }

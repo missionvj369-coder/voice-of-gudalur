@@ -10,6 +10,7 @@ import {
   aadhaarAddress,
   verifyAadhaarSecureQr,
   setUidaiSpkiKeys,
+  setUidaiKeyValidity,
   type AadhaarDecodeResult,
 } from '../aadhaarDecoder';
 
@@ -116,7 +117,11 @@ describe('Aadhaar Secure QR (v2, signed) — on-device structural decode', () =>
   };
 
   /** Build the full decimal Secure QR string (unsigned → signature can't verify). */
-  async function buildSecureQrString(opts?: { refId?: number; corruptHash?: boolean }): Promise<string> {
+  async function buildSecureQrString(opts?: {
+    refId?: number;
+    corruptHash?: boolean;
+    signature?: Uint8Array;
+  }): Promise<string> {
     const refId = opts?.refId ?? 0x1234;
     const fields = concat(
       new Uint8Array([2, 0]), // version=2, emailMobileStatus=0
@@ -130,7 +135,7 @@ describe('Aadhaar Secure QR (v2, signed) — on-device structural decode', () =>
     );
     const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', fields));
     if (opts?.corruptHash) digest[0] ^= 0xff;
-    const sig = new Uint8Array(256).fill(0xab); // fake signature — we lack UIDAI's private key
+    const sig = opts?.signature ?? new Uint8Array(256).fill(0xab); // fake signature — we lack UIDAI's private key
     const all = new Uint8Array(fields.length + 32 + 256);
     all.set(fields, 0);
     all.set(digest, fields.length);
@@ -160,6 +165,63 @@ describe('Aadhaar Secure QR (v2, signed) — on-device structural decode', () =>
     expect(vBad.integrityOk).toBe(false);
     // Without UIDAI keys registered, the signature check is unavailable (null).
     expect(vGood.signatureOk).toBeNull();
+    expect(vGood.signatureStatus).toBe('unverified');
+  });
+
+  it('signature path: a current trusted key yields SIGNATURE_VERIFIED, an expired key yields UNVERIFIED', async () => {
+    // Generate a fresh RSA-2048 keypair IN THE TEST (NOT a UIDAI key — this
+    // proves the WebCrypto verify path works end-to-end, and that an expired
+    // validity window can never produce "verified").
+    const kp = await crypto.subtle.generateKey(
+      { name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
+      true,
+      ['sign', 'verify'],
+    );
+    const publicSpkiB64 = btoa(
+      String.fromCharCode(...new Uint8Array(await crypto.subtle.exportKey('spki', kp.publicKey))),
+    );
+    const publicKeyB64 = publicSpkiB64;
+
+    // Build the exact signed bytes the verifier reconstructs: fields || sha256.
+    const fields = concat(
+      new Uint8Array([2, 0]),
+      u16(0x1234),
+      str('SARAVANA KUMAR'),
+      str('01-01-1990'),
+      str('M'),
+      str('S/O MURUGAN'),
+      str('12, temple street, near bus stand, GUDALUR, GUDALUR PO, GUDALUR, THE NILGIRIS, TAMIL NADU, 643212'),
+      str('4321'),
+    );
+    const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', fields));
+    const signed = new Uint8Array(fields.length + 32);
+    signed.set(fields, 0);
+    signed.set(digest, fields.length);
+    const sig = new Uint8Array(
+      await crypto.subtle.sign('RSASSA-PKCS1-v1_5', kp.privateKey, signed),
+    );
+    const qr = await buildSecureQrString({ signature: sig });
+    const decoded = decodeAadhaar(qr);
+    expect(decoded.ok).toBe(true);
+
+    // 1) Key registered with a CURRENT validity window → VERIFIED.
+    setUidaiSpkiKeys([publicKeyB64]);
+    setUidaiKeyValidity({ [publicKeyB64]: '2099-12-31' });
+    const cur = await verifyAadhaarSecureQr(decoded);
+    expect(cur.signatureOk).toBe(true);
+    expect(cur.signatureStatus).toBe('verified');
+
+    // 2) Same key but marked EXPIRED → never verified (key rotation honesty).
+    setUidaiKeyValidity({ [publicKeyB64]: '2020-01-01' });
+    const exp = await verifyAadhaarSecureQr(decoded);
+    expect(exp.signatureStatus).toBe('unverified');
+
+    // 3) Signature corrupted → even a current key reports INVALID.
+    const badSig = new Uint8Array(sig); badSig[0] ^= 0xff;
+    const badQr = await buildSecureQrString({ signature: badSig });
+    setUidaiKeyValidity({ [publicKeyB64]: '2999-12-31' });
+    const inv = await verifyAadhaarSecureQr(decodeAadhaar(badQr));
+    expect(inv.signatureStatus).toBe('invalid');
   });
 
   it('rejects short numeric strings and non-numeric garbage', () => {

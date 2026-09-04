@@ -37,6 +37,25 @@ export const UIDAI_SPKI_KEYS: readonly string[] = [
   'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAonIsDl8t5bpwftk/A27CsfC5VZMjkPrMDwvL8gyAoVwIi0iGhmty6yWrC/VaL+Brae29XMg7dMdwnbIUHmwHxovN+FnT2vfz/O0kHQcgVdwVSIR0tFwsmC+pVKpSqm//skgYYcZQhdhLZBWOn0PZ81ymm0jOkwBSIQKkyuCTv/1HSwjTLR0EBvaH9+Vb0iaiOEv1ikHDhMOXTxx8URWBnJJt463z7LuZBMSG8fXVMDl3vqY1hDZzKbXBaK/clRIXMff0jUOvfPMfabHju+eUnceosQwL3eurq96+oHahz4FmrfBqikHe3xQ7/4NdvSvVuwth0kcsI0ptRBG8m1NglQIDAQAB',
 ];
 
+/**
+ * ISO validity window (yyyy-mm-dd) for each bundled key, keyed by its exact
+ * SPKI base64. A signature is only reported as "verified" when it matches a
+ * key whose window has NOT passed. Expired keys are retained so older cards
+ * can still be structurally decoded + integrity-checked, but they can never
+ * yield a "verified" status.
+ *
+ * ⚠️ All bundled keys are currently EXPIRED. Until UIDAI publishes a newer
+ * Offline e-KYC certificate (and it is added to UIDAI_SPKI_KEYS + this map),
+ * signatureStatus will remain "unverified" for every new card. The SHA-256
+ * integrity check — independent of these keys — keeps guarding every scan.
+ */
+export const UIDAI_KEY_VALID_UNTIL: Readonly<Record<string, string>> = {
+  // DS Unique Identification Authority of India 05 — 2026 cert, expired 2026-02-16
+  'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmMIJKj28JcTN1B72p2/pgzDCoguhs/rbIXgN/ybNNh0NVOrZV2KllrmT5VOYlMrABpvIp7JU/n6hma3/O14n7nvngJ/y3colh8rk7msDwVAO7ZuVD+GCzfaYPLLkUS+wqH7M7FOHIn/pyJo1Rkxm98lO3dyox5RuLG2Uqm7JfVIomm0t7QKJoM5rf8JNvPXdwsxN89eWlT2Bf7BF//G3FKiF7ZHfvIyyqte/3orRRG/M80QqLrDP1RIeOa53ZTgILXcyQOb2yZOqNH3iN2uSKRsusNO17To5FOb2J9Hd5wIMuDv3zw4MWTrKAWuTYon90QSeGRKv1d5AQNRt0x5dSwIDAQAB': '2026-02-16',
+  // DS UNIQUE IDENTIFICATION AUTHORITY OF INDIA 05 — 2021 cert, expired 2024-02-27
+  'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAonIsDl8t5bpwftk/A27CsfC5VZMjkPrMDwvL8gyAoVwIi0iGhmty6yWrC/VaL+Brae29XMg7dMdwnbIUHmwHxovN+FnT2vfz/O0kHQcgVdwVSIR0tFwsmC+pVKpSqm//skgYYcZQhdhLZBWOn0PZ81ymm0jOkwBSIQKkyuCTv/1HSwjTLR0EBvaH9+Vb0iaiOEv1ikHDhMOXTxx8URWBnJJt463z7LuZBMSG8fXVMDl3vqY1hDZzKbXBaK/clRIXMff0jUOvfPMfabHju+eUnceosQwL3eurq96+oHahz4FmrfBqikHe3xQ7/4NdvSvVuwth0kcsI0ptRBG8m1NglQIDAQAB': '2024-02-27',
+};
+
 let initialized = false;
 
 /**
@@ -57,8 +76,18 @@ export async function refreshUidaiKeysFromServer(): Promise<void> {
     );
     if (remoteKeys.length === 0) return;
     const merged = Array.from(new Set([...remoteKeys, ...UIDAI_SPKI_KEYS]));
-    const { setUidaiSpkiKeys } = await import('./aadhaarDecoder');
+    const { setUidaiSpkiKeys, setUidaiKeyValidity } = await import('./aadhaarDecoder');
     setUidaiSpkiKeys(merged);
+    // Preserve validity windows for remote keys where the server also sends
+    // them ({ key, validUntilISO } shape); bundled keys keep their local map.
+    const validity: Record<string, string> = { ...UIDAI_KEY_VALID_UNTIL };
+    for (const item of (payload.keys ?? [])) {
+      if (typeof item === 'object' && item && typeof (item as { key?: unknown }).key === 'string' &&
+          typeof (item as { validUntilISO?: unknown }).validUntilISO === 'string') {
+        validity[(item as { key: string }).key] = (item as { validUntilISO: string }).validUntilISO;
+      }
+    }
+    setUidaiKeyValidity(validity);
   } catch {
     /* offline / endpoint missing — bundled keys remain active */
   }
@@ -69,8 +98,9 @@ export function initUidaiVerification(): void {
   if (initialized) return;
   initialized = true;
   // Imported lazily to keep this module tree-shakeable alongside the decoder.
-  import('./aadhaarDecoder').then(({ setUidaiSpkiKeys }) => {
+  import('./aadhaarDecoder').then(({ setUidaiSpkiKeys, setUidaiKeyValidity }) => {
     setUidaiSpkiKeys([...UIDAI_SPKI_KEYS]);
+    setUidaiKeyValidity({ ...UIDAI_KEY_VALID_UNTIL });
     // Fire-and-forget overlay of any newer keys published via app_config.
     void refreshUidaiKeysFromServer();
   });
