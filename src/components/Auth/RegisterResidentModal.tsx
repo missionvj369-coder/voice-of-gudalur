@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Phone, MapPin, User, CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
+import { X, Phone, MapPin, User, CheckCircle2, Loader2, ShieldCheck, Search, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { GUDALUR_LOCALITIES } from '../../data/gudalurMasterData';
@@ -28,11 +28,51 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
   const [localityId, setLocalityId] = useState(GUDALUR_LOCALITIES[0].id);
   const [customPlaceName, setCustomPlaceName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [placeSearch, setPlaceSearch] = useState(GUDALUR_LOCALITIES[0].name);
+  const [showPlaceDropdown, setShowPlaceDropdown] = useState(false);
+  const [filteredLocalities, setFilteredLocalities] = useState(GUDALUR_LOCALITIES);
+  const placeInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const locality = useMemo(
     () => GUDALUR_LOCALITIES.find((l) => l.id === localityId) ?? GUDALUR_LOCALITIES[0],
     [localityId],
   );
+
+  // Filter localities based on search input
+  useEffect(() => {
+    if (placeSearch.trim() === '') {
+      setFilteredLocalities(GUDALUR_LOCALITIES);
+    } else {
+      const search = placeSearch.toLowerCase();
+      setFilteredLocalities(
+        GUDALUR_LOCALITIES.filter(
+          (loc) =>
+            loc.name.toLowerCase().includes(search) ||
+            loc.nameTa?.toLowerCase().includes(search) ||
+            loc.alternativeNames?.some((alt) => alt.toLowerCase().includes(search))
+        )
+      );
+    }
+  }, [placeSearch]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+          placeInputRef.current && !placeInputRef.current.contains(event.target as Node)) {
+        setShowPlaceDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelectPlace = (loc: typeof GUDALUR_LOCALITIES[0]) => {
+    setLocalityId(loc.id);
+    setPlaceSearch(loc.name);
+    setShowPlaceDropdown(false);
+  };
 
   if (!isOpen) return null;
 
@@ -149,20 +189,66 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('reg.place')} *</label>
                 <div className="relative">
-                  <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  <select
-                    value={localityId}
-                    onChange={(e) => setLocalityId(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition text-slate-900 bg-white"
+                  <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                  <input
+                    ref={placeInputRef}
+                    type="text"
+                    value={placeSearch}
+                    onChange={(e) => {
+                      setPlaceSearch(e.target.value);
+                      setShowPlaceDropdown(true);
+                    }}
+                    onFocus={() => setShowPlaceDropdown(true)}
+                    placeholder={t('reg.place_placeholder') || 'Type your area name...'}
+                    className="w-full pl-10 pr-10 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition text-slate-900 bg-white placeholder:text-slate-400"
+                    autoComplete="off"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPlaceDropdown(!showPlaceDropdown)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                   >
-                    {GUDALUR_LOCALITIES.map((loc) => (
-                      <option key={loc.id} value={loc.id}>{loc.name}</option>
-                    ))}
-                  </select>
+                    <ChevronDown size={16} className={`transition-transform ${showPlaceDropdown ? 'rotate-180' : ''}`} />
+                  </button>
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1.5">
-                  {t('reg.pincode').replace('{n}', locality.pincode || '')}
+                  {t('reg.pincode').replace('{n}', locality.pincode || '')} · {filteredLocalities.length} areas
                 </p>
+                
+                {/* Searchable Dropdown */}
+                <AnimatePresence>
+                  {showPlaceDropdown && (
+                    <motion.div
+                      ref={dropdownRef}
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg"
+                    >
+                      {filteredLocalities.length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-slate-500 text-center">
+                          <Search size={16} className="inline mr-2" />
+                          {t('reg.no_areas') || 'No areas found. Type to search...'}
+                        </div>
+                      ) : (
+                        filteredLocalities.slice(0, 50).map((loc) => (
+                          <button
+                            key={loc.id}
+                            type="button"
+                            onClick={() => handleSelectPlace(loc)}
+                            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-emerald-50 transition flex items-center gap-2 ${
+                              localityId === loc.id ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-700'
+                            }`}
+                          >
+                            <MapPin size={14} className="text-slate-400 flex-shrink-0" />
+                            <span className="truncate">{loc.name}</span>
+                            <span className="text-[10px] text-slate-400 ml-auto">{loc.pincode}</span>
+                          </button>
+                        ))
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               <div>
