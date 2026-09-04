@@ -11,7 +11,7 @@ interface AuthContextType {
   loading: boolean;
   userCoords: { lat: number; lng: number } | null;
   acquireLiveLocation: () => Promise<{ lat: number; lng: number } | null>;
-  registerResident: (data: {
+    registerResident: (data: {
     name: string;
     phone: string;
     localityId: string;
@@ -20,11 +20,10 @@ interface AuthContextType {
     pincode: string;
     lat?: number;
     lng?: number;
-    aadhaarVerified?: boolean;
-    aadhaarLast4?: string;
-    aadhaarRef?: string;
   }) => Promise<UserProfile>;
   loginResident: (phone?: string, gudalurId?: string) => Promise<UserProfile>;
+  requestOtp: (phone: string) => Promise<{ message: string; otp?: string }>;
+  verifyOtp: (phone: string, code: string) => Promise<{ isNew: boolean; user?: UserProfile }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateLocality: (localityId: string, customPlaceName?: string, pincode?: string) => Promise<void>;
@@ -47,10 +46,16 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   userCoords: null,
   acquireLiveLocation: async () => null,
-  registerResident: async () => {
+    registerResident: async () => {
     throw new Error('Not implemented');
   },
   loginResident: async () => {
+    throw new Error('Not implemented');
+  },
+  requestOtp: async () => {
+    throw new Error('Not implemented');
+  },
+  verifyOtp: async () => {
     throw new Error('Not implemented');
   },
   logout: async () => {},
@@ -87,9 +92,6 @@ function toUserProfile(r: any): UserProfile {
     bio: r.bio || undefined,
     lat: r.lat || undefined,
     lng: r.lng || undefined,
-    aadhaarVerified: r.aadhaarVerified || undefined,
-    aadhaarLast4: r.aadhaarLast4 || undefined,
-    aadhaarRef: r.aadhaarRef || undefined,
     createdAt: r.createdAt ? new Date(r.createdAt).getTime() : Date.now(),
     updatedAt: r.updatedAt ? new Date(r.updatedAt).getTime() : Date.now(),
     issuesReported: r.issuesReported || 0,
@@ -114,8 +116,6 @@ function toAuthUser(p: UserProfile): AuthUser {
     customPlaceName: p.customPlaceName,
     pincode: p.pincode,
     email: p.email,
-    aadhaarVerified: p.aadhaarVerified,
-    aadhaarLast4: p.aadhaarLast4,
   };
 }
 
@@ -234,9 +234,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         customPlaceName: data.customPlaceName,
         pincode: data.pincode.trim() || loc?.pincode || '643212',
         email: data.email,
-        aadhaarVerified: data.aadhaarVerified,
-        aadhaarLast4: data.aadhaarLast4,
-        aadhaarRef: data.aadhaarRef,
         lat: data.lat ?? userCoords?.lat ?? loc?.lat,
         lng: data.lng ?? userCoords?.lng ?? loc?.lng,
       });
@@ -268,9 +265,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           bloodGroup: undefined,
           lat: data.lat || userCoords?.lat || loc?.lat,
           lng: data.lng || userCoords?.lng || loc?.lng,
-          aadhaarVerified: data.aadhaarVerified || false,
-          aadhaarLast4: data.aadhaarLast4,
-          aadhaarRef: data.aadhaarRef,
           createdAt: Date.now(),
           updatedAt: Date.now(),
           issuesReported: 0,
@@ -314,6 +308,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       throw new Error('No resident found for these details. Check your mobile number / Gudalur ID, or register first.');
     }
+    };
+
+  const requestOtp = async (phone: string): Promise<{ message: string; otp?: string }> => {
+    const normalized = normalizePhone(phone);
+    if (normalized.length !== 10) {
+      throw new Error('A valid 10-digit mobile number is required');
+    }
+    const res = await authApi.requestOtp({ phone: normalized });
+    if (!res) throw new Error('Failed to send OTP');
+    return res;
+  };
+
+  const verifyOtp = async (phone: string, code: string): Promise<{ isNew: boolean; user?: UserProfile }> => {
+    const normalized = normalizePhone(phone);
+    const res = await authApi.verifyOtp({ phone: normalized, code });
+    if (!res) throw new Error('OTP verification failed');
+    if (!res.isNew && res.user) {
+      const prof = applyPlatformAdminOverride(toUserProfile(res.user));
+      persistProfile(prof);
+      setUser(toAuthUser(prof));
+      return { isNew: false, user: prof };
+    }
+    return { isNew: true };
   };
 
   const updateLocality = async (localityId: string, customPlaceName?: string, pincode?: string) => {
@@ -417,6 +434,8 @@ return (
       acquireLiveLocation,
       registerResident,
       loginResident,
+      requestOtp,
+      verifyOtp,
       logout,
       refreshProfile,
       updateLocality,

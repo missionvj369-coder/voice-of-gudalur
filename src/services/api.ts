@@ -57,8 +57,6 @@ export interface AuthUser {
   verificationLevel?: string;
   localityName?: string;
   kind?: 'user' | 'official';
-  aadhaarVerified?: boolean;
-  aadhaarLast4?: string;
   email?: string;
   pincode?: string;
   localityId?: string;
@@ -66,11 +64,24 @@ export interface AuthUser {
 }
 
 export const authApi = {
+  /** POST /api/auth/request-otp - send a 6-digit code to a phone number. */
+  requestOtp: (input: { phone: string }) =>
+    request<{ message: string; otp?: string }>('/api/auth/request-otp', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  /** POST /api/auth/verify-otp - validate OTP, returns user (login) or isNew + phone (new registration). */
+  verifyOtp: (input: { phone: string; code: string }) =>
+    request<{ user?: AuthUser; isNew: boolean; phone: string; csrfToken?: string }>('/api/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
   /** POST /api/auth/register — create a resident (issues a Gudalur ID + session). */
   register: (input: {
     name: string; phone: string; localityId: string; customPlaceName?: string;
-    pincode: string; email?: string; aadhaarVerified?: boolean; aadhaarLast4?: string;
-    aadhaarRef?: string; lat?: number; lng?: number;
+    pincode: string; email?: string; lat?: number; lng?: number;
   }) =>
     request<{ resident: AuthUser }>('/api/auth/register', {
       method: 'POST',
@@ -153,14 +164,7 @@ export const authApi = {
       body: JSON.stringify(input),
     }),
 
-  /** POST /api/auth/verify-otp — validate OTP and establish the session (cookies). */
-  verifyOtp: (input: { phone: string; code: string; purpose?: string }) =>
-    request<{ user: AuthUser; csrfToken: string }>('/api/auth/verify-otp', {
-      method: 'POST',
-      body: JSON.stringify(input),
-    }),
-
-  /** PATCH /api/auth/me — update the authenticated resident's profile. */
+    /** PATCH /api/auth/me — update the authenticated resident's profile. */
   updateProfile: (input: Record<string, unknown>) =>
     request<{ user: AuthUser }>('/api/auth/me', {
       method: 'PATCH',
@@ -335,7 +339,6 @@ export const officialsApi = {
 // ─────────────────────────────────────────────────────────────
 
 export const configApi = {
-  uidaiKeys: () => request<{ keys: unknown[] }>('/api/config/uidai-keys'),
   localities: () => request<{ localities: Array<Record<string, unknown>> }>('/api/config/localities'),
 };
 

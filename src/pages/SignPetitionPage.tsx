@@ -14,19 +14,13 @@ export const SignPetitionPage: React.FC = () => {
   } | null>(null);
   const [showRegister, setShowRegister] = useState(false);
 
-  const handleSign = useCallback(async () => {
+    const handleSign = useCallback(async () => {
     if (!profile) {
       setShowRegister(true);
       return;
     }
-    if (!profile.aadhaarVerified || !profile.aadhaarLast4) {
-      toast.error("Your account must be Aadhaar-verified before signing.");
-      return;
-    }
     setBusy(true);
     try {
-      // The server derives identity, Aadhaar metadata, hash and batch from the
-      // authenticated session — the client sends nothing sensitive.
       const res = await petitionApi.sign({
         idempotencyKey: `petition-sign-${profile.uid}`,
       });
@@ -54,7 +48,7 @@ export const SignPetitionPage: React.FC = () => {
       `📜 *Voice of Gudalur — Verified Signature*\n\n` +
       `I have digitally signed the Right to Life / Mudhalvan Mugavari Grievance Petition.\n\n` +
       `🔎 Verify my verified sign here:\n${result.verifyUrl}\n\n` +
-      `Batch #${result.batchNo} · Verified Aadhaar`;
+            `Batch #${result.batchNo} · Verified Resident`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
   }, [result]);
 
@@ -79,28 +73,22 @@ export const SignPetitionPage: React.FC = () => {
         </p>
       </div>
 
-      {!profile && (
+            {!profile && (
         <div className="rounded-2xl bg-white border border-slate-200 p-6 text-center space-y-4">
           <div className="text-4xl">🪪</div>
           <p className="text-sm text-slate-600">
-            You must register with your <strong>scanned Aadhaar</strong> (get a GDR ID) before signing.
+            You must register (get a GDR ID) before signing.
           </p>
           <button
             onClick={() => setShowRegister(true)}
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-lg"
           >
-            Scan Aadhaar &amp; Register (1 step)
+            Register &amp; Get GDR ID
           </button>
         </div>
       )}
 
-      {profile && !profile.aadhaarVerified && (
-        <div className="rounded-2xl bg-red-50 border border-red-200 p-4 text-sm text-red-700">
-          This account is not Aadhaar-verified. Please complete verification before signing.
-        </div>
-      )}
-
-      {profile?.aadhaarVerified && (
+      {profile && (
         <div className="rounded-2xl bg-white border border-slate-200 p-6 space-y-4">
           <div className="text-sm space-y-2">
             <div className="flex justify-between">
@@ -110,10 +98,6 @@ export const SignPetitionPage: React.FC = () => {
             <div className="flex justify-between">
               <span className="text-slate-400">GDR ID</span>
               <span className="font-bold">{profile.gudalurId}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-400">Verified Aadhaar</span>
-              <span className="font-bold tracking-widest">•••• {profile.aadhaarLast4}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">Location</span>
@@ -154,7 +138,7 @@ export const SignPetitionPage: React.FC = () => {
         </div>
       )}
 
-      <RegisterResidentModal open={showRegister} onClose={() => setShowRegister(false)} />
+      <RegisterResidentModal isOpen={showRegister} onClose={() => setShowRegister(false)} />
     </div>
   );
 };

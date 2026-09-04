@@ -1,13 +1,15 @@
 /**
  * Voice of Gudalur - Session & authentication service.
  *
- * Replaces Supabase Auth. Residents authenticate passwordless via Aadhaar
- * QR-scan (on-device, privacy-first): the scan IS the proof, so registration
- * and login establish a server session immediately - no OTP step.
+ * Replaces Supabase Auth. Residents authenticate passwordless via OTP to
+ * their mobile phone. Registration is a two-step flow:
+ *   1. POST /api/auth/request-otp  — code sent to phone (6 digits, 5 min)
+ *   2. POST /api/auth/verify-otp   — code validated, session issued
+ *   3. GET  /api/auth/register     — resident completes profile (name, locality, pincode)
  *
- * Officials authenticate via email + password. A govt official requests
- * access by email; the master admin approves from the backend. Once approved
- * the official sets a password and signs in - no OTP step.
+ * Officials authenticate via email + OTP (not password). A govt official
+ * requests access by email; the master admin approves from the backend.
+ * Once approved the official requests an OTP, then sets a password.
  */
 import crypto from 'crypto';
 import { db } from '../db/client';
@@ -44,9 +46,6 @@ function rowToResident(row) {
     isBloodDonor: row.is_blood_donor ?? false, bloodGroup: row.blood_group ?? undefined,
     avatarUrl: row.avatar_url ?? undefined, bio: row.bio ?? undefined,
     lat: row.lat ?? undefined, lng: row.lng ?? undefined,
-    aadhaarVerified: row.aadhaar_verified ?? false,
-    aadhaarLast4: row.aadhaar_last4 ?? undefined,
-    aadhaarRef: row.aadhaar_ref ?? undefined,
     createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
     updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : Date.now(),
   };
@@ -55,8 +54,7 @@ function rowToResident(row) {
 async function findUserByPhone(phone) {
   return db.queryOne(
     `SELECT uid, phone, gudalur_id, name, email, locality_id, locality_name,
-            custom_place_name, pincode, role, verification_level, aadhaar_verified,
-            aadhaar_last4, aadhaar_ref, lat, lng, created_at, updated_at,
+            custom_place_name, pincode, role, verification_level, lat, lng, created_at, updated_at,
             is_blood_donor, blood_group, avatar_url, bio
        FROM users WHERE phone = $1`,
     [phone],
@@ -66,8 +64,7 @@ async function findUserByPhone(phone) {
 async function findUserByGudalurId(gudalurId) {
   return db.queryOne(
     `SELECT uid, phone, gudalur_id, name, email, locality_id, locality_name,
-            custom_place_name, pincode, role, verification_level, aadhaar_verified,
-            aadhaar_last4, aadhaar_ref, lat, lng, created_at, updated_at,
+            custom_place_name, pincode, role, verification_level, lat, lng, created_at, updated_at,
             is_blood_donor, blood_group, avatar_url, bio
        FROM users WHERE gudalur_id = $1`,
     [gudalurId],
@@ -80,19 +77,13 @@ export interface ResidentProfile {
   pincode?: string; role: string; verificationLevel: string;
   isBloodDonor?: boolean; bloodGroup?: string;
   avatarUrl?: string; bio?: string; lat?: number; lng?: number;
-  aadhaarVerified?: boolean; aadhaarLast4?: string; aadhaarRef?: string;
   createdAt: number; updatedAt: number;
 }
 
-export interface RegisterInput {
-  name: string; phone: string; localityId: string; customPlaceName?: string;
-  pincode: string; email?: string; aadhaarVerified?: boolean;
-  aadhaarLast4?: string; aadhaarRef?: string; lat?: number; lng?: number;
-}
-
-export async function registerResident(input) {
+export async function registerResident(input: RegisterInput) {
   const phone = normalizePhone(input.phone);
   if (phone.length !== 10) throw new Error('A valid 10-digit mobile number is required');
+  if (!input.name.trim()) throw new Error('Name is required');
 
   const uid = crypto.randomUUID();
   const gudalurId = await allocateGudalurId();
@@ -102,14 +93,12 @@ export async function registerResident(input) {
     await tx.query(
       `INSERT INTO users (uid, phone, gudalur_id, name, email, locality_id, locality_name,
          custom_place_name, pincode, role, verification_level, is_blood_donor,
-         blood_group, lat, lng, aadhaar_verified, aadhaar_last4, aadhaar_ref)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'LOCAL_MEMBER',
-               CASE WHEN $14 THEN 'AADHAAR_VERIFIED' ELSE 'UNVERIFIED' END,
-               $10,$11,$12,$13,$14,$15)`,
+         blood_group, lat, lng)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'LOCAL_MEMBER','PHONE_VERIFIED',
+               $10,$11,$12,$13)`,
       [uid, phone, gudalurId, input.name.trim(), input.email?.trim(),
        input.localityId, localityName, input.customPlaceName?.trim() || undefined,
-       input.pincode, false, undefined, input.lat, input.lng,
-       input.aadhaarVerified || false, input.aadhaarLast4, input.aadhaarRef],
+       input.pincode, false, undefined, input.lat, input.lng],
     );
   });
 
@@ -120,8 +109,7 @@ export async function registerResident(input) {
     resident: {
       uid, phone, gudalurId, name: input.name.trim(), email: input.email, localityId: input.localityId,
       localityName, customPlaceName: input.customPlaceName, pincode: input.pincode, role: 'LOCAL_MEMBER',
-      verificationLevel: input.aadhaarVerified ? 'AADHAAR_VERIFIED' : 'UNVERIFIED',
-      aadhaarVerified: input.aadhaarVerified, aadhaarLast4: input.aadhaarLast4, aadhaarRef: input.aadhaarRef,
+      verificationLevel: 'PHONE_VERIFIED',
       lat: input.lat, lng: input.lng, createdAt: Date.now(), updatedAt: Date.now(),
     },
     session,
@@ -139,7 +127,12 @@ export async function loginResident(phone, gudalurId) {
   return { resident: rowToResident(row), session };
 }
 
-export function normalizePhone(phone) {
+export interface RegisterInput {
+  name: string; phone: string; localityId: string; customPlaceName?: string;
+  pincode: string; email?: string; lat?: number; lng?: number;
+}
+
+export function normalizePhone(phone: string) {
   const digits = phone.replace(/\D/g, '');
   return digits.startsWith('91') && digits.length === 12 ? digits.slice(2) : digits;
 }

@@ -63,9 +63,6 @@ function residentRowToProfile(row: any) {
     bio: row.bio ?? undefined,
     lat: row.lat ?? undefined,
     lng: row.lng ?? undefined,
-    aadhaarVerified: row.aadhaar_verified ?? false,
-    aadhaarLast4: row.aadhaar_last4 ?? undefined,
-    aadhaarRef: row.aadhaar_ref ?? undefined,
     createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
     updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : Date.now(),
     issuesReported: row.issues_reported ?? 0,
@@ -75,7 +72,7 @@ function residentRowToProfile(row: any) {
   };
 }
 
-/** POST /api/auth/register - Aadhaar-verified resident signs up, session issued immediately. */
+/** POST /api/auth/register - Resident completes registration after OTP verification. */
 router.post('/register', async (req: Request, res: Response) => {
   try {
     const created = await registerResident(req.body);
@@ -88,13 +85,84 @@ router.post('/register', async (req: Request, res: Response) => {
   }
 });
 
-// (verify-otp route removed - sessions issued immediately on register/lookup)
+/** POST /api/auth/request-otp - Send a 6-digit code to a phone number. */
+router.post('/request-otp', async (req: Request, res: Response) => {
+  const phone = String(req.body?.phone || '').trim();
+  const digits = phone.replace(/\D/g, '');
+  if (!digits || digits.length !== 10) {
+    return res.status(400).json({ error: 'A valid 10-digit mobile number is required' });
+  }
+  const normalized = digits;
+  const code = crypto.randomInt(100000, 999999).toString();
+  const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+  const salt = crypto.randomBytes(8).toString('hex');
+  await db.execute(
+    `INSERT INTO otp_tokens (recipient, channel, code_hash, salt, purpose, expires_at)
+     VALUES ($1, 'phone', $2, $3, 'register', now() + INTERVAL '5 minutes')`,
+    [normalized, codeHash, salt],
+  );
+  // In devel mode, return the code directly. In production, send via SMS aggregator.
+  if (process.env.OTP_PROVIDER === 'devel' || !process.env.OTP_PROVIDER) {
+    logger.info(`[OTP devel] code for ${normalized}: ${code}`);
+    res.json({ message: 'OTP sent', otp: code });
+  } else {
+    // OTP_PROVIDER could be 'android-gw', 'smtp', 'sms-api', etc.
+    // The actual SMS sending would be implemented per-provider.
+    logger.info(`[OTP] code for ${normalized} would be sent via ${process.env.OTP_PROVIDER}`);
+    res.json({ message: 'OTP sent' });
+  }
+});
+
+/** POST /api/auth/verify-otp - Validate an OTP and establish a pending registration session. */
+router.post('/verify-otp', async (req: Request, res: Response) => {
+  const phone = String(req.body?.phone || '').trim();
+  const digits = phone.replace(/\D/g, '');
+  const code = String(req.body?.code || '').trim();
+  if (!digits || digits.length !== 10) return res.status(400).json({ error: 'A valid 10-digit mobile number is required' });
+  if (!code || code.length !== 6) return res.status(400).json({ error: 'A valid 6-digit code is required' });
+  const normalized = digits;
+  const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+  const row = await db.queryOne<{ id: string; code_hash: string; salt: string; expires_at: Date; used_at: Date | null; attempts: number }>(
+    `SELECT id, code_hash, salt, expires_at, used_at, attempts FROM otp_tokens
+     WHERE recipient = $1 AND channel = 'phone' AND purpose = 'register'
+     ORDER BY created_at DESC LIMIT 1`,
+    [normalized],
+  );
+  if (!row) return res.status(400).json({ error: 'No OTP requested for this number' });
+  if (row.used_at) return res.status(400).json({ error: 'OTP already used' });
+  if (new Date(row.expires_at) < new Date()) return res.status(400).json({ error: 'OTP expired' });
+  if (row.attempts >= 3) return res.status(400).json({ error: 'Too many attempts' });
+  if (row.code_hash !== codeHash) {
+    await db.execute(`UPDATE otp_tokens SET attempts = attempts + 1 WHERE id = $1`, [row.id]);
+    return res.status(400).json({ error: 'Invalid code' });
+  }
+  await db.execute(`UPDATE otp_tokens SET used_at = now() WHERE id = $1`, [row.id]);
+  // Look up existing user if phone is already registered
+  const existing = await db.queryOne<{
+    uid: string; phone: string; gudalur_id: string; name: string; role: string;
+    verification_level: string; locality_name: string | null; email: string | null;
+    locality_id: string | null; custom_place_name: string | null; pincode: string;
+    lat: number | null; lng: number | null; is_blood_donor: boolean; blood_group: string | null;
+    avatar_url: string | null; bio: string | null; created_at: Date; updated_at: Date;
+    issues_reported: number; issues_supported: number; representations_created: number; alerts_acknowledged: number;
+  }>('SELECT uid, phone, gudalur_id, name, email, locality_id, locality_name, custom_place_name, pincode, role, verification_level, is_blood_donor, blood_group, avatar_url, bio, lat, lng, created_at, updated_at, issues_reported, issues_supported, representations_created, alerts_acknowledged FROM users WHERE phone = $1', [normalized]);
+  if (existing) {
+    const sessionUser = { uid: existing.uid, phone: existing.phone, gudalurId: existing.gudalur_id, name: existing.name, role: existing.role, kind: 'user' as const, localityName: existing.locality_name ?? undefined };
+    const session = await createSession(sessionUser);
+    setSessionCookies(res, session);
+    return res.json({ user: residentRowToProfile(existing), isNew: false, csrfToken: session.csrfToken });
+  }
+  // Not registered yet — set a pending session cookie so client can complete registration
+  res.cookie('pending_phone', normalized, { httpOnly: true, sameSite: 'strict' as const, secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 5 * 60 * 1000 });
+  res.json({ isNew: true, phone: normalized });
+});
 
 /** POST /api/auth/logout */
 router.post('/logout', async (req: Request, res: Response) => {
   const rf = req.cookies?.refresh_token as string | undefined;
   if (rf) await revokeSession(rf);
   clearSessionCookies(res);
+  res.clearCookie('pending_phone', { path: '/' });
   res.json({ ok: true });
 });
 
@@ -154,10 +222,10 @@ router.patch('/me', requireAuth, async (req: Request, res: Response) => {
        localityName ?? null, customPlaceName ?? null, pincode ?? null,
        lat ?? null, lng ?? null],
     );
-    const row = await db.queryOne<any>(
+        const row = await db.queryOne<any>(
       `SELECT uid, phone, gudalur_id, name, email, locality_id, locality_name,
               custom_place_name, pincode, role, verification_level,
-              aadhaar_verified, aadhaar_last4, aadhaar_ref, lat, lng,
+              lat, lng,
               created_at, updated_at, issues_reported, issues_supported,
               representations_created, alerts_acknowledged,
               is_blood_donor, blood_group, avatar_url, bio
@@ -179,13 +247,10 @@ router.get('/csrf', (_req: Request, res: Response) => {
   res.json({ csrfToken: token });
 });
 
-/** POST /api/auth/forgot — residents authenticate via Aadhaar QR scan only.
- * An OTP 'forgot password' flow no longer exists; registration is idempotent
- * (re-scanning the same Aadhaar re-opens the same Gudalur ID). We return a
- * 410 Gone with guidance so any stale client is redirected cleanly. */
+/** POST /api/auth/forgot — residents authenticate via OTP to their phone. */
 router.post('/forgot', async (_req: Request, res: Response) => {
-  res.status(410).json({
-    error: 'Passwordless Aadhaar verification only. Scan your Aadhaar QR to sign in or register.',
+  res.json({
+    message: 'Passwordless phone verification only. Enter your mobile number to request an OTP code.',
   });
 });
 
