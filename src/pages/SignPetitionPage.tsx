@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { petitionApi } from "../services/api";
 import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal";
-import { BarChart3, Download, PenLine } from "lucide-react";
+import { ThirukuralSection } from "../components/ThirukuralSection";
+import { BarChart3, Download, PenLine, FileText, Eye } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface PlaceCount {
@@ -253,6 +255,27 @@ export const SignPetitionPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Action Buttons */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+        <Link
+          to="/sign-petition"
+          className="flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
+        >
+          <PenLine size={18} />
+          {t("home.sign_petition_btn") || "Sign the Petition"}
+        </Link>
+        <Link
+          to="/about"
+          className="flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-white border-2 border-emerald-600 text-emerald-700 font-bold text-sm shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
+        >
+          <Eye size={18} />
+          {t("home.view_grievances_btn") || "View Grievances Submitted"}
+        </Link>
+      </div>
+
+      {/* Thirukural Section */}
+      <ThirukuralSection />
 
       <RegisterResidentModal isOpen={showRegister} onClose={() => setShowRegister(false)} />
     </div>

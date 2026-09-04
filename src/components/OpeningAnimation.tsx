@@ -28,7 +28,9 @@ const T = {
   rebootEnd: 5.6,
   lanesEnd: 8.8,
   brandStart: 8.8,
-  end: 10.4,
+  kuralStart: 10.4,
+  kuralEnd: 18.0,
+  end: 19.5,
 };
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -514,6 +516,116 @@ function drawLanes(
   ctx.fillText('Dedicated lanes · Safe passage · Coexistence', W / 2, H * 0.075 + Math.min(W * 0.045, 34) * 0.85 + 10);
 }
 
+/** Thirukural phase — white clouds, green text, magic animation. */
+function drawKural(ctx: CanvasRenderingContext2D, W: number, H: number, t: number, clouds: Cloud[]) {
+  // White cloud background
+  ctx.fillStyle = 'rgba(255,255,255,0.98)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw animated clouds
+  for (const c of clouds) {
+    drawCloud(ctx, c, `rgba(255,255,255,${c.a})`);
+  }
+
+  const kuralProgress = clamp01((t - T.kuralStart) / 1.5);
+  const textFade = clamp01((t - T.kuralStart - 0.5) / 1.0);
+
+  // Green gradient overlay at top and bottom
+  const gradTop = ctx.createLinearGradient(0, 0, 0, H * 0.15);
+  gradTop.addColorStop(0, 'rgba(240,248,240,0.9)');
+  gradTop.addColorStop(1, 'rgba(240,248,240,0)');
+  ctx.fillStyle = gradTop;
+  ctx.fillRect(0, 0, W, H * 0.15);
+
+  const gradBottom = ctx.createLinearGradient(0, H * 0.85, 0, H);
+  gradBottom.addColorStop(0, 'rgba(240,248,240,0)');
+  gradBottom.addColorStop(1, 'rgba(240,248,240,0.9)');
+  ctx.fillStyle = gradBottom;
+  ctx.fillRect(0, H * 0.85, W, H * 0.15);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Kural number badge
+  const badgeA = clamp01((t - T.kuralStart) / 0.8);
+  ctx.fillStyle = `rgba(27,94,32,${badgeA * 0.1})`;
+  roundRectPath(ctx, W / 2 - 60, H * 0.08, 120, 36, 18);
+  ctx.fill();
+  ctx.fillStyle = `rgba(27,94,32,${badgeA})`;
+  ctx.font = `700 ${Math.min(W * 0.022, 14)}px 'Segoe UI', system-ui, sans-serif`;
+  ctx.fillText('திருக்குறள் #228', W / 2, H * 0.08 + 18);
+
+  // Chapter title
+  const chapterA = clamp01((t - T.kuralStart - 0.3) / 0.8);
+  ctx.fillStyle = `rgba(46,125,50,${chapterA})`;
+  ctx.font = `700 ${Math.min(W * 0.032, 22)}px 'Segoe UI', system-ui, sans-serif`;
+  ctx.fillText('கைம்மாறு வேண்டா கடப்பாடு', W / 2, H * 0.18);
+
+  // Main kural text with magic effect
+  const kuralText = 'கைம்மாறு வேண்டா கடப்பாடு மாரிமாட்டு என்னாற்றும் கொல்லோ உலகு.';
+  const chars = kuralText.split('');
+  const charDelay = 0.05;
+  const startY = H * 0.30;
+  ctx.font = `800 ${Math.min(W * 0.038, 28)}px 'Segoe UI', system-ui, sans-serif`;
+
+  // Draw each character with staggered animation
+  let xPos = W * 0.1;
+  chars.forEach((char, i) => {
+    const charA = clamp01((t - T.kuralStart - 0.8 - i * charDelay) / 0.3);
+    if (charA > 0) {
+      const yOffset = (1 - charA) * 20;
+      ctx.fillStyle = `rgba(27,94,32,${charA})`;
+      // Add glow effect
+      ctx.shadowColor = `rgba(76,175,80,${charA * 0.6})`;
+      ctx.shadowBlur = 15 * charA;
+      ctx.fillText(char, xPos, startY + yOffset);
+      ctx.shadowBlur = 0;
+      xPos += ctx.measureText(char).width + 2;
+    }
+  });
+
+  // Meaning in multiple languages
+  const meaningA = clamp01((t - T.kuralStart - 2.5) / 1.0);
+  ctx.fillStyle = `rgba(46,125,50,${meaningA * 0.9})`;
+  ctx.font = `500 ${Math.min(W * 0.022, 15)}px 'Segoe UI', system-ui, sans-serif`;
+
+  const meanings = [
+    'Like the rain cloud that asks for nothing in return,',
+    'true service is done for society without expecting reward.',
+    '',
+    'பருவம் பெய்யும் மேகம் எந்த ஈடுமாற்றும் எதிபார்க்காமல் மழை பெய்கிறது;',
+    'உண்மையான சமூக சேவை பரிகாரம் எதிபார்க்காமல் செய்ய வேண்டும்.',
+  ];
+
+  meanings.forEach((line, i) => {
+    if (line) {
+      ctx.fillText(line, W / 2, H * 0.50 + i * (Math.min(W * 0.03, 20)));
+    }
+  });
+
+  // Footer quote
+  const footerA = clamp01((t - T.kuralStart - 4.5) / 1.2);
+  ctx.fillStyle = `rgba(27,94,32,${footerA})`;
+  ctx.font = `700 ${Math.min(W * 0.026, 18)}px 'Segoe UI', system-ui, sans-serif`;
+  ctx.fillText('இந்த மண் எங்களுக்கு என்ன செய்தது என்று கேட்காதே...', W / 2, H * 0.72);
+  ctx.fillText('இந்த மண்ணுக்காக நாம் என்ன செய்தோம் என்று கேள்.', W / 2, H * 0.72 + Math.min(W * 0.03, 22));
+
+  // English translation of footer
+  ctx.fillStyle = `rgba(46,125,50,${footerA * 0.8})`;
+  ctx.font = `500 ${Math.min(W * 0.02, 13)}px 'Segoe UI', system-ui, sans-serif`;
+  ctx.fillText('"Don\'t ask what this land has done for us...', W / 2, H * 0.82);
+  ctx.fillText('Ask what we have done for this land."', W / 2, H * 0.82 + Math.min(W * 0.025, 18));
+
+  // Loading indicator
+  const loadA = clamp01((t - T.kuralStart - 6.0) / 0.5);
+  if (loadA > 0) {
+    ctx.fillStyle = `rgba(27,94,32,${loadA * 0.6})`;
+    ctx.font = `500 ${Math.min(W * 0.02, 13)}px 'Segoe UI', system-ui, sans-serif`;
+    const dots = '.'.repeat(1 + (Math.floor(t * 2) % 3));
+    ctx.fillText(`Loading Voice of Gudalur${dots}`, W / 2, H * 0.92);
+  }
+}
+
 /** Brand reveal — deep green, flame mark, tagline, then fade into the site. */
 function drawBrand(ctx: CanvasRenderingContext2D, W: number, H: number, t: number) {
   ctx.fillStyle = '#052e16';
@@ -616,7 +728,8 @@ export const OpeningAnimation: React.FC<{ onFinish: () => void }> = ({ onFinish 
       if (t < T.failureEnd) drawPhase1(ctx, w, h, t, clouds);
       else if (t < T.rebootEnd) drawReboot(ctx, w, h, t);
       else if (t < T.lanesEnd) drawLanes(ctx, w, h, t, clouds);
-      else drawBrand(ctx, w, h, t);
+      else if (t < T.kuralStart) drawBrand(ctx, w, h, t);
+      else drawKural(ctx, w, h, t, clouds);
       ctx.restore();
 
       if (t >= T.end) {

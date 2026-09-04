@@ -119,7 +119,7 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Your full name"
                     maxLength={80}
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition text-slate-900 bg-white placeholder:text-slate-400"
                   />
                 </div>
               </div>
@@ -135,7 +135,7 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                     placeholder="10-digit mobile number"
                     maxLength={10}
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition font-mono"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition font-mono text-slate-900 bg-white placeholder:text-slate-400"
                   />
                 </div>
               </div>
@@ -147,7 +147,7 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
                   <select
                     value={localityId}
                     onChange={(e) => setLocalityId(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition bg-white"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition text-slate-900 bg-white"
                   >
                     {GUDALUR_LOCALITIES.map((loc) => (
                       <option key={loc.id} value={loc.id}>{loc.name}</option>
@@ -167,7 +167,7 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
                   onChange={(e) => setCustomPlaceName(e.target.value)}
                   placeholder="e.g. Glenrock Division 2"
                   maxLength={100}
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-xs outline-none transition"
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-xs outline-none transition text-slate-900 bg-white placeholder:text-slate-400"
                 />
               </div>
 

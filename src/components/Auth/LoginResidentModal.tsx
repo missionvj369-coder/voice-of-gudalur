@@ -116,7 +116,7 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="10-digit mobile number"
                     maxLength={14}
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition font-mono"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition font-mono text-slate-900 bg-white placeholder:text-slate-400"
                   />
                 </div>
               </div>
@@ -132,7 +132,7 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
                     value={gudalurId}
                     onChange={(e) => setGudalurId(e.target.value)}
                     placeholder="GDR000000"
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition font-mono uppercase"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition font-mono uppercase text-slate-900 bg-white placeholder:text-slate-400"
                   />
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1.5">
