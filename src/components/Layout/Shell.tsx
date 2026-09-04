@@ -5,8 +5,9 @@ import { useLanguage, type Language } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import {
   Flame, User, LogIn, LogOut, Menu, X, PenLine, BookOpen,
-  Map as MapIcon, PawPrint, ShieldCheck, IdCard, UserPlus,
+  Map as MapIcon, PawPrint, ShieldCheck, IdCard, UserPlus, RotateCcw,
 } from 'lucide-react';
+import { INTRO_SEEN_KEY } from '../OpeningAnimation';
 import { GudalurIdModal } from '../GudalurIdModal';
 
 import { LoginResidentModal } from '../Auth/LoginResidentModal';
@@ -207,6 +208,16 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     </span>
                   </div>
                   <DrawerLink to="/officials" icon={<ShieldCheck size={16} />} label="Officials Portal" onNavigate={() => setMenuOpen(false)} />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try { sessionStorage.removeItem(INTRO_SEEN_KEY); } catch { /* ignore */ }
+                      window.location.reload();
+                    }}
+                    className="flex w-full items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-[#F5F5F5]/85 hover:text-[#F5F5F5] hover:bg-[#388E3C]/40 transition"
+                  >
+                    <RotateCcw size={16} /> Replay Opening
+                  </button>
                 </nav>
 
                 <div className="border-t border-[#AED581]/20 px-3 py-4 space-y-3 shrink-0">

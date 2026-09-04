@@ -1,9 +1,10 @@
-﻿import React, { lazy, Suspense } from 'react';
+﻿import React, { lazy, Suspense, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { Shell } from './components/Layout/Shell';
+import { OpeningAnimation, INTRO_SEEN_KEY } from './components/OpeningAnimation';
 
 // Route-level code splitting — every page downloads only when first visited.
 const SignPetitionPage = lazy(() => import('./pages/SignPetitionPage').then((m) => ({ default: m.SignPetitionPage })));
@@ -53,6 +54,15 @@ const SightingsSoonPage: React.FC = () => (
 
 const AppContent: React.FC = () => {
   const { loading } = useAuth();
+  // The opening animation plays once per session (skipped for reduced-motion users).
+  const [introDone, setIntroDone] = useState<boolean>(() => {
+    try {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+      return sessionStorage.getItem(INTRO_SEEN_KEY) === '1';
+    } catch {
+      return true;
+    }
+  });
 
   if (loading) {
     return (
@@ -63,7 +73,9 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <Shell>
+    <>
+      {!introDone && <OpeningAnimation onFinish={() => setIntroDone(true)} />}
+      <Shell>
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           {/* Clean homepage — the Right to Life petition sign-in. */}
@@ -78,7 +90,8 @@ const AppContent: React.FC = () => {
           <Route path="*" element={<SignPetitionPage />} />
         </Routes>
       </Suspense>
-    </Shell>
+      </Shell>
+    </>
   );
 };
 
