@@ -54,7 +54,7 @@ const DrawerLink: React.FC<{
 );
 
 export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
   const { profile, logout } = useAuth();
   const [idModalOpen, setIdModalOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
@@ -174,15 +174,20 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 </a>
               </p>
             </div>
-            <div className="flex flex-col items-center sm:items-end gap-2 text-xs text-[#AED581]/80">
-              <div className="flex items-center gap-3">
-                <a href="https://www.instagram.com/voiceofgudalur" target="_blank" rel="noopener noreferrer" title="Instagram" aria-label="Voice of Gudalur on Instagram" className="rounded-full border border-[#AED581]/40 p-2 transition hover:bg-[#AED581]/20">
-                  <Instagram size={15} />
-                </a>
-                <a href="https://www.facebook.com/voiceofgudalur" target="_blank" rel="noopener noreferrer" title="Facebook" aria-label="Voice of Gudalur on Facebook" className="rounded-full border border-[#AED581]/40 p-2 transition hover:bg-[#AED581]/20">
-                  <Facebook size={15} />
-                </a>
+            <div className="flex flex-col items-center sm:items-end gap-1.5">
+                <div className="flex items-center gap-3">
+                  <a href="https://www.instagram.com/voiceofgudalur" target="_blank" rel="noopener noreferrer" title="Instagram — Voice of Gudalur" aria-label="Voice of Gudalur on Instagram" className="rounded-full border border-[#AED581]/40 p-2 transition hover:bg-[#AED581]/20">
+                    <Instagram size={15} />
+                  </a>
+                  <a href="https://www.instagram.com/universalguardtrust" target="_blank" rel="noopener noreferrer" title="Instagram — Universal Guard Trust" aria-label="Universal Guard Trust on Instagram" className="rounded-full border border-[#AED581]/40 p-2 transition hover:bg-[#AED581]/20">
+                    <Instagram size={15} />
+                  </a>
+                  <a href="https://www.facebook.com/universalguardtrust" target="_blank" rel="noopener noreferrer" title="Facebook — Universal Guard Trust" aria-label="Universal Guard Trust on Facebook" className="rounded-full border border-[#AED581]/40 p-2 transition hover:bg-[#AED581]/20">
+                    <Facebook size={15} />
+                  </a>
+                </div>
               </div>
+              <div className="flex flex-col items-center sm:items-end gap-1.5 text-xs text-[#AED581]/80">
               <a href="https://ugtindia.space" target="_blank" rel="noopener noreferrer" className="hover:text-[#F5F5F5] transition">ugtindia.space ↗</a>
               <a href="https://ugtglobal.space" target="_blank" rel="noopener noreferrer" className="hover:text-[#F5F5F5] transition">ugtglobal.space ↗</a>
               <a href="mailto:soulconnect@ugtindia.space" className="hover:text-[#F5F5F5] transition">soulconnect@ugtglobal.space</a>
@@ -205,7 +210,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 transition={{ type: 'tween', duration: 0.22, ease: 'easeOut' }}
               >
                 <div className="flex items-center justify-between px-4 h-14 border-b border-[#AED581]/20 shrink-0">
-                  <span className="font-black text-xs text-[#F5F5F5] tracking-wider">MENU</span>
+                  <span className="font-black text-xs text-[#F5F5F5] tracking-wider">{t('mnu.title')}</span>
                   <button
                     type="button"
                     onClick={() => setMenuOpen(false)}
@@ -217,15 +222,15 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 </div>
 
                 <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-                  <DrawerLink to="/" icon={<PenLine size={16} />} label="Sign Petition" onNavigate={() => setMenuOpen(false)} end />
+                  <DrawerLink to="/" icon={<PenLine size={16} />} label={t('mnu.sign_petition')} onNavigate={() => setMenuOpen(false)} end />
                   {supportRecorded && (
                     <div className="flex items-center gap-2 rounded-xl border border-[#AED581]/30 bg-[#AED581]/15 px-3 py-2 text-[10px] font-bold leading-snug text-[#AED581]">
-                      🌿 Your support is recorded — thank you!
+                      🌿 {t('mnu.support')}
                     </div>
                   )}
-                  <DrawerLink to="/about" icon={<BookOpen size={16} />} label="About the Movement" onNavigate={() => setMenuOpen(false)} />
-                  <DrawerLink to="/corridors" icon={<MapIcon size={16} />} label="Closed Corridors Map" onNavigate={() => setMenuOpen(false)} />
-                  <DrawerLink to="/sightings" icon={<PawPrint size={16} />} label="Animal Sightings" onNavigate={() => setMenuOpen(false)} />
+                  <DrawerLink to="/about" icon={<BookOpen size={16} />} label={t('mnu.about')} onNavigate={() => setMenuOpen(false)} />
+                  <DrawerLink to="/corridors" icon={<MapIcon size={16} />} label={t('mnu.corridors')} onNavigate={() => setMenuOpen(false)} />
+                  <DrawerLink to="/sightings" icon={<PawPrint size={16} />} label={t('mnu.sightings')} onNavigate={() => setMenuOpen(false)} />
                   <button
                     type="button"
                     onClick={() => {
@@ -234,7 +239,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     }}
                     className="flex w-full items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-[#F5F5F5]/85 hover:text-[#F5F5F5] hover:bg-[#388E3C]/40 transition"
                   >
-                    <RotateCcw size={16} /> Replay Opening
+                    <RotateCcw size={16} /> {t('mnu.replay')}
                   </button>
                 </nav>
 
@@ -267,14 +272,14 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                         onClick={() => { setMenuOpen(false); openIdModal(); }}
                         className="w-full py-2.5 rounded-xl bg-[#AED581] text-[#1B5E20] font-bold text-xs flex items-center justify-center gap-2"
                       >
-                        <IdCard size={14} /> My Gudalur ID Card
+                        <IdCard size={14} /> {t('mnu.my_card')}
                       </button>
                       <button
                         type="button"
                         onClick={async () => { setMenuOpen(false); await logout(); }}
                         className="w-full py-2.5 rounded-xl border border-[#AED581]/40 text-[#F5F5F5] font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#388E3C]/40 transition"
                       >
-                        <LogOut size={14} /> Logout
+                        <LogOut size={14} /> {t('mnu.logout')}
                       </button>
                     </div>
                   ) : (
@@ -284,14 +289,14 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                         onClick={() => { setMenuOpen(false); setRegisterModalOpen(true); }}
                         className="w-full py-2.5 rounded-xl bg-[#AED581] text-[#1B5E20] font-bold text-xs flex items-center justify-center gap-2"
                       >
-                        <UserPlus size={14} /> Register — Get Gudalur ID
+                        <UserPlus size={14} /> {t('mnu.register')}
                       </button>
                       <button
                         type="button"
                         onClick={() => { setMenuOpen(false); setLoginModalOpen(true); }}
                         className="w-full py-2.5 rounded-xl border border-[#AED581]/40 text-[#F5F5F5] font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#388E3C]/40 transition"
                       >
-                        <LogIn size={14} /> Login
+                        <LogIn size={14} /> {t('mnu.login')}
                       </button>
                     </div>
                   )}

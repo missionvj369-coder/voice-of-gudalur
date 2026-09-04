@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
 import { petitionApi } from "../services/api";
 import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal";
 import { BarChart3, Download, PenLine } from "lucide-react";
@@ -17,6 +18,7 @@ interface PlaceCount {
  */
 export const SignPetitionPage: React.FC = () => {
   const { profile } = useAuth();
+  const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{
     hash: string;
@@ -61,10 +63,10 @@ export const SignPetitionPage: React.FC = () => {
           ? new URL(res.verifyUrl, window.location.origin).toString()
           : `${window.location.origin}/verify-sign?id=${encodeURIComponent(res.signHash)}`;
       if (res.isDuplicate) {
-        toast.success("You've already signed — thank you for your support! 🌿", { duration: 5000 });
+        toast.success(t("home.dup_toast"), { duration: 5000 });
       } else {
         try { localStorage.setItem("vog_petition_signed", "1"); } catch { /* ignore */ }
-        toast.success("Your support is recorded — thank you! 🌿", { duration: 6000 });
+        toast.success(t("home.signed_toast"), { duration: 6000 });
         void loadStats();
       }
       setResult({ hash: res.signHash, verifyUrl, batchNo: res.batchNo ?? 1 });
@@ -130,7 +132,7 @@ export const SignPetitionPage: React.FC = () => {
       );
       doc.save(`vog-signature-${result.hash.slice(0, 12)}.pdf`);
     } catch {
-      toast.error("Could not generate the PDF receipt");
+      toast.error(t("home.pdf_fail"));
     }
   }, [result, profile]);
 
@@ -138,11 +140,9 @@ export const SignPetitionPage: React.FC = () => {
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
       {/* Hero — petition + live counter */}
       <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-6 text-center space-y-3">
-        <h1 className="text-2xl font-black text-slate-900">Right to Life Petition</h1>
+        <h1 className="text-2xl font-black text-slate-900">{t("home.title")}</h1>
         <p className="text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
-          Sign the petition submitted as a grievance to <strong>Mudhalvan Mugavari</strong>.
-          Your Gudalur ID + UTC timestamp are recorded as your digital signature —
-          verifiable by officials at any time.
+          {t("home.subtitle")}
         </p>
         <div className="inline-flex items-center gap-2 rounded-full bg-emerald-600/10 border border-emerald-600/20 px-4 py-1.5">
           <span className="relative flex h-2 w-2">
@@ -150,7 +150,7 @@ export const SignPetitionPage: React.FC = () => {
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
           </span>
           <span className="text-xs font-black text-emerald-800">
-            {total === null ? "Loading live count…" : `${total.toLocaleString("en-IN")} verified signs — live`}
+            {total === null ? t("home.loading") : t("home.live").replace("{n}", total.toLocaleString("en-IN"))}
           </span>
         </div>
       </div>
@@ -159,14 +159,13 @@ export const SignPetitionPage: React.FC = () => {
         <div className="rounded-2xl bg-white border border-slate-200 p-6 text-center space-y-4">
           <div className="text-4xl">🪪</div>
           <p className="text-sm text-slate-600">
-            You must register (get a Gudalur ID) before signing — it takes 20 seconds,
-            no OTP needed.
+            {t("home.need_register")}
           </p>
           <button
             onClick={() => setShowRegister(true)}
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-lg"
           >
-            Register &amp; Get GDR ID
+            {t("home.register_cta")}
           </button>
         </div>
       )}
@@ -175,19 +174,19 @@ export const SignPetitionPage: React.FC = () => {
         <div className="rounded-2xl bg-white border border-slate-200 p-6 space-y-4">
           <div className="text-sm space-y-2">
             <div className="flex justify-between">
-              <span className="text-slate-400">Signing as</span>
+              <span className="text-slate-400">{t("home.signing_as")}</span>
               <span className="font-bold">{profile.name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">GDR ID</span>
+              <span className="text-slate-400">{t("home.gdr")}</span>
               <span className="font-bold">{profile.gudalurId}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">Location</span>
+              <span className="text-slate-400">{t("home.location")}</span>
               <span className="font-bold text-right">{profile.customPlaceName || profile.localityName}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">Timestamp</span>
+              <span className="text-slate-400">{t("home.timestamp")}</span>
               <span className="font-bold text-right">{new Date().toISOString()} UTC</span>
             </div>
           </div>
@@ -196,7 +195,7 @@ export const SignPetitionPage: React.FC = () => {
             disabled={busy}
             className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-sm shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            {busy ? "Recording your verified signature…" : <><PenLine size={16} /> Sign with my Verified GDR ID</>}
+            {busy ? t("home.signing") : <><PenLine size={16} /> {t("home.sign_btn")}</>}
           </button>
         </div>
       )}
@@ -205,22 +204,22 @@ export const SignPetitionPage: React.FC = () => {
         <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 space-y-4 text-center">
           <div className="text-4xl">✅</div>
           <div>
-            <p className="text-sm font-black text-emerald-800">Signature recorded &amp; verifiable</p>
+            <p className="text-sm font-black text-emerald-800">{t("home.recorded")}</p>
             <p className="text-[11px] text-emerald-700 mt-1 break-all font-mono">{result.hash}</p>
-            <p className="text-[11px] text-emerald-600 mt-1">Batch #{result.batchNo}</p>
+            <p className="text-[11px] text-emerald-600 mt-1">{t("home.batch").replace("{n}", String(result.batchNo))}</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button onClick={copyLink} className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs">
-              🔗 Copy verify link
+              🔗 {t("home.copy_link")}
             </button>
             <button onClick={forwardViaWhatsApp} className="py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">
-              📤 Share on WhatsApp
+              📤 {t("home.share_wa")}
             </button>
             <button
               onClick={() => { void downloadReceipt(); }}
               className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5"
             >
-              <Download size={13} /> Download receipt
+              <Download size={13} /> {t("home.download")}
             </button>
           </div>
           <p className="text-[10px] text-emerald-700 break-all">{result.verifyUrl}</p>
@@ -231,7 +230,7 @@ export const SignPetitionPage: React.FC = () => {
         <div className="rounded-3xl border border-slate-200 bg-white p-6 space-y-4">
           <h2 className="text-sm font-black text-slate-900 flex items-center gap-2">
             <BarChart3 size={15} className="text-emerald-600" />
-            Signs by Place — highest first
+            {t("home.by_place")}
           </h2>
           <div className="space-y-2.5">
             {places.map((p, i) => {

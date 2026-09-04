@@ -2,7 +2,7 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { LanguageProvider } from './context/LanguageContext';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { Shell } from './components/Layout/Shell';
 import { OpeningAnimation, INTRO_SEEN_KEY } from './components/OpeningAnimation';
 
@@ -34,23 +34,24 @@ const AdminRoutes: React.FC = () => (
 );
 
 /** Animal sightings open after the government system integration — launch placeholder. */
-const SightingsSoonPage: React.FC = () => (
+const SightingsSoonPage: React.FC = () => {
+  const { t } = useLanguage();
+  return (
   <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-5">
     <div className="text-5xl" aria-hidden>🐘</div>
-    <h1 className="text-2xl font-black text-white">Animal Sightings</h1>
+    <h1 className="text-2xl font-black text-white">{t('sght.title')}</h1>
     <p className="text-sm text-emerald-50/90 leading-relaxed">
-      Sighting reports will open here once the government forest-department system is
-      integrated with Voice of Gudalur. Until then, explore the closed corridors map
-      and add your voice to the Right to Life petition.
+      {t('sght.sub')}
     </p>
     <Link
       to="/"
       className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-lg"
     >
-      Sign the Petition
+      {t('sght.btn')}
     </Link>
   </div>
-);
+  );
+};
 
 const AppContent: React.FC = () => {
   const { loading } = useAuth();

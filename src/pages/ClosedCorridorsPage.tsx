@@ -1,5 +1,6 @@
 import React from 'react';
 import { MapPin } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 import { CLOSED_CORRIDORS } from '../data/closedCorridors';
 import { CorridorMap } from '../components/CorridorMap';
 
@@ -7,14 +8,14 @@ import { CorridorMap } from '../components/CorridorMap';
  * Closed / restricted wildlife corridor checkpoints around Gudalur on an
  * OpenStreetMap (Leaflet) — uses the shared CorridorMap.
  */
-export const ClosedCorridorsPage: React.FC = () => (
+export const ClosedCorridorsPage: React.FC = () => {
+  const { t } = useLanguage();
+  return (
   <div className="max-w-4xl mx-auto py-8 px-4 space-y-6">
     <div className="text-center space-y-2">
-      <h1 className="text-3xl font-black text-white">Closed Corridors — Gudalur &amp; Nilgiris</h1>
+      <h1 className="text-3xl font-black text-white">{t('crr.title')}</h1>
       <p className="text-sm text-emerald-50/90 max-w-xl mx-auto">
-        {CLOSED_CORRIDORS.length} closed / restricted wildlife corridor checkpoints around Gudalur —
-        forest gates, night-closure sections and elephant-fringe buffers. Keep this list in sync
-        with Gudalur Forest Division notifications.
+        {t('crr.sub').replace('{n}', String(CLOSED_CORRIDORS.length))}
       </p>
     </div>
 
@@ -38,6 +39,7 @@ export const ClosedCorridorsPage: React.FC = () => (
       ))}
     </div>
   </div>
-);
+  );
+};
 
 export default ClosedCorridorsPage;

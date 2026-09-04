@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Phone, MapPin, User, CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { GUDALUR_LOCALITIES } from '../../data/gudalurMasterData';
 import toast from 'react-hot-toast';
 
@@ -20,6 +21,7 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
   isOpen, onClose, onSuccess,
 }) => {
   const { registerResident, userCoords } = useAuth();
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [localityId, setLocalityId] = useState(GUDALUR_LOCALITIES[0].id);
@@ -37,11 +39,11 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
     e.preventDefault();
     const digits = phone.replace(/\D/g, '');
     if (name.trim().length < 2) {
-      toast.error('Please enter your full name');
+      toast.error(t('reg.name_required'));
       return;
     }
     if (digits.length !== 10) {
-      toast.error('Please enter a valid 10-digit mobile number');
+      toast.error(t('reg.phone_required'));
       return;
     }
     setIsSubmitting(true);
@@ -55,7 +57,7 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
         lat: userCoords?.lat,
         lng: userCoords?.lng,
       });
-      toast.success(`Welcome! Your Gudalur ID: ${profile.gudalurId}`, { duration: 6000, icon: '🪪' });
+      toast.success(t('reg.welcome').replace('{n}', profile.gudalurId), { duration: 6000, icon: '🪪' });
       setName('');
       setPhone('');
       setCustomPlaceName('');
@@ -64,9 +66,9 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
     } catch (err: any) {
       const msg = String((err && err.message) || '');
       if ((err && err.code === 'DUPLICATE_PHONE') || /duplicate|already registered|unique key/i.test(msg)) {
-        toast.error('This phone number is already registered — please use Login instead.', { duration: 5000 });
+        toast.error(t('reg.dup_phone'), { duration: 5000 });
       } else {
-        toast.error(msg || 'Registration failed. Please try again.');
+        toast.error(msg || t('reg.fail'));
       }
     } finally {
       setIsSubmitting(false);
@@ -98,17 +100,17 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
                   <ShieldCheck size={20} />
                 </div>
                 <h3 className="text-lg font-black text-slate-900 leading-tight">
-                  Register — Get your Gudalur ID
+                  {t('reg.title')}
                 </h3>
               </div>
               <p className="text-xs text-slate-500">
-                No OTP needed. Just your name, mobile number and place — one number, one registration.
+                {t('reg.subtitle')}
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Full Name *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('reg.name')} *</label>
                 <div className="relative">
                   <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
@@ -123,7 +125,7 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Mobile Number *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('reg.phone')} *</label>
                 <div className="relative">
                   <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
@@ -139,7 +141,7 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Your Place (Gudalur &amp; Nilgiris) *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('reg.place')} *</label>
                 <div className="relative">
                   <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   <select
@@ -153,12 +155,12 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
                   </select>
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1.5">
-                  Pincode {locality.pincode} — filled automatically.
+                  {t('reg.pincode').replace('{n}', locality.pincode || '')}
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Specific Estate / Village (Optional)</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('reg.estate')}</label>
                 <input
                   type="text"
                   value={customPlaceName}
@@ -175,12 +177,11 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-lg shadow-emerald-700/20 transition flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-                <span>{isSubmitting ? 'Generating Gudalur ID…' : 'Generate My Gudalur ID'}</span>
+                <span>{isSubmitting ? t('reg.submitting') : t('reg.submit')}</span>
               </button>
 
               <p className="text-[10px] text-slate-400 text-center leading-relaxed">
-                Already registered? Use Login with your mobile number or Gudalur ID.
-                Aadhaar verification arrives later.
+                {t('reg.already')}
               </p>
             </form>
           </motion.div>
