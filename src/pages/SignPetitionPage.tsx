@@ -5,7 +5,7 @@ import { useLanguage } from "../context/LanguageContext";
 import { petitionApi } from "../services/api";
 import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal";
 import { ThirukuralSection } from "../components/ThirukuralSection";
-import { BarChart3, Download, PenLine, FileText, Eye } from "lucide-react";
+import { BarChart3, Download, PenLine, FileText, Eye, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface PlaceCount {
@@ -22,6 +22,7 @@ export const SignPetitionPage: React.FC = () => {
   const { profile } = useAuth();
   const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
+  const [autoSigning, setAutoSigning] = useState(false);
   const [result, setResult] = useState<{
     hash: string;
     verifyUrl: string;
@@ -49,6 +50,32 @@ export const SignPetitionPage: React.FC = () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, [loadStats]);
+
+  // Auto-sign petition after successful registration
+  const handleRegistered = useCallback(async () => {
+    setAutoSigning(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const res = await petitionApi.sign({
+        idempotencyKey: `petition-sign-${Date.now()}`,
+      });
+      const verifyUrl = res.verifyUrl
+        ? new URL(res.verifyUrl, window.location.origin).toString()
+        : `${window.location.origin}/verify-sign?id=${encodeURIComponent(res.signHash)}`;
+      if (res.isDuplicate) {
+        toast.success(t("home.dup_toast"), { duration: 5000 });
+      } else {
+        try { localStorage.setItem("vog_petition_signed", "1"); } catch { /* ignore */ }
+        toast.success(t("home.signed_toast"), { duration: 6000 });
+        void loadStats();
+      }
+      setResult({ hash: res.signHash, verifyUrl, batchNo: res.batchNo ?? 1 });
+    } catch (e: any) {
+      toast.error(e?.error ?? e?.message ?? "Sign failed. Please try again.");
+    } finally {
+      setAutoSigning(false);
+    }
+  }, [loadStats, t]);
 
   const handleSign = useCallback(async () => {
     if (!profile) {
@@ -277,7 +304,22 @@ export const SignPetitionPage: React.FC = () => {
       {/* Thirukural Section */}
       <ThirukuralSection />
 
-      <RegisterResidentModal isOpen={showRegister} onClose={() => setShowRegister(false)} />
+      {/* Auto-signing overlay */}
+      {autoSigning && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/90 backdrop-blur-sm">
+          <div className="text-center space-y-4">
+            <Loader2 size={48} className="animate-spin text-emerald-600 mx-auto" />
+            <p className="text-lg font-bold text-emerald-800">{t("home.auto_signing") || "Signing your petition..."}</p>
+            <p className="text-sm text-emerald-600">{t("home.auto_signing_sub") || "Please wait while we submit your signature"}</p>
+          </div>
+        </div>
+      )}
+
+      <RegisterResidentModal 
+        isOpen={showRegister} 
+        onClose={() => setShowRegister(false)} 
+        onRegistered={() => { setShowRegister(false); void handleRegistered(); }}
+      />
     </div>
   );
 };

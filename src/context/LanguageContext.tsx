@@ -425,6 +425,8 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'home.pdf_fail': 'Could not generate the PDF receipt',
     'home.sign_petition_btn': 'Sign the Petition',
     'home.view_grievances_btn': 'View Grievances Submitted',
+    'home.auto_signing': 'Signing your petition...',
+    'home.auto_signing_sub': 'Please wait while we submit your signature',
 
     'reg.title': 'Register — Get your Gudalur ID',
     'reg.subtitle': 'No OTP needed. Just your name, mobile number and place — one number, one registration.',
@@ -502,6 +504,8 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'home.pdf_fail': 'PDF ரசீதை உருவாக்க முடியவில்லை',
     'home.sign_petition_btn': 'மனுவில் கையெழுத்திடுங்கள்',
     'home.view_grievances_btn': 'சமர்ப்பித்துள்ள புகார்களைக் காண',
+    'home.auto_signing': 'உங்கள் மனு கையெழுத்திடப்படுகிறது...',
+    'home.auto_signing_sub': 'உங்கள் கையெழுத்தைச் சமர்ப்பிக்க காத்திருக்கவும்',
 
     'reg.title': 'பதிவு — உங்கள் கூடலூர் ஐடி பெறுக',
     'reg.subtitle': 'OTP தேவையில்லை. பெயர், கைபேசி எண் மற்றும் இடம் மட்டும் போதும் — ஒரு எண், ஒரே பதிவு.',
@@ -579,6 +583,8 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'home.pdf_fail': 'PDF രസീത് സൃഷ്ടിക്കാൻ കഴിഞ്ഞില്ല',
     'home.sign_petition_btn': 'പരാതിയിൽ ഒപ്പിടുക',
     'home.view_grievances_btn': 'സമർപ്പിച്ച പരാതികൾ കാണുക',
+    'home.auto_signing': 'നിങ്ങളുടെ പരാതി ഒപ്പിടുന്നു...',
+    'home.auto_signing_sub': 'നിങ്ങളുടെ ഒപ്പ് സമർപ്പിക്കാൻ കാത്തിരിക്കുക',
 
     'reg.title': 'രജിസ്റ്റർ — നിങ്ങളുടെ ഗൂഡല്ലൂർ ഐഡി നേടുക',
     'reg.subtitle': 'OTP ആവശ്യമില്ല. പേര്, മൊബൈൽ നമ്പർ, സ്ഥലം മാത്രം — ഒരു നമ്പർ, ഒരു രജിസ്ട്രേഷൻ.',
@@ -656,6 +662,8 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'home.pdf_fail': 'PDF ಹುಂಡಿಯನ್ನು ರಚಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ',
     'home.sign_petition_btn': 'ಅರ್ಜಿಗೆ ಸಹಿ ಹಾಕಿ',
     'home.view_grievances_btn': 'ಸಲ್ಲಿಸಿದ ದೂರುಗಳನ್ನು ವೀಕ್ಷಿಸಿ',
+    'home.auto_signing': 'ನಿಮ್ಮ ಅರ್ಜಿಗೆ ಸಹಿ ಹಾಗುತ್ತಿದೆ...',
+    'home.auto_signing_sub': 'ನಿಮ್ಮ ಸಹಿಯನ್ನು ಸಲ್ಲಿಸಲು ಕಾಯಿರಿ',
 
     'reg.title': 'ನೋಂದಣಿ — ನಿಮ್ಮ ಗೂಡಲೂರು ಐಡಿ ಪಡೆಯಿರಿ',
     'reg.subtitle': 'OTP ಅಗತ್ಯವಿಲ್ಲ. ಹೆಸರು, ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಮತ್ತು ಸ್ಥಳ ಮಾತ್ರ — ಒಂದು ಸಂಖ್ಯೆ, ಒಂದು ನೋಂದಣಿ.',

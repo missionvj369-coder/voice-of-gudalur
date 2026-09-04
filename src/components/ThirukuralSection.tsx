@@ -10,53 +10,46 @@ interface Cloud {
   opacity: number;
 }
 
-const splitGraphemes = (text: string): string[] => {
-  if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
-    const segmenter = new (Intl as any).Segmenter('ta', { granularity: 'grapheme' });
-    return Array.from(segmenter.segment(text), (s: any) => s.segment);
-  }
-  return Array.from(text);
-};
-
 const MagicText: React.FC<{ text: string; delay?: number }> = ({ text, delay = 0 }) => {
-  const [visibleCount, setVisibleCount] = useState(0);
-  const graphemes = splitGraphemes(text);
+  const [visibleWords, setVisibleWords] = useState(0);
+  const words = text.split(' ');
 
   useEffect(() => {
-    setVisibleCount(0);
+    setVisibleWords(0);
     const timer = setTimeout(() => {
       const interval = setInterval(() => {
-        setVisibleCount((prev) => {
-          if (prev >= graphemes.length) {
+        setVisibleWords((prev) => {
+          if (prev >= words.length) {
             clearInterval(interval);
             return prev;
           }
           return prev + 1;
         });
-      }, 50);
+      }, 200);
       return () => clearInterval(interval);
     }, delay);
     return () => clearTimeout(timer);
-  }, [text, delay, graphemes.length]);
+  }, [text, delay, words.length]);
 
   return (
     <span className="inline-block">
-      {graphemes.map((grapheme, i) => (
+      {words.map((word, i) => (
         <motion.span
           key={i}
-          initial={{ opacity: 0, y: 15, scale: 0.6 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={
-            i < visibleCount
-              ? { opacity: 1, y: 0, scale: 1 }
-              : { opacity: 0, y: 15, scale: 0.6 }
+            i < visibleWords
+              ? { opacity: 1, y: 0 }
+              : { opacity: 0, y: 10 }
           }
-          transition={{ duration: 0.3, ease: 'easeOut' }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
           className="inline-block"
           style={{
-            textShadow: i < visibleCount ? '0 0 12px rgba(76, 175, 80, 0.6)' : 'none',
+            marginRight: '0.25em',
+            textShadow: i < visibleWords ? '0 0 8px rgba(76, 175, 80, 0.4)' : 'none',
           }}
         >
-          {grapheme}
+          {word}
         </motion.span>
       ))}
     </span>

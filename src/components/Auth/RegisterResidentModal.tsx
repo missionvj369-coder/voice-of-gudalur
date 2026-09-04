@@ -10,6 +10,7 @@ interface RegisterResidentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  onRegistered?: (profile: { gudalurId: string; name: string; phone: string }) => void;
 }
 
 /**
@@ -18,7 +19,7 @@ interface RegisterResidentModalProps {
  * index; duplicates are pointed to Login). Aadhaar verification comes later.
  */
 export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
-  isOpen, onClose, onSuccess,
+  isOpen, onClose, onSuccess, onRegistered,
 }) => {
   const { registerResident, userCoords } = useAuth();
   const { t } = useLanguage();
@@ -62,6 +63,11 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
       setPhone('');
       setCustomPlaceName('');
       onSuccess?.();
+      onRegistered?.({
+        gudalurId: profile.gudalurId,
+        name: profile.name,
+        phone: profile.phone,
+      });
       onClose();
     } catch (err: any) {
       const msg = String((err && err.message) || '');

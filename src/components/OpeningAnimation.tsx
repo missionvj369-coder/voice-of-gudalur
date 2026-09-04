@@ -561,26 +561,32 @@ function drawKural(ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
   ctx.font = `700 ${Math.min(W * 0.032, 22)}px 'Segoe UI', system-ui, sans-serif`;
   ctx.fillText('கைம்மாறு வேண்டா கடப்பாடு', W / 2, H * 0.18);
 
-  // Main kural text with magic effect
+  // Main kural text with magic effect - draw word by word to preserve Indic script
   const kuralText = 'கைம்மாறு வேண்டா கடப்பாடு மாரிமாட்டு என்னாற்றும் கொல்லோ உலகு.';
-  const chars = kuralText.split('');
-  const charDelay = 0.05;
+  const words = kuralText.split(' ');
+  const wordDelay = 0.3;
   const startY = H * 0.30;
-  ctx.font = `800 ${Math.min(W * 0.038, 28)}px 'Segoe UI', system-ui, sans-serif`;
+  const fontSize = Math.min(W * 0.038, 28);
+  ctx.font = `800 ${fontSize}px 'Segoe UI', system-ui, sans-serif`;
 
-  // Draw each character with staggered animation
-  let xPos = W * 0.1;
-  chars.forEach((char, i) => {
-    const charA = clamp01((t - T.kuralStart - 0.8 - i * charDelay) / 0.3);
-    if (charA > 0) {
-      const yOffset = (1 - charA) * 20;
-      ctx.fillStyle = `rgba(27,94,32,${charA})`;
+  // Calculate total width to center the text
+  const totalWidth = words.reduce((acc, word, i) => {
+    return acc + ctx.measureText(word).width + (i < words.length - 1 ? fontSize * 0.3 : 0);
+  }, 0);
+  let xPos = (W - totalWidth) / 2;
+
+  // Draw each word with staggered animation
+  words.forEach((word, i) => {
+    const wordA = clamp01((t - T.kuralStart - 0.8 - i * wordDelay) / 0.4);
+    if (wordA > 0) {
+      const yOffset = (1 - wordA) * 20;
+      ctx.fillStyle = `rgba(27,94,32,${wordA})`;
       // Add glow effect
-      ctx.shadowColor = `rgba(76,175,80,${charA * 0.6})`;
-      ctx.shadowBlur = 15 * charA;
-      ctx.fillText(char, xPos, startY + yOffset);
+      ctx.shadowColor = `rgba(76,175,80,${wordA * 0.6})`;
+      ctx.shadowBlur = 10 * wordA;
+      ctx.fillText(word, xPos, startY + yOffset);
       ctx.shadowBlur = 0;
-      xPos += ctx.measureText(char).width + 2;
+      xPos += ctx.measureText(word).width + fontSize * 0.3;
     }
   });
 
