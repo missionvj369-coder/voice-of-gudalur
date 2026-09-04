@@ -38,7 +38,7 @@ const securityHeaders: Record<string, string> = {
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https:",
     "media-src 'self' data: blob: https:",
-    "frame-src 'self' blob:",
+    "frame-src 'self' blob: https://cmhelpline.tnega.org",
     "connect-src 'self' https://huggingface.co https://*.huggingface.co https://gateway.storjshare.io",
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",

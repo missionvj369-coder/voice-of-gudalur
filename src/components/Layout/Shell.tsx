@@ -5,9 +5,10 @@ import { useLanguage, type Language } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import {
   Flame, User, LogIn, LogOut, Menu, X, PenLine, BookOpen,
-  Map as MapIcon, PawPrint, ShieldCheck, IdCard, UserPlus, RotateCcw,
+  Map as MapIcon, PawPrint, IdCard, UserPlus, RotateCcw, Instagram, Facebook,
 } from 'lucide-react';
 import { INTRO_SEEN_KEY } from '../OpeningAnimation';
+import { OPEN_REGISTER_EVENT } from '../../pages/about_helpers';
 import { GudalurIdModal } from '../GudalurIdModal';
 
 import { LoginResidentModal } from '../Auth/LoginResidentModal';
@@ -59,6 +60,10 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // "Once signed, everywhere shows it" — the petition gratitude chip in the menu.
+  const supportRecorded = (() => {
+    try { return localStorage.getItem('vog_petition_signed') === '1'; } catch { return false; }
+  })();
   const [readyQueue, setReadyQueue] = useState<{ id: number; fn: () => void }[]>([]);
 
   const openIdModal = () => {
@@ -81,6 +86,12 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     },
     [profile]
   );
+
+  React.useEffect(() => {
+    const onOpenRegister = () => setRegisterModalOpen(true);
+    window.addEventListener(OPEN_REGISTER_EVENT, onOpenRegister);
+    return () => window.removeEventListener(OPEN_REGISTER_EVENT, onOpenRegister);
+  }, []);
 
   return (
     <IdModalContext.Provider value={{ openIdModal, whenRegistered }}>
@@ -163,7 +174,15 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 </a>
               </p>
             </div>
-            <div className="flex flex-col items-center sm:items-end gap-1.5 text-xs text-[#AED581]/80">
+            <div className="flex flex-col items-center sm:items-end gap-2 text-xs text-[#AED581]/80">
+              <div className="flex items-center gap-3">
+                <a href="https://www.instagram.com/voiceofgudalur" target="_blank" rel="noopener noreferrer" title="Instagram" aria-label="Voice of Gudalur on Instagram" className="rounded-full border border-[#AED581]/40 p-2 transition hover:bg-[#AED581]/20">
+                  <Instagram size={15} />
+                </a>
+                <a href="https://www.facebook.com/voiceofgudalur" target="_blank" rel="noopener noreferrer" title="Facebook" aria-label="Voice of Gudalur on Facebook" className="rounded-full border border-[#AED581]/40 p-2 transition hover:bg-[#AED581]/20">
+                  <Facebook size={15} />
+                </a>
+              </div>
               <a href="https://ugtindia.space" target="_blank" rel="noopener noreferrer" className="hover:text-[#F5F5F5] transition">ugtindia.space ↗</a>
               <a href="https://ugtglobal.space" target="_blank" rel="noopener noreferrer" className="hover:text-[#F5F5F5] transition">ugtglobal.space ↗</a>
               <a href="mailto:soulconnect@ugtindia.space" className="hover:text-[#F5F5F5] transition">soulconnect@ugtglobal.space</a>
@@ -199,15 +218,14 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
                 <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
                   <DrawerLink to="/" icon={<PenLine size={16} />} label="Sign Petition" onNavigate={() => setMenuOpen(false)} end />
+                  {supportRecorded && (
+                    <div className="flex items-center gap-2 rounded-xl border border-[#AED581]/30 bg-[#AED581]/15 px-3 py-2 text-[10px] font-bold leading-snug text-[#AED581]">
+                      🌿 Your support is recorded — thank you!
+                    </div>
+                  )}
                   <DrawerLink to="/about" icon={<BookOpen size={16} />} label="About the Movement" onNavigate={() => setMenuOpen(false)} />
                   <DrawerLink to="/corridors" icon={<MapIcon size={16} />} label="Closed Corridors Map" onNavigate={() => setMenuOpen(false)} />
-                  <div className="relative">
-                    <DrawerLink to="/sightings" icon={<PawPrint size={16} />} label="Animal Sightings" onNavigate={() => setMenuOpen(false)} />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] font-black uppercase tracking-wider bg-amber-400/90 text-[#1B5E20] px-1.5 py-0.5 rounded-full pointer-events-none">
-                      Soon
-                    </span>
-                  </div>
-                  <DrawerLink to="/officials" icon={<ShieldCheck size={16} />} label="Officials Portal" onNavigate={() => setMenuOpen(false)} />
+                  <DrawerLink to="/sightings" icon={<PawPrint size={16} />} label="Animal Sightings" onNavigate={() => setMenuOpen(false)} />
                   <button
                     type="button"
                     onClick={() => {

@@ -61,9 +61,10 @@ export const SignPetitionPage: React.FC = () => {
           ? new URL(res.verifyUrl, window.location.origin).toString()
           : `${window.location.origin}/verify-sign?id=${encodeURIComponent(res.signHash)}`;
       if (res.isDuplicate) {
-        toast.error("You have already signed this petition.");
+        toast.success("You've already signed — thank you for your support! 🌿", { duration: 5000 });
       } else {
-        toast.success("Signature recorded. Thank you!");
+        try { localStorage.setItem("vog_petition_signed", "1"); } catch { /* ignore */ }
+        toast.success("Your support is recorded — thank you! 🌿", { duration: 6000 });
         void loadStats();
       }
       setResult({ hash: res.signHash, verifyUrl, batchNo: res.batchNo ?? 1 });

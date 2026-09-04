@@ -37,8 +37,8 @@ const AdminRoutes: React.FC = () => (
 const SightingsSoonPage: React.FC = () => (
   <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-5">
     <div className="text-5xl" aria-hidden>🐘</div>
-    <h1 className="text-2xl font-black text-slate-900">Animal Sightings — Coming Soon</h1>
-    <p className="text-sm text-slate-600 leading-relaxed">
+    <h1 className="text-2xl font-black text-white">Animal Sightings</h1>
+    <p className="text-sm text-emerald-50/90 leading-relaxed">
       Sighting reports will open here once the government forest-department system is
       integrated with Voice of Gudalur. Until then, explore the closed corridors map
       and add your voice to the Right to Life petition.

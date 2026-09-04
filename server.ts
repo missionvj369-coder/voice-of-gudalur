@@ -111,7 +111,7 @@ export async function createApp() {
       "img-src 'self' data: https: blob:; " +
       "font-src 'self' https://fonts.gstatic.com; " +
       "media-src 'self' blob: https: data:; " +
-      "frame-src 'self' blob:; " +
+      "frame-src 'self' blob: https://cmhelpline.tnega.org; " +
       "connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://gateway.storjshare.io; " +
       "frame-ancestors 'none'; " +
       "base-uri 'self'; " +

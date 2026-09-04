@@ -30,6 +30,10 @@
   --color-ivory: #F5F5F5;
   --color-earth-gold: #AED581;
   --color-alert-amber: #81C784;
+  /* EYE-COMFORT MODE — every utility that asks for white (bg-white,
+     glass-card, bg-white/70, …) now resolves to warm "evening paper" ivory
+     instead of glare-white. Same theme, dramatically softer on the eyes. */
+  --color-white: #FAF5EA;
 }
 
 body::before {
@@ -43,6 +47,20 @@ body::before {
     radial-gradient(60vw 30vh at 100% 100%, rgba(46, 125, 50, 0.6), rgba(46, 125, 50, 0) 70%),
     radial-gradient(50vw 25vh at 0% 100%, rgba(27, 94, 32, 0.5), rgba(27, 94, 32, 0) 70%),
     linear-gradient(180deg, #1B5E20 0%, #2E7D32 45%, #388E3C 100%);
+}
+
+/* EYE-COMFORT VEIL — like phone "eye protection" mode: a faint warm amber
+   sheet softens glare over every reading surface without changing the theme.
+   Sits above normal content (z-40) but below modals (z-50), the menu (z-60)
+   and the opening animation (z-100); pointer-events none, so it never blocks
+   a single tap. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 186, 110, 0.055), rgba(255, 170, 90, 0.04));
 }
 
 @layer components {
