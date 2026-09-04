@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { UserProfile, Role, VerificationLevel } from '../types';
 import { GUDALUR_LOCALITIES } from '../data/gudalurMasterData';
 import { authApi } from '../services/api';
@@ -239,7 +239,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (e?.status === 409 || /duplicate|already registered|unique key/i.test(msg)) {
         throw duplicateError();
       }
-      if (e?.status === undefined || /failed to fetch|networkerror|load failed/i.test(msg)) {
+      if (e?.status === undefined || e?.status === 502 || /failed to fetch|networkerror|load failed|invalid server response/i.test(msg)) {
         // Offline fallback: still issue a local unique ID and cache the card.
         const fallback: UserProfile = {
           uid: `res_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,

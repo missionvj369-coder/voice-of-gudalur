@@ -44,7 +44,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     // / "unrecognized token" SyntaxError. Surface an actionable message instead.
     const isHtml = /^\s*<(!doctype|html)/i.test(text);
     const detail = isHtml
-      ? 'the API backend is not routed on this host (got HTML instead of JSON — check the /api/* proxy redirect in netlify.toml)'
+      ? 'the API backend is not routed on this host (got HTML instead of JSON — check the /api/* proxy redirect in netlify.toml AND that DATABASE_URL + SESSION_SECRET are set in Netlify env)'
       : `unrecognized response: ${text.slice(0, 100)}`;
     const err: ApiError = { error: `Invalid server response — ${detail}`, status: res.ok ? 502 : res.status };
     throw err;

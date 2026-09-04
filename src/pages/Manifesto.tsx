@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { PenLine, ExternalLink } from 'lucide-react';
+import { PenLine } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { CorridorMap } from '../components/CorridorMap';
+import { GrievanceTicket } from '../components/GrievanceTicket';
 import { GetGDRCard } from './about_helpers';
 import { petitionApi } from '../services/api';
 
 /**
  * About the Movement — the full story, the closed-corridor GIS map, the ALREADY
- * SUBMITTED grievance (viewed on the official portal, since embedding is
- * blocked), and the sign-in-petition call to action that supports it.
+ * SUBMITTED grievance (rendered inline from the official portal's saved page),
+ * and the sign-in-petition call to action that supports it.
  */
-const GRIEVANCE_URL = 'https://cmhelpline.tnega.org/portal/en/ticket/35665012410302427';
 
 export const Manifesto: React.FC = () => {
   const navigate = useNavigate();
@@ -65,21 +65,8 @@ export const Manifesto: React.FC = () => {
         <CorridorMap />
       </div>
 
-      {/* Grievance ALREADY SUBMITTED — view it on the official portal (embed blocked) */}
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center space-y-4">
-        <div className="text-4xl" aria-hidden>📨</div>
-        <h2 className="text-xl font-serif font-bold text-[#F5F5F5]">{t('abt.grv_title')}</h2>
-        <p className="text-sm text-[#E6F7E6] max-w-2xl mx-auto">{t('abt.grv_sub')}</p>
-        <a
-          href={GRIEVANCE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:opacity-95"
-        >
-          <ExternalLink size={16} /> {t('abt.grv_btn')}
-        </a>
-        <p className="text-[11px] text-[#AED581]/70 leading-relaxed max-w-xl mx-auto">{t('abt.grv_note')}</p>
-      </div>
+      {/* Grievance ALREADY SUBMITTED - inline from the official portal's saved page (embed blocked) */}
+      <GrievanceTicket />
 
       {/* Privacy note */}
       <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center">

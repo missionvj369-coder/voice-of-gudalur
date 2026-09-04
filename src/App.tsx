@@ -1,4 +1,4 @@
-﻿import React, { lazy, Suspense, useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -33,8 +33,8 @@ const AdminRoutes: React.FC = () => (
   </Suspense>
 );
 
-/** Animal sightings open after the government system integration — launch placeholder. */
-const SightingsSoonPage: React.FC = () => {
+/** Animal sightings launch page — opens after the government system integration. */
+const SightingsPage: React.FC = () => {
   const { t } = useLanguage();
   return (
   <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-5">
@@ -85,7 +85,7 @@ const AppContent: React.FC = () => {
           {/* Original home content lives as a topic inside the menu. */}
           <Route path="/about" element={<Manifesto />} />
           <Route path="/corridors" element={<ClosedCorridorsPage />} />
-          <Route path="/sightings" element={<SightingsSoonPage />} />
+          <Route path="/sightings" element={<SightingsPage />} />
           <Route path="/verify-sign" element={<VerifySignPage />} />
           <Route path="/officials" element={<OfficialsPortalPage />} />
           <Route path="*" element={<SignPetitionPage />} />

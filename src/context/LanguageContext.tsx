@@ -461,7 +461,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'crr.sub': '{n} closed / restricted wildlife corridor checkpoints around Gudalur — forest gates, night-closure sections and elephant-fringe buffers. Keep this list in sync with Gudalur Forest Division notifications.',
 
     'sght.title': 'Animal Sightings',
-    'sght.sub': 'Sighting reports will open here once the government forest-department system is integrated with Voice of Gudalur. Until then, explore the closed corridors map and add your voice to the Right to Life petition.',
+    'sght.sub': 'Sighting reports will open here.',
     'sght.btn': 'Sign the Petition',
   },
   ta: {
@@ -536,7 +536,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'crr.sub': 'கூடலூரைச் சுற்றியுள்ள {n} மூடப்பட்ட/கட்டுப்படுத்தப்பட்ட வன வழித்தடங்கள் — வன சாவடிகள், இரவு நேர மூடல்கள், யானை எல்லை மண்டலங்கள். வனத்துறை அறிவிப்புகளுடன் இணைத்து வைக்கவும்.',
 
     'sght.title': 'வனவிலங்கு நடமாட்டம்',
-    'sght.sub': 'அரசு வனத்துறை அமைப்புடன் இணைந்த பிறகு நடமாட்ட அறிக்கைகள் இங்கு திறக்கப்படும். இப்போது மூடிய வழித்தடங்களை ஆராய்ந்து, வாழ்வுரிமை மனுவில் உங்கள் குரலைச் சேருங்கள்.',
+    'sght.sub': 'நடமாட்ட அறிக்கைகள் இங்கே திறக்கப்படும்.',
     'sght.btn': 'மனுவில் கையெழுத்திடு',
   },
   ml: {
@@ -611,7 +611,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'crr.sub': 'ഗൂഡല്ലൂരിന് ചുറ്റുമുള്ള {n} അടഞ്ഞ/നിയന്ത്രിത വന്യജീവി ഇടനാഴികൾ — ഫോറസ്റ്റ് ഗേറ്റുകൾ, രാത്രി അടയ്ക്കൽ, ആന അതിർത്തി മേഖലകൾ. വനം വകുപ്പ് അറിയിപ്പുകളുമായി പൊരുത്തപ്പെടുത്തുക.',
 
     'sght.title': 'വന്യജീവി സാന്നിധ്യം',
-    'sght.sub': 'സർക്കാർ വനം വകുപ്പ് സംവിധാനവുമായി സംയോജിപ്പിച്ചതിന് ശേഷം സാന്നിധ്യ റിപ്പോർട്ടുകൾ ഇവിടെ തുറക്കും. അതുവരെ അടഞ്ഞ ഇടനാഴികൾ പര്യവേക്ഷണം ചെയ്ത് ജീവൻ അവകാശ പരാതിയിൽ ശബ്ദം ചേരൂ.',
+    'sght.sub': 'സാന്നിധ്യ റിപ്പോർട്ടുകൾ ഇവിടെ തുറക്കും.',
     'sght.btn': 'പരാതിയിൽ ഒപ്പിടുക',
   },
   kn: {
@@ -686,7 +686,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'crr.sub': 'ಗೂಡಲೂರು ಸುತ್ತಮುತ್ತಲಿನ {n} ಮುಚ್ಚಿದ/ನಿರ್ಬಂಧಿತ ವನ್ಯಜೀವಿ ಕಾರಿಡಾರ್ಗಳು — ವನ ಚೆಕ್ಪೋಸ್ಟ್ಗಳು, ರಾತ್ರಿ ಮುಚ್ಚುವಿಕೆಗಳು, ಆನೆ ಗಡಿ ವಲಯಗಳು. ವನ ಇಲಾಖೆ ಅಧಿಸೂಚನೆಗಳೊಂದಿಗೆ ಪಟ್ಟಿಯನ್ನು ಅಪ್ಡೇಟ್ ಮಾಡಿ.',
 
     'sght.title': 'ವನ್ಯಜೀವಿ ಸಂಚಾರ',
-    'sght.sub': 'ಸರ್ಕಾರಿ ವನ ಇಲಾಖೆ ವ್ಯವಸ್ಥೆಯೊಂದಿಗೆ ಸಂಯೋಜಿಸಿದ ನಂತರ ಸಂಚಾರ ವರದಿಗಳು ಇಲ್ಲಿ ತೆರೆಯುತ್ತವೆ. ಅಲ್ಲಿಯವರೆಗೆ ಮುಚ್ಚಿದ ಕಾರಿಡಾರ್ಗಳನ್ನು ಅನ್ವೇಷಿಸಿ ಮತ್ತು ಜೀವನ ಹಕ್ಕು ಅರ್ಜಿಗೆ ಧ್ವನಿ ಸೇರಿಸಿ.',
+    'sght.sub': 'ಸಂಚಾರ ವರದಿಗಳು ಇಲ್ಲಿ ತೆರೆಯುತ್ತವೆ.',
     'sght.btn': 'ಅರ್ಜಿಗೆ ಸಹಿ ಹಾಕಿ',
   },
 };
