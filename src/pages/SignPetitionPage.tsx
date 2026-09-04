@@ -1,9 +1,20 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { petitionApi } from "../services/api";
 import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal";
+import { BarChart3, Download, PenLine } from "lucide-react";
 import toast from "react-hot-toast";
 
+interface PlaceCount {
+  place: string;
+  count: number;
+}
+
+/**
+ * HOMEPAGE — clean, with only the Right to Life petition sign-in.
+ * Live total counter, per-place leaderboard (highest first), WhatsApp share
+ * and a machine-verifiable PDF receipt for the signed document.
+ */
 export const SignPetitionPage: React.FC = () => {
   const { profile } = useAuth();
   const [busy, setBusy] = useState(false);
@@ -13,8 +24,29 @@ export const SignPetitionPage: React.FC = () => {
     batchNo: number;
   } | null>(null);
   const [showRegister, setShowRegister] = useState(false);
+  const [total, setTotal] = useState<number | null>(null);
+  const [places, setPlaces] = useState<PlaceCount[]>([]);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    const handleSign = useCallback(async () => {
+  const loadStats = useCallback(async () => {
+    try {
+      const s = await petitionApi.signStats();
+      setTotal(s?.total ?? 0);
+      setPlaces(s?.places ?? []);
+    } catch {
+      // Backend unreachable — keep the last known counters on screen.
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadStats();
+    pollRef.current = setInterval(() => { void loadStats(); }, 30000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [loadStats]);
+
+  const handleSign = useCallback(async () => {
     if (!profile) {
       setShowRegister(true);
       return;
@@ -30,17 +62,17 @@ export const SignPetitionPage: React.FC = () => {
           : `${window.location.origin}/verify-sign?id=${encodeURIComponent(res.signHash)}`;
       if (res.isDuplicate) {
         toast.error("You have already signed this petition.");
-        setResult({ hash: res.signHash, verifyUrl, batchNo: res.batchNo ?? 1 });
-        return;
+      } else {
+        toast.success("Signature recorded. Thank you!");
+        void loadStats();
       }
       setResult({ hash: res.signHash, verifyUrl, batchNo: res.batchNo ?? 1 });
-      toast.success("Signature recorded. Thank you!");
     } catch (e: any) {
       toast.error(e?.error ?? e?.message ?? "Sign failed");
     } finally {
       setBusy(false);
     }
-  }, [profile]);
+  }, [profile, loadStats]);
 
   const forwardViaWhatsApp = useCallback(() => {
     if (!result) return;
@@ -48,7 +80,7 @@ export const SignPetitionPage: React.FC = () => {
       `📜 *Voice of Gudalur — Verified Signature*\n\n` +
       `I have digitally signed the Right to Life / Mudhalvan Mugavari Grievance Petition.\n\n` +
       `🔎 Verify my verified sign here:\n${result.verifyUrl}\n\n` +
-            `Batch #${result.batchNo} · Verified Resident`;
+      `Batch #${result.batchNo} · Verified Resident`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
   }, [result]);
 
@@ -62,22 +94,72 @@ export const SignPetitionPage: React.FC = () => {
     }
   }, [result]);
 
+  /** Signed-document download — a machine-verifiable PDF receipt. */
+  const downloadReceipt = useCallback(async () => {
+    if (!result || !profile) return;
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("VOICE OF GUDALUR", 60, 70);
+      doc.setFontSize(12);
+      doc.text("Right to Life Petition — Signed Signature Receipt", 60, 92);
+      doc.setDrawColor(27, 94, 32);
+      doc.setLineWidth(1);
+      doc.line(60, 104, 535, 104);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      const lines = [
+        `Name: ${profile.name}`,
+        `Gudalur ID: ${profile.gudalurId}`,
+        `Place: ${profile.customPlaceName || profile.localityName || "Gudalur"}`,
+        `Batch: #${result.batchNo}`,
+        `Signature hash: ${result.hash}`,
+        `Signed at (UTC): ${new Date().toISOString()}`,
+        `Verify online: ${result.verifyUrl}`,
+      ];
+      lines.forEach((l, i) => doc.text(l, 60, 132 + i * 20));
+      doc.setFontSize(8);
+      doc.setTextColor(120);
+      doc.text(
+        "This receipt is machine-verifiable. Officials can verify the signature hash at the URL above.",
+        60,
+        132 + lines.length * 20 + 16,
+      );
+      doc.save(`vog-signature-${result.hash.slice(0, 12)}.pdf`);
+    } catch {
+      toast.error("Could not generate the PDF receipt");
+    }
+  }, [result, profile]);
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-      <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-6">
-        <h1 className="text-2xl font-black text-slate-900 mb-1">Right to Life Petition</h1>
-        <p className="text-xs text-slate-600 leading-relaxed">
+      {/* Hero — petition + live counter */}
+      <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-6 text-center space-y-3">
+        <h1 className="text-2xl font-black text-slate-900">Right to Life Petition</h1>
+        <p className="text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
           Sign the petition submitted as a grievance to <strong>Mudhalvan Mugavari</strong>.
-          Your verified GDR ID + Aadhaar details + UTC timestamp are recorded as your digital
-          signature — verifiable by officials at any time.
+          Your Gudalur ID + UTC timestamp are recorded as your digital signature —
+          verifiable by officials at any time.
         </p>
+        <div className="inline-flex items-center gap-2 rounded-full bg-emerald-600/10 border border-emerald-600/20 px-4 py-1.5">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
+          </span>
+          <span className="text-xs font-black text-emerald-800">
+            {total === null ? "Loading live count…" : `${total.toLocaleString("en-IN")} verified signs — live`}
+          </span>
+        </div>
       </div>
 
-            {!profile && (
+      {!profile && (
         <div className="rounded-2xl bg-white border border-slate-200 p-6 text-center space-y-4">
           <div className="text-4xl">🪪</div>
           <p className="text-sm text-slate-600">
-            You must register (get a GDR ID) before signing.
+            You must register (get a Gudalur ID) before signing — it takes 20 seconds,
+            no OTP needed.
           </p>
           <button
             onClick={() => setShowRegister(true)}
@@ -111,9 +193,9 @@ export const SignPetitionPage: React.FC = () => {
           <button
             onClick={handleSign}
             disabled={busy}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-sm shadow-lg disabled:opacity-60"
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-sm shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            {busy ? "Recording your verified signature…" : "✍️ Sign with my Verified GDR ID"}
+            {busy ? "Recording your verified signature…" : <><PenLine size={16} /> Sign with my Verified GDR ID</>}
           </button>
         </div>
       )}
@@ -126,15 +208,49 @@ export const SignPetitionPage: React.FC = () => {
             <p className="text-[11px] text-emerald-700 mt-1 break-all font-mono">{result.hash}</p>
             <p className="text-[11px] text-emerald-600 mt-1">Batch #{result.batchNo}</p>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button onClick={copyLink} className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs">
               🔗 Copy verify link
             </button>
             <button onClick={forwardViaWhatsApp} className="py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">
-              📤 Forward on WhatsApp
+              📤 Share on WhatsApp
+            </button>
+            <button
+              onClick={() => { void downloadReceipt(); }}
+              className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5"
+            >
+              <Download size={13} /> Download receipt
             </button>
           </div>
           <p className="text-[10px] text-emerald-700 break-all">{result.verifyUrl}</p>
+        </div>
+      )}
+
+      {total !== null && places.length > 0 && (
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 space-y-4">
+          <h2 className="text-sm font-black text-slate-900 flex items-center gap-2">
+            <BarChart3 size={15} className="text-emerald-600" />
+            Signs by Place — highest first
+          </h2>
+          <div className="space-y-2.5">
+            {places.map((p, i) => {
+              const max = places[0]?.count || 1;
+              return (
+                <div key={p.place} className="space-y-1">
+                  <div className="flex justify-between text-[11px]">
+                    <span className="font-bold text-slate-700">{i + 1}. {p.place}</span>
+                    <span className="font-mono text-slate-500">{p.count}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500"
+                      style={{ width: `${Math.max(6, (p.count / max) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

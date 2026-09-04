@@ -9,6 +9,7 @@ import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import { db } from '../db/client';
 import { registerResident, loginResident, normalizePhone } from '../services/authService';
+import { sendOtpSms } from '../services/smsService';
 import {
   createSession, revokeSession, resolveSession, SessionUser,
   requireAuth,
@@ -101,15 +102,22 @@ router.post('/request-otp', async (req: Request, res: Response) => {
      VALUES ($1, 'phone', $2, $3, 'register', now() + INTERVAL '5 minutes')`,
     [normalized, codeHash, salt],
   );
-  // In devel mode, return the code directly. In production, send via SMS aggregator.
+  // In devel mode, return the code directly (dev/test ONLY — never production).
+  // Any other value sends a real SMS via the configured provider (smsService).
   if (process.env.OTP_PROVIDER === 'devel' || !process.env.OTP_PROVIDER) {
     logger.info(`[OTP devel] code for ${normalized}: ${code}`);
     res.json({ message: 'OTP sent', otp: code });
   } else {
-    // OTP_PROVIDER could be 'android-gw', 'smtp', 'sms-api', etc.
-    // The actual SMS sending would be implemented per-provider.
-    logger.info(`[OTP] code for ${normalized} would be sent via ${process.env.OTP_PROVIDER}`);
-    res.json({ message: 'OTP sent' });
+    try {
+      await sendOtpSms(normalized, code);
+      logger.info(`[OTP] code sent to ${normalized} via ${process.env.SMS_PROVIDER || 'sms'}`);
+      res.json({ message: 'OTP sent' });
+    } catch (e: any) {
+      // Fail loudly so misconfiguration is visible immediately instead of
+      // users waiting forever for an SMS that was never sent.
+      logger.error('otp sms:', e.message);
+      res.status(503).json({ error: `Could not send the OTP SMS — ${e.message}` });
+    }
   }
 });
 

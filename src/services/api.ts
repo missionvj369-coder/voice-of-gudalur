@@ -34,7 +34,21 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   const res = await fetch(path, { ...init, headers, credentials: 'same-origin' });
   const text = await res.text();
-  const data = text ? JSON.parse(text) : {};
+  let data: any;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    // JSON.parse threw — the body is not JSON. Classic cause on Netlify: an
+    // /api/* request with no backend route falls through to the SPA fallback
+    // and returns index.html, surfacing as the cryptic "Unexpected token '<'"
+    // / "unrecognized token" SyntaxError. Surface an actionable message instead.
+    const isHtml = /^\s*<(!doctype|html)/i.test(text);
+    const detail = isHtml
+      ? 'the API backend is not routed on this host (got HTML instead of JSON — check the /api/* proxy redirect in netlify.toml)'
+      : `unrecognized response: ${text.slice(0, 100)}`;
+    const err: ApiError = { error: `Invalid server response — ${detail}`, status: res.ok ? 502 : res.status };
+    throw err;
+  }
   if (!res.ok) {
     const err: ApiError = { error: data?.error || `Request failed (${res.status})`, status: res.status };
     throw err;
@@ -217,6 +231,10 @@ export const petitionApi = {
     request<{ signHash: string; fullName: string; village?: string; batchNo: number | null; signedAt: string; verified: boolean }>(
       `/api/petitions/verify/${encodeURIComponent(hash)}`,
     ),
+
+  /** GET /api/petitions/sign-stats — live total + per-place leaderboard (highest first). */
+  signStats: () =>
+    request<{ total: number; places: Array<{ place: string; count: number }> }>('/api/petitions/sign-stats'),
 
   list: () =>
     request<{ petitions: Array<Record<string, unknown>> }>('/api/petitions/list'),

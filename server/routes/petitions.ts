@@ -126,6 +126,28 @@ router.get('/list', async (_req: Request, res: Response) => {
   res.json({ petitions: rows.rows });
 });
 
+/** GET /api/petitions/sign-stats — public live totals + per-place leaderboard (highest first). */
+router.get('/sign-stats', async (_req: Request, res: Response) => {
+  try {
+    const total = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
+    const places = await db.query<{ place: string; count: number }>(
+      `SELECT COALESCE(NULLIF(village, ''), 'Gudalur') AS place, COUNT(*)::int AS count
+       FROM petition_signs
+       GROUP BY 1
+       ORDER BY count DESC, place ASC
+       LIMIT 60`,
+    );
+    // CockroachDB returns COUNT(*) (INT8) as strings through pg — coerce to numbers.
+    res.json({
+      total: Number(total?.count ?? 0),
+      places: places.rows.map((r) => ({ place: String(r.place), count: Number(r.count) })),
+    });
+  } catch (e: any) {
+    logger.error('sign-stats:', e.message);
+    res.json({ total: 0, places: [] });
+  }
+});
+
 /** GET /api/petitions/:id — petition detail. */
 router.get('/:id', async (req: Request, res: Response) => {
   const row = await db.queryOne<{

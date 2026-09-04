@@ -1,5 +1,4 @@
 ﻿import express from 'express';
-import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
@@ -67,17 +66,35 @@ async function whisperTranscribe(audioBase64: string, language?: string): Promis
 // In-memory cache for weather snapshot
 let weatherCache: { data: any; timestamp: number } | null = null;
 
-async function startServer() {
+/**
+ * Build the full Express app (middleware + every /api route). Exported so the
+ * Netlify Function (netlify/functions/api.ts) can serve this exact backend
+ * serverlessly; `startServer()` below is the local standalone entrypoint.
+ */
+export async function createApp() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+
+  // Behind a reverse proxy (Netlify /api/* rewrite → Cloud Run load balancer)
+  // the socket address is the proxy, not the visitor. Trust the proxy chain so
+  // req.ip (and therefore the rate limiters below) resolves to the real client
+  // — without this every visitor shares ONE bucket (20 OTP requests / 15 min)
+  // and registration 429s platform-wide. Tune the hop count to your host:
+  // 2 = Netlify proxy → Cloud Run LB; 1 = direct Cloud Run / single proxy.
+  app.set('trust proxy', 2);
 
     app.use(express.json());
   app.use(cookieParser());
 
   // â”€â”€ Rate limiting (abuse protection) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const authRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: 'Too many requests' });
-  const publicRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120, message: 'Too many requests' });
-  const writeRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: 'Too many requests' });
+  // In serverless (Netlify Function) runs the socket address can be absent;
+  // key on req.ip with a safe fallback and skip the validations that throw
+  // when IP info is missing. Behind Netlify, X-Forwarded-For + trust proxy
+  // still resolve real client IPs (per-user buckets).
+  const clientKey = (req: any): string => req.ip || req.socket?.remoteAddress || 'anonymous';
+  const limiterOpts = { validate: { xForwardedForHeader: false, ip: false } as any };
+  const authRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts });
+  const publicRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts });
+  const writeRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts });
 
   // Security headers (CSP updated â€” no *.supabase.co, no Realtime websocket)
   app.use((req, res, next) => {
@@ -564,12 +581,18 @@ Role:
     py.stdin.end();
   });
 
-  // Serve the production build when deployed (NODE_ENV=production) or when
-  // explicitly requested (`npm run preview` â†’ `tsx server.ts --serve-dist`).
-  // Everything else (npm run dev) uses Vite middleware â€” both modes expose the
-  // real /api backend on the same origin.
+  return app;
+}
+
+/** Local standalone entrypoint: attach Vite middleware (dev) or serve dist (preview). */
+async function startServer() {
+  const app = await createApp();
+  const PORT = Number(process.env.PORT) || 3000;
+
   const serveDist = process.env.NODE_ENV === 'production' || process.argv.includes('--serve-dist');
   if (!serveDist) {
+    // Dynamic import keeps Vite out of serverless bundles entirely.
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -588,4 +611,10 @@ Role:
   });
 }
 
-startServer();
+// Run the standalone server only when server.ts itself is the entrypoint
+// (`npm run dev` / `npm run preview`). When imported by the Netlify Function,
+// createApp() is served serverlessly: no listen, no Vite.
+const invokedDirectly = (process.argv[1] || '').replace(/\\/g, '/').endsWith('/server.ts');
+if (invokedDirectly) {
+  void startServer();
+}

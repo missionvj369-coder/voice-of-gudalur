@@ -22,8 +22,6 @@ interface AuthContextType {
     lng?: number;
   }) => Promise<UserProfile>;
   loginResident: (phone?: string, gudalurId?: string) => Promise<UserProfile>;
-  requestOtp: (phone: string) => Promise<{ message: string; otp?: string }>;
-  verifyOtp: (phone: string, code: string) => Promise<{ isNew: boolean; user?: UserProfile }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateLocality: (localityId: string, customPlaceName?: string, pincode?: string) => Promise<void>;
@@ -50,12 +48,6 @@ const AuthContext = createContext<AuthContextType>({
     throw new Error('Not implemented');
   },
   loginResident: async () => {
-    throw new Error('Not implemented');
-  },
-  requestOtp: async () => {
-    throw new Error('Not implemented');
-  },
-  verifyOtp: async () => {
     throw new Error('Not implemented');
   },
   logout: async () => {},
@@ -310,29 +302,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     };
 
-  const requestOtp = async (phone: string): Promise<{ message: string; otp?: string }> => {
-    const normalized = normalizePhone(phone);
-    if (normalized.length !== 10) {
-      throw new Error('A valid 10-digit mobile number is required');
-    }
-    const res = await authApi.requestOtp({ phone: normalized });
-    if (!res) throw new Error('Failed to send OTP');
-    return res;
-  };
-
-  const verifyOtp = async (phone: string, code: string): Promise<{ isNew: boolean; user?: UserProfile }> => {
-    const normalized = normalizePhone(phone);
-    const res = await authApi.verifyOtp({ phone: normalized, code });
-    if (!res) throw new Error('OTP verification failed');
-    if (!res.isNew && res.user) {
-      const prof = applyPlatformAdminOverride(toUserProfile(res.user));
-      persistProfile(prof);
-      setUser(toAuthUser(prof));
-      return { isNew: false, user: prof };
-    }
-    return { isNew: true };
-  };
-
   const updateLocality = async (localityId: string, customPlaceName?: string, pincode?: string) => {
     const loc = GUDALUR_LOCALITIES.find((l) => l.id === localityId);
     if (!profile) return;
@@ -434,8 +403,6 @@ return (
       acquireLiveLocation,
       registerResident,
       loginResident,
-      requestOtp,
-      verifyOtp,
       logout,
       refreshProfile,
       updateLocality,

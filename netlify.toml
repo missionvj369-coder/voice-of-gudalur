@@ -6,6 +6,10 @@
 
 [functions]
   node_bundler = "esbuild"
+  # vite is only dynamically imported by the local dev server (startServer);
+  # keep it out of the serverless bundle. pg-native is an optional pg binding
+  # that is never used here but would otherwise fail the esbuild pass.
+  external_node_modules = ["vite", "pg-native"]
 
 # NOTE: The canonical backend is the Express server (server.ts) talking to
 # CockroachDB — it serves ALL /api/* routes on the same origin (Cloud Run /
@@ -15,6 +19,25 @@
   from = "/api/storage/*"
   to = "/.netlify/functions/storage"
   status = 200
+
+# ── API (Netlify Function — the Express backend itself) ─────────────────────
+# server.ts#createApp() is wrapped with serverless-http in
+# netlify/functions/api.ts, so the WHOLE backend (auth, petitions, config,
+# CockroachDB) runs on Netlify. Required Netlify environment variables
+# (Site configuration → Environment variables):
+#   DATABASE_URL        CockroachDB connection string
+#   SESSION_SECRET      JWT signing secret (required)
+#   NODE_ENV            production  (enables secure session cookies)
+#   DATABASE_POOL_MAX   5 recommended for serverless (each instance has its own pool)
+#   DATABASE_SSL        optional — verify-full | require; encryption-only
+#                       fallback when no CA file is present (server/db/client.ts)
+#   OTP_PROVIDER        devel | sms — registration is OTP-free; devel returns
+#                       the code in the response (dev/test ONLY)
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
 
 # SPA fallback — lets /verify-docket and other client routes work on Netlify.
 # Function routes (/.netlify/functions/*) always take precedence over redirects.

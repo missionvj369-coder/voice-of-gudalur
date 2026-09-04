@@ -1,15 +1,14 @@
 ﻿import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { Shell } from './components/Layout/Shell';
-import { NavBar } from './components/NavBar';
 
 // Route-level code splitting — every page downloads only when first visited.
-const Manifesto = lazy(() => import('./pages/Manifesto').then((m) => ({ default: m.Manifesto })));
-const VoiceSoundboardPage = lazy(() => import('./pages/VoiceSoundboardPage').then((m) => ({ default: m.VoiceSoundboardPage })));
 const SignPetitionPage = lazy(() => import('./pages/SignPetitionPage').then((m) => ({ default: m.SignPetitionPage })));
+const Manifesto = lazy(() => import('./pages/Manifesto').then((m) => ({ default: m.Manifesto })));
+const ClosedCorridorsPage = lazy(() => import('./pages/ClosedCorridorsPage').then((m) => ({ default: m.ClosedCorridorsPage })));
 const VerifySignPage = lazy(() => import('./pages/VerifySignPage').then((m) => ({ default: m.VerifySignPage })));
 const OfficialsPortalPage = lazy(() => import('./pages/OfficialsPortalPage').then((m) => ({ default: m.OfficialsPortalPage })));
 const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage').then((m) => ({ default: m.AdminLoginPage })));
@@ -33,6 +32,25 @@ const AdminRoutes: React.FC = () => (
   </Suspense>
 );
 
+/** Animal sightings open after the government system integration — launch placeholder. */
+const SightingsSoonPage: React.FC = () => (
+  <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-5">
+    <div className="text-5xl" aria-hidden>🐘</div>
+    <h1 className="text-2xl font-black text-slate-900">Animal Sightings — Coming Soon</h1>
+    <p className="text-sm text-slate-600 leading-relaxed">
+      Sighting reports will open here once the government forest-department system is
+      integrated with Voice of Gudalur. Until then, explore the closed corridors map
+      and add your voice to the Right to Life petition.
+    </p>
+    <Link
+      to="/"
+      className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-lg"
+    >
+      Sign the Petition
+    </Link>
+  </div>
+);
+
 const AppContent: React.FC = () => {
   const { loading } = useAuth();
 
@@ -46,15 +64,18 @@ const AppContent: React.FC = () => {
 
   return (
     <Shell>
-      <NavBar />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
-          <Route path="/" element={<Manifesto />} />
-          <Route path="/voice-soundboard" element={<VoiceSoundboardPage />} />
+          {/* Clean homepage — the Right to Life petition sign-in. */}
+          <Route path="/" element={<SignPetitionPage />} />
           <Route path="/sign-petition" element={<SignPetitionPage />} />
+          {/* Original home content lives as a topic inside the menu. */}
+          <Route path="/about" element={<Manifesto />} />
+          <Route path="/corridors" element={<ClosedCorridorsPage />} />
+          <Route path="/sightings" element={<SightingsSoonPage />} />
           <Route path="/verify-sign" element={<VerifySignPage />} />
           <Route path="/officials" element={<OfficialsPortalPage />} />
-          <Route path="*" element={<Manifesto />} />
+          <Route path="*" element={<SignPetitionPage />} />
         </Routes>
       </Suspense>
     </Shell>

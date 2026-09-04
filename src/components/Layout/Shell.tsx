@@ -1,7 +1,12 @@
 ﻿import React, { createContext, useContext, useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import { AnimatePresence, motion } from 'motion/react';
 import { useLanguage, type Language } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
-import { Flame, User, LogIn, LogOut } from 'lucide-react';
+import {
+  Flame, User, LogIn, LogOut, Menu, X, PenLine, BookOpen,
+  Map as MapIcon, PawPrint, ShieldCheck, IdCard, UserPlus,
+} from 'lucide-react';
 import { GudalurIdModal } from '../GudalurIdModal';
 
 import { LoginResidentModal } from '../Auth/LoginResidentModal';
@@ -23,12 +28,36 @@ const LANGUAGES: { code: Language; short: string; label: string }[] = [
   { code: 'kn', short: 'ಕನ್ನ', label: 'ಕನ್ನಡ' },
 ];
 
+/** A menu entry — active route highlighted, closes the drawer on navigation. */
+const DrawerLink: React.FC<{
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  onNavigate: () => void;
+  end?: boolean;
+}> = ({ to, icon, label, onNavigate, end }) => (
+  <NavLink
+    to={to}
+    end={end}
+    onClick={onNavigate}
+    className={({ isActive }) =>
+      `flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition ${
+        isActive ? 'bg-[#AED581] text-[#1B5E20]' : 'text-[#F5F5F5]/85 hover:text-[#F5F5F5] hover:bg-[#388E3C]/40'
+      }`
+    }
+  >
+    {icon}
+    {label}
+  </NavLink>
+);
+
 export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { lang, setLang } = useLanguage();
   const { profile, logout } = useAuth();
   const [idModalOpen, setIdModalOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [readyQueue, setReadyQueue] = useState<{ id: number; fn: () => void }[]>([]);
 
   const openIdModal = () => {
@@ -84,24 +113,6 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-0.5 rounded-lg bg-[#2E7D32]/60 border border-[#AED581]/30 p-0.5">
-                {LANGUAGES.map((l) => (
-                  <button
-                    key={l.code}
-                    type="button"
-                    onClick={() => setLang(l.code)}
-                    title={l.label}
-                    className={`px-1.5 sm:px-2 py-1 rounded-md text-[9px] sm:text-[10px] font-black uppercase transition-all ${
-                      lang === l.code
-                        ? 'bg-[#AED581] text-[#1B5E20] shadow'
-                        : 'text-[#F5F5F5]/80 hover:text-[#F5F5F5] hover:bg-[#388E3C]/40'
-                    }`}
-                  >
-                    <span className="hidden sm:inline">{l.label}</span>
-                    <span className="sm:hidden">{l.short}</span>
-                  </button>
-                ))}
-              </div>
               <button
                 type="button"
                 onClick={openIdModal}
@@ -122,27 +133,16 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     <User size={12} />
                   </span>
                 )}
-                {profile && (
-                  <button
-                    type="button"
-                    onClick={async () => { await logout(); }}
-                    title="Logout"
-                    className="ml-1 rounded-full p-1 text-[#F5F5F5]/60 hover:text-[#F5F5F5] hover:bg-[#388E3C]/50 transition shrink-0"
-                  >
-                    <LogOut size={12} />
-                  </button>
-                )}
               </button>
-              {profile && (
-                <button
-                  type="button"
-                  onClick={() => setLoginModalOpen(true)}
-                  title="Switch account"
-                  className="ml-1 rounded-full p-1 text-[#F5F5F5]/60 hover:text-[#F5F5F5] hover:bg-[#388E3C]/50 transition shrink-0 hidden sm:flex"
-                >
-                  <LogIn size={12} />
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setMenuOpen(true)}
+                title="Menu"
+                aria-label="Open menu"
+                className="rounded-lg p-1.5 bg-[#AED581]/20 border border-[#AED581]/40 hover:bg-[#AED581]/30 text-[#F5F5F5] transition shrink-0"
+              >
+                <Menu size={14} />
+              </button>
             </div>
           </div>
         </header>
@@ -169,6 +169,108 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             </div>
           </div>
         </footer>
+
+        {/* Slide-in menu — every section lives here instead of a header link bar. */}
+        <AnimatePresence>
+          {menuOpen && (
+            <div className="fixed inset-0 z-[60]" role="dialog" aria-label="Main menu">
+              <motion.div
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setMenuOpen(false)}
+              />
+              <motion.aside
+                className="absolute right-0 top-0 bottom-0 w-72 max-w-[85vw] bg-[#1B5E20] border-l border-[#AED581]/30 shadow-2xl flex flex-col"
+                initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+                transition={{ type: 'tween', duration: 0.22, ease: 'easeOut' }}
+              >
+                <div className="flex items-center justify-between px-4 h-14 border-b border-[#AED581]/20 shrink-0">
+                  <span className="font-black text-xs text-[#F5F5F5] tracking-wider">MENU</span>
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen(false)}
+                    aria-label="Close menu"
+                    className="rounded-lg p-1.5 text-[#F5F5F5]/70 hover:text-[#F5F5F5] hover:bg-[#388E3C]/40 transition"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+                  <DrawerLink to="/" icon={<PenLine size={16} />} label="Sign Petition" onNavigate={() => setMenuOpen(false)} end />
+                  <DrawerLink to="/about" icon={<BookOpen size={16} />} label="About the Movement" onNavigate={() => setMenuOpen(false)} />
+                  <DrawerLink to="/corridors" icon={<MapIcon size={16} />} label="Closed Corridors Map" onNavigate={() => setMenuOpen(false)} />
+                  <div className="relative">
+                    <DrawerLink to="/sightings" icon={<PawPrint size={16} />} label="Animal Sightings" onNavigate={() => setMenuOpen(false)} />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] font-black uppercase tracking-wider bg-amber-400/90 text-[#1B5E20] px-1.5 py-0.5 rounded-full pointer-events-none">
+                      Soon
+                    </span>
+                  </div>
+                  <DrawerLink to="/officials" icon={<ShieldCheck size={16} />} label="Officials Portal" onNavigate={() => setMenuOpen(false)} />
+                </nav>
+
+                <div className="border-t border-[#AED581]/20 px-3 py-4 space-y-3 shrink-0">
+                  <div className="flex items-center gap-1">
+                    {LANGUAGES.map((l) => (
+                      <button
+                        key={l.code}
+                        type="button"
+                        onClick={() => setLang(l.code)}
+                        title={l.label}
+                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
+                          lang === l.code
+                            ? 'bg-[#AED581] text-[#1B5E20] shadow'
+                            : 'text-[#F5F5F5]/80 hover:text-[#F5F5F5] hover:bg-[#388E3C]/40'
+                        }`}
+                      >
+                        {l.short}
+                      </button>
+                    ))}
+                  </div>
+
+                  {profile ? (
+                    <div className="space-y-2">
+                      <div className="text-[10px] text-[#AED581]/80 font-mono truncate">
+                        {profile.name} · {profile.gudalurId}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setMenuOpen(false); openIdModal(); }}
+                        className="w-full py-2.5 rounded-xl bg-[#AED581] text-[#1B5E20] font-bold text-xs flex items-center justify-center gap-2"
+                      >
+                        <IdCard size={14} /> My Gudalur ID Card
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => { setMenuOpen(false); await logout(); }}
+                        className="w-full py-2.5 rounded-xl border border-[#AED581]/40 text-[#F5F5F5] font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#388E3C]/40 transition"
+                      >
+                        <LogOut size={14} /> Logout
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => { setMenuOpen(false); setRegisterModalOpen(true); }}
+                        className="w-full py-2.5 rounded-xl bg-[#AED581] text-[#1B5E20] font-bold text-xs flex items-center justify-center gap-2"
+                      >
+                        <UserPlus size={14} /> Register — Get Gudalur ID
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setMenuOpen(false); setLoginModalOpen(true); }}
+                        className="w-full py-2.5 rounded-xl border border-[#AED581]/40 text-[#F5F5F5] font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#388E3C]/40 transition"
+                      >
+                        <LogIn size={14} /> Login
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </motion.aside>
+            </div>
+          )}
+        </AnimatePresence>
 
         <GudalurIdModal isOpen={idModalOpen} onClose={() => setIdModalOpen(false)} />
         <LoginResidentModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onNeedRegister={() => { setLoginModalOpen(false); setRegisterModalOpen(true); }} />
