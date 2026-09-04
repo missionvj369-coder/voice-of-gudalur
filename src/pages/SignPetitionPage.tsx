@@ -5,7 +5,8 @@ import { useLanguage } from "../context/LanguageContext";
 import { petitionApi } from "../services/api";
 import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal";
 import { ThirukuralSection } from "../components/ThirukuralSection";
-import { BarChart3, Download, PenLine, FileText, Eye, Loader2 } from "lucide-react";
+import ShareSocialModal from "../components/ShareSocial/ShareSocialModal";
+import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface PlaceCount {
@@ -22,16 +23,36 @@ export const SignPetitionPage: React.FC = () => {
   const { profile } = useAuth();
   const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
-  const [autoSigning, setAutoSigning] = useState(false);
   const [result, setResult] = useState<{
     hash: string;
     verifyUrl: string;
     batchNo: number;
+    signedAt: string;
+    name: string;
+    gudalurId: string;
+    locality: string;
   } | null>(null);
   const [showRegister, setShowRegister] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [total, setTotal] = useState<number | null>(null);
   const [places, setPlaces] = useState<PlaceCount[]>([]);
+  const [hasSigned, setHasSigned] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Check if user has already signed
+  useEffect(() => {
+    const signed = localStorage.getItem("vog_petition_signed") === "1";
+    setHasSigned(signed);
+    if (signed && profile) {
+      // Load previous sign data
+      const savedResult = localStorage.getItem("vog_petition_result");
+      if (savedResult) {
+        try {
+          setResult(JSON.parse(savedResult));
+        } catch { /* ignore */ }
+      }
+    }
+  }, [profile]);
 
   const loadStats = useCallback(async () => {
     try {
@@ -51,35 +72,19 @@ export const SignPetitionPage: React.FC = () => {
     };
   }, [loadStats]);
 
-  // Auto-sign petition after successful registration
-  const handleRegistered = useCallback(async () => {
-    setAutoSigning(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const res = await petitionApi.sign({
-        idempotencyKey: `petition-sign-${Date.now()}`,
-      });
-      const verifyUrl = res.verifyUrl
-        ? new URL(res.verifyUrl, window.location.origin).toString()
-        : `${window.location.origin}/verify-sign?id=${encodeURIComponent(res.signHash)}`;
-      if (res.isDuplicate) {
-        toast.success(t("home.dup_toast"), { duration: 5000 });
-      } else {
-        try { localStorage.setItem("vog_petition_signed", "1"); } catch { /* ignore */ }
-        toast.success(t("home.signed_toast"), { duration: 6000 });
-        void loadStats();
-      }
-      setResult({ hash: res.signHash, verifyUrl, batchNo: res.batchNo ?? 1 });
-    } catch (e: any) {
-      toast.error(e?.error ?? e?.message ?? "Sign failed. Please try again.");
-    } finally {
-      setAutoSigning(false);
-    }
-  }, [loadStats, t]);
+  // After registration - show ID card, don't auto-sign
+  const handleRegistered = useCallback(() => {
+    // Just close the modal - user will see their ID card
+    setShowRegister(false);
+  }, []);
 
   const handleSign = useCallback(async () => {
     if (!profile) {
       setShowRegister(true);
+      return;
+    }
+    if (hasSigned) {
+      toast.success(t("home.dup_toast"), { duration: 5000 });
       return;
     }
     setBusy(true);
@@ -91,20 +96,34 @@ export const SignPetitionPage: React.FC = () => {
         res.verifyUrl
           ? new URL(res.verifyUrl, window.location.origin).toString()
           : `${window.location.origin}/verify-sign?id=${encodeURIComponent(res.signHash)}`;
+      const signedAt = new Date().toISOString();
       if (res.isDuplicate) {
         toast.success(t("home.dup_toast"), { duration: 5000 });
       } else {
-        try { localStorage.setItem("vog_petition_signed", "1"); } catch { /* ignore */ }
+        const resultData = {
+          hash: res.signHash,
+          verifyUrl,
+          batchNo: res.batchNo ?? 1,
+          signedAt,
+          name: profile.name,
+          gudalurId: profile.gudalurId || "",
+          locality: profile.customPlaceName || profile.localityName || "Gudalur",
+        };
+        try {
+          localStorage.setItem("vog_petition_signed", "1");
+          localStorage.setItem("vog_petition_result", JSON.stringify(resultData));
+        } catch { /* ignore */ }
+        setHasSigned(true);
+        setResult(resultData);
         toast.success(t("home.signed_toast"), { duration: 6000 });
         void loadStats();
       }
-      setResult({ hash: res.signHash, verifyUrl, batchNo: res.batchNo ?? 1 });
     } catch (e: any) {
       toast.error(e?.error ?? e?.message ?? "Sign failed");
     } finally {
       setBusy(false);
     }
-  }, [profile, loadStats]);
+  }, [profile, loadStats, hasSigned, t]);
 
   const forwardViaWhatsApp = useCallback(() => {
     if (!result) return;
@@ -199,33 +218,104 @@ export const SignPetitionPage: React.FC = () => {
         </div>
       )}
 
-      {profile && (
+      {profile && !hasSigned && (
         <div className="rounded-2xl bg-white border border-slate-200 p-6 space-y-4">
-          <div className="text-sm space-y-2">
-            <div className="flex justify-between">
-              <span className="text-slate-400">{t("home.signing_as")}</span>
-              <span className="font-bold">{profile.name}</span>
+          <div className="text-center mb-4">
+            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center mb-2">
+              <Shield size={32} className="text-white" />
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-400">{t("home.gdr")}</span>
-              <span className="font-bold">{profile.gudalurId}</span>
+            <h3 className="font-bold text-slate-900">Your ID Card</h3>
+          </div>
+          <div className="bg-slate-50 rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <User size={16} className="text-emerald-600" />
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase">Name</p>
+                <p className="font-bold text-slate-900">{profile.name}</p>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-400">{t("home.location")}</span>
-              <span className="font-bold text-right">{profile.customPlaceName || profile.localityName}</span>
+            <div className="flex items-center gap-3">
+              <Shield size={16} className="text-emerald-600" />
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase">GDR ID</p>
+                <p className="font-mono font-bold text-slate-900">{profile.gudalurId}</p>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-400">{t("home.timestamp")}</span>
-              <span className="font-bold text-right">{new Date().toISOString()} UTC</span>
+            <div className="flex items-center gap-3">
+              <MapPin size={16} className="text-emerald-600" />
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase">Location</p>
+                <p className="font-bold text-slate-900">{profile.customPlaceName || profile.localityName}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Clock size={16} className="text-emerald-600" />
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase">Registered</p>
+                <p className="font-bold text-slate-900">{new Date().toLocaleDateString()}</p>
+              </div>
             </div>
           </div>
           <button
             onClick={handleSign}
             disabled={busy}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-sm shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            {busy ? t("home.signing") : <><PenLine size={16} /> {t("home.sign_btn")}</>}
+            {busy ? <><Loader2 size={16} className="animate-spin" /> Signing...</> : <><PenLine size={16} /> {t("home.sign_btn")}</>}
           </button>
+        </div>
+      )}
+
+      {profile && hasSigned && result && (
+        <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 p-6 space-y-4">
+          <div className="text-center">
+            <CheckCircle2 size={48} className="mx-auto text-emerald-600 mb-2" />
+            <h3 className="font-bold text-emerald-900">Petition Signed!</h3>
+          </div>
+          <div className="bg-white rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <User size={16} className="text-emerald-600" />
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase">Signing as</p>
+                <p className="font-bold text-slate-900">{result.name}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Shield size={16} className="text-emerald-600" />
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase">GDR ID</p>
+                <p className="font-mono font-bold text-slate-900">{result.gudalurId}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <MapPin size={16} className="text-emerald-600" />
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase">Location</p>
+                <p className="font-bold text-slate-900">{result.locality}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Clock size={16} className="text-emerald-600" />
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase">Timestamp</p>
+                <p className="font-mono text-xs text-slate-900">{result.signedAt} UTC</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowShareModal(true)}
+              className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2"
+            >
+              <Share2 size={16} /> Share
+            </button>
+            <button
+              disabled={true}
+              className="flex-1 py-3 rounded-xl bg-slate-200 text-slate-500 font-bold text-sm flex items-center justify-center gap-2 cursor-not-allowed"
+            >
+              <CheckCircle2 size={16} /> Signed
+            </button>
+          </div>
         </div>
       )}
 
@@ -304,21 +394,18 @@ export const SignPetitionPage: React.FC = () => {
       {/* Thirukural Section */}
       <ThirukuralSection />
 
-      {/* Auto-signing overlay */}
-      {autoSigning && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/90 backdrop-blur-sm">
-          <div className="text-center space-y-4">
-            <Loader2 size={48} className="animate-spin text-emerald-600 mx-auto" />
-            <p className="text-lg font-bold text-emerald-800">{t("home.auto_signing") || "Signing your petition..."}</p>
-            <p className="text-sm text-emerald-600">{t("home.auto_signing_sub") || "Please wait while we submit your signature"}</p>
-          </div>
-        </div>
-      )}
+      {/* Share Social Modal */}
+      <ShareSocialModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        posters={[]}
+        videos={[]}
+      />
 
       <RegisterResidentModal 
         isOpen={showRegister} 
         onClose={() => setShowRegister(false)} 
-        onRegistered={() => { setShowRegister(false); void handleRegistered(); }}
+        onRegistered={() => { setShowRegister(false); handleRegistered(); }}
       />
     </div>
   );

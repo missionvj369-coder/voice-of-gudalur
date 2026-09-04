@@ -378,10 +378,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setUser(null);
     persistProfile(null);
-    // Clear all locally-pending records on logout so the next user starts fresh
+    // Clear ALL locally-stored data on logout so the next user starts fresh
     try {
+      // Clear pending records
       localStorage.removeItem('og_pending_signatures');
       localStorage.removeItem('og_pending_emails');
+      // Clear petition data
+      localStorage.removeItem('vog_petition_signed');
+      localStorage.removeItem('vog_petition_result');
+      // Clear intro seen flag
+      sessionStorage.removeItem('vog_intro_seen');
     } catch {
       /* best-effort */
     }
