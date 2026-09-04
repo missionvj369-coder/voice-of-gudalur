@@ -66,7 +66,8 @@ export const SignPetitionPage: React.FC = () => {
 
   useEffect(() => {
     void loadStats();
-    pollRef.current = setInterval(() => { void loadStats(); }, 30000);
+    // Live tracking - update every 10 seconds
+    pollRef.current = setInterval(() => { void loadStats(); }, 10000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
@@ -345,33 +346,66 @@ export const SignPetitionPage: React.FC = () => {
         </div>
       )}
 
-      {total !== null && places.length > 0 && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 space-y-4">
-          <h2 className="text-sm font-black text-slate-900 flex items-center gap-2">
+      {/* Live Tracking Section */}
+      <div className="rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-black text-emerald-900 flex items-center gap-2">
             <BarChart3 size={15} className="text-emerald-600" />
-            {t("home.by_place")}
+            Live Tracking
           </h2>
-          <div className="space-y-2.5">
-            {places.map((p, i) => {
-              const max = places[0]?.count || 1;
-              return (
-                <div key={p.place} className="space-y-1">
-                  <div className="flex justify-between text-[11px]">
-                    <span className="font-bold text-slate-700">{i + 1}. {p.place}</span>
-                    <span className="font-mono text-slate-500">{p.count}</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500"
-                      style={{ width: `${Math.max(6, (p.count / max) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+            </span>
+            <span className="text-[10px] font-bold text-emerald-700">LIVE</span>
           </div>
         </div>
-      )}
+        
+        {/* Total Count */}
+        <div className="text-center py-4">
+          <p className="text-4xl font-black text-emerald-900">{total !== null ? total.toLocaleString('en-IN') : '...'}</p>
+          <p className="text-xs text-emerald-700 mt-1">Petitions Signed</p>
+        </div>
+
+        {/* Places Leaderboard */}
+        {places.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-emerald-800">Top Places by Signatures</p>
+            {places
+              .sort((a, b) => b.count - a.count)
+              .slice(0, 10)
+              .map((p, i) => {
+                const max = places[0]?.count || 1;
+                const percentage = Math.max(4, (p.count / max) * 100);
+                return (
+                  <div key={p.place} className="bg-white/80 rounded-lg p-2 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          i === 0 ? 'bg-yellow-400 text-yellow-900' :
+                          i === 1 ? 'bg-slate-300 text-slate-700' :
+                          i === 2 ? 'bg-amber-600 text-white' :
+                          'bg-slate-100 text-slate-600'
+                        }`}>
+                          {i + 1}
+                        </span>
+                        <span className="font-bold text-slate-800 text-xs">{p.place}</span>
+                      </div>
+                      <span className="font-mono font-bold text-emerald-700 text-sm">{p.count}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+      </div>
 
       {/* Action Buttons */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">

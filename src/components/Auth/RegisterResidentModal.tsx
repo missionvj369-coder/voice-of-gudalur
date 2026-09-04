@@ -87,7 +87,24 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
       toast.error(t('reg.phone_required'));
       return;
     }
+    
+    // Check if phone number already exists
     setIsSubmitting(true);
+    try {
+      // First check if phone is already registered
+      const checkResponse = await fetch(`/api/auth/check-phone?phone=${digits}`);
+      if (checkResponse.ok) {
+        const checkData = await checkResponse.json();
+        if (checkData.exists) {
+          toast.error('Mobile number already registered! Please login instead.', { duration: 6000, icon: '📱' });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+    } catch {
+      // If check fails, continue with registration (server will validate)
+    }
+    
     try {
       const profile = await registerResident({
         name: name.trim(),
@@ -102,6 +119,7 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
       setName('');
       setPhone('');
       setCustomPlaceName('');
+      setPlaceSearch(GUDALUR_LOCALITIES[0].name);
       onSuccess?.();
       onRegistered?.({
         gudalurId: profile.gudalurId,
@@ -111,8 +129,8 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
       onClose();
     } catch (err: any) {
       const msg = String((err && err.message) || '');
-      if ((err && err.code === 'DUPLICATE_PHONE') || /duplicate|already registered|unique key/i.test(msg)) {
-        toast.error(t('reg.dup_phone'), { duration: 5000 });
+      if ((err && err.code === 'DUPLICATE_PHONE') || /duplicate|already registered|unique key|phone.*exist|mobile.*registered/i.test(msg)) {
+        toast.error('Mobile number already registered! Please login instead.', { duration: 6000, icon: '📱' });
       } else {
         toast.error(msg || t('reg.fail'));
       }
