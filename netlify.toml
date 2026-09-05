@@ -1,6 +1,6 @@
 # VOICE OF GUDALUR — Netlify configuration
 [build]
-  command = "npm run build"
+  command = "node scripts/netlify-install-cache-buster.js && npm run build"
   publish = "dist"
   functions = "netlify/functions"
 
