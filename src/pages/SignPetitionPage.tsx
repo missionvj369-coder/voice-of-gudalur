@@ -129,7 +129,7 @@ export const SignPetitionPage: React.FC = () => {
       locality: profile.customPlaceName || profile.localityName || "Gudalur",
     };
     
-    try {
+                        try {
       const res = await petitionApi.sign({
         idempotencyKey: `petition-sign-${profile.uid}`,
       });
@@ -140,29 +140,32 @@ export const SignPetitionPage: React.FC = () => {
       resultData.hash = res.signHash;
       resultData.verifyUrl = verifyUrl;
       resultData.batchNo = res.batchNo ?? 1;
-      
+
       if (res.isDuplicate) {
         toast.success(t("home.dup_toast"), { duration: 5000 });
       } else {
         toast.success(t("home.signed_toast"), { duration: 6000 });
       }
+
+      // Save locally only after the backend successfully records the signature
+      try {
+        localStorage.setItem("vog_petition_signed", "1");
+        localStorage.setItem("vog_petition_result", JSON.stringify(resultData));
+      } catch { /* ignore */ }
+      setHasSigned(true);
+      setResult(resultData);
     } catch (e: any) {
-      // Backend unavailable - save locally (offline mode)
+      // Backend unavailable - show accurate error (no misleading "offline" message)
       const errorMsg = e?.error || e?.message || "";
       if (errorMsg.includes("502") || errorMsg.includes("DATABASE_URL") || errorMsg.includes("backend")) {
-        toast.success("Signature saved offline! Will sync when connection is restored.", { duration: 6000, icon: "📱" });
+        toast.error("Petition service unavailable. Please try again in a moment.", {
+          duration: 6000,
+          icon: "⚠",
+        });
       } else {
         toast.error(errorMsg || "Sign failed");
       }
     }
-    
-    // Always save locally as backup
-    try {
-      localStorage.setItem("vog_petition_signed", "1");
-      localStorage.setItem("vog_petition_result", JSON.stringify(resultData));
-    } catch { /* ignore */ }
-    setHasSigned(true);
-    setResult(resultData);
     // Let other screens (e.g. About → "Petition Signed") update instantly.
     window.dispatchEvent(new Event("vog:petition-signed"));
     setBusy(false);
