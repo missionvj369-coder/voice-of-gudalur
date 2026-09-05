@@ -12,17 +12,6 @@
 [build.environment]
   NPM_FLAGS = "--include=dev"
   NODE_ENV = "production"
-  node_bundler = "esbuild"
-  # vite is only dynamically imported by the local dev server (startServer);
-  # keep it out of the serverless bundle. pg-native is an optional pg binding
-  # that is never used here but would otherwise fail the esbuild pass.
-  external_node_modules = ["vite", "pg-native"]
-
-# NOTE: The canonical backend is the Express server (server.ts) talking to
-# CockroachDB — it serves ALL /api/* routes on the same origin (Cloud Run /
-# any Node host). Netlify hosts the static PWA and the thin Express backend
-# via the serverless function. No external object storage (Storj removed —
-# CockroachDB is the only datastore).
 
 # ── API (Netlify Function — the Express backend itself) ─────────────────────
 # server.ts#createApp() is wrapped with serverless-http in
@@ -37,6 +26,13 @@
 #                       fallback when no CA file is present (server/db/client.ts)
 #   OTP_PROVIDER        devel | sms — registration is OTP-free; devel returns
 #                       the code in the response (dev/test ONLY)
+
+[functions]
+  node_bundler = "esbuild"
+  # vite is only dynamically imported by the local dev server (startServer);
+  # keep it out of the serverless bundle. pg-native is an optional pg binding
+  # that is never used here but would otherwise fail the esbuild pass.
+  external_node_modules = ["vite", "pg-native"]
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
