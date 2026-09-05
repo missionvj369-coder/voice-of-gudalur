@@ -22,8 +22,23 @@ let lambda: ReturnType<typeof serverless> | null = null;
 
 export const handler = async (event: any, context: any) => {
   if (!lambda) {
-    // Cold start: build the Express app once per lambda instance.
-    lambda = serverless(await createApp());
+    // Cold start: build the Express app once per lambda instance. If init
+    // fails (bad bundle, missing env, DB config), answer with a JSON 503 that
+    // NAMES the problem instead of an opaque HTML 502 the client cannot read.
+    // A failed init is NOT cached — the next invocation retries.
+    try {
+      lambda = serverless(await createApp());
+    } catch (e: any) {
+      console.error('[api] function init failed:', e?.stack || e?.message || e);
+      return {
+        statusCode: 503,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: `API failed to initialize — ${e?.message || e}`,
+          hint: 'Check Netlify function logs and environment variables (DATABASE_URL, SESSION_SECRET).',
+        }),
+      };
+    }
   }
   const e = { ...event };
   const path: string = e.path || '';

@@ -6,8 +6,10 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename = typeof (import.meta as any)?.url === 'string'
+  ? fileURLToPath((import.meta as any).url)
+  : '';
+const __dirname = __filename ? path.dirname(__filename) : process.cwd();
 
 // â”€â”€ 100% open-source AI backend (no proprietary API keys) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Chat:   any OpenAI-compatible local LLM via Ollama (MIT) â€” llama3.2 default.
@@ -20,7 +22,7 @@ import webPush from 'web-push';
 import { spawn } from 'child_process';
 import multer from 'multer';
 import cookieParser from 'cookie-parser';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import authRoutes from './server/routes/auth';
 import petitionRoutes from './server/routes/petitions';
 import manifestoRoutes from './server/routes/manifesto';
@@ -90,7 +92,20 @@ export async function createApp() {
   // key on req.ip with a safe fallback and skip the validations that throw
   // when IP info is missing. Behind Netlify, X-Forwarded-For + trust proxy
   // still resolve real client IPs (per-user buckets).
-  const clientKey = (req: any): string => req.ip || req.socket?.remoteAddress || 'anonymous';
+  // express-rate-limit v8 REQUIRES the ipKeyGenerator helper when a custom
+  // keyGenerator reads req.ip — the plain form fails its IPv6 startup
+  // validation (ERR_ERL_KEY_GEN_IPV6) and crashes the whole app/function.
+  const clientKey = (req: any): string => {
+    const ip: string = req.ip || req.socket?.remoteAddress || 'anonymous';
+    if (!ip || ip === 'anonymous') return 'anonymous';
+    try {
+      return ipKeyGenerator(ip as any);
+    } catch {
+      // Not a valid IP (unix socket, unknown, …) — one shared bucket is safer
+      // than crashing the request pipeline.
+      return 'anonymous';
+    }
+  };
   const limiterOpts = { validate: { xForwardedForHeader: false, ip: false } as any };
   const authRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts });
   const publicRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts });
@@ -123,12 +138,29 @@ export async function createApp() {
     next();
   });
 
-  // Health route
-  app.get('/api/health', (req, res) => {
-    res.json({ 
-      status: 'ok', 
-      system: 'VOICE OF GUDALUR Living Intelligence Platform', 
-      version: '2.0.0-production' 
+  // Health route — also reports DB reachability + required env config so a
+  // broken deployment is diagnosable straight from the browser.
+  app.get('/api/health', async (req, res) => {
+    let dbUp = false;
+    let dbError: string | undefined;
+    try {
+      const { ping } = await import('./server/db/client');
+      dbUp = await ping();
+    } catch (e: any) {
+      dbError = e?.message;
+    }
+    res.json({
+      status: dbUp ? 'ok' : 'degraded',
+      system: 'VOICE OF GUDALUR Living Intelligence Platform',
+      version: '2.0.0-production',
+      db: dbUp ? 'connected' : 'unreachable',
+      dbError,
+      config: {
+        databaseUrl: Boolean(process.env.DATABASE_URL),
+        sessionSecret: Boolean(process.env.SESSION_SECRET),
+        nodeEnv: process.env.NODE_ENV || null,
+      },
+      time: new Date().toISOString(),
     });
   });
 

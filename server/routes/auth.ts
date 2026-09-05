@@ -98,7 +98,11 @@ router.post('/register', async (req: Request, res: Response) => {
     const created = await registerResident(req.body);
     if (!created) return res.status(400).json({ error: 'Registration failed' });
     setSessionCookies(res, created.session);
-    res.status(201).json({ user: residentRowToProfile(created.resident), csrfToken: created.session.csrfToken });
+    // created.resident is ALREADY the camelCase shape the client expects
+    // (gudalurId, localityName, pincode, …). Do NOT route it through
+    // residentRowToProfile — that mapper expects a snake_case DB row and
+    // would wipe gudalurId/localityId/pincode to undefined.
+    res.status(201).json({ resident: created.resident, csrfToken: created.session.csrfToken });
   } catch (e: any) {
     logger.error('register:', e.message);
     res.status(e.message?.includes('unique') ? 409 : 400).json({ error: e.message });
@@ -207,7 +211,9 @@ router.post('/lookup', async (req: Request, res: Response) => {
     const result = await loginResident(phone, gudalurId);
     if (!result) return res.status(404).json({ error: 'No resident found for this phone or Gudalur ID. Register first.' });
     setSessionCookies(res, result.session);
-    res.json({ user: residentRowToProfile(result.resident), csrfToken: result.session.csrfToken });
+    // result.resident is already camelCase (authService.rowToResident) — return
+    // it directly; residentRowToProfile would blank gudalurId etc.
+    res.json({ resident: result.resident, csrfToken: result.session.csrfToken });
   } catch (e: any) {
     logger.error('lookup:', e.message);
     res.status(500).json({ error: 'Login failed' });

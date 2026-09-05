@@ -175,7 +175,13 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction) 
   if (['GET', 'HEAD', 'OPTIONS'].includes(method)) return next();
   const header = (req.headers['x-csrf-token'] as string) ?? (req.headers['x-csrf-token'] as string);
   const cookie = req.cookies?.csrf_token as string | undefined;
-  if (!header || !cookie || !crypto.timingSafeEqual(Buffer.from(header), Buffer.from(cookie))) {
+  if (!header || !cookie) {
+    return res.status(403).json({ error: 'Invalid CSRF token' });
+  }
+  // timingSafeEqual THROWS on length mismatch — compare lengths first.
+  const headerBuf = Buffer.from(header);
+  const cookieBuf = Buffer.from(cookie);
+  if (headerBuf.length !== cookieBuf.length || !crypto.timingSafeEqual(headerBuf, cookieBuf)) {
     return res.status(403).json({ error: 'Invalid CSRF token' });
   }
   next();

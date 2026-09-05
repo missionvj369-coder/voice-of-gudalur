@@ -312,12 +312,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // the residents (users) ledger and issues the session cookie. If the
       // server cannot be reached, fail loudly instead of inventing an
       // unverifiable "OFFLINE-*" card that officials could never confirm.
-      if (e?.status === undefined || e?.status === 502 || /failed to fetch|networkerror|load failed|invalid server response/i.test(msg)) {
+      if (e?.status === undefined || /failed to fetch|networkerror|load failed/i.test(msg)) {
         const offlineErr = new Error(
           'No internet connection — Gudalur IDs are issued online only and saved in the residents ledger. Please connect to the internet and try again.',
         ) as Error & { code?: string };
         offlineErr.code = 'OFFLINE_REQUIRED';
         throw offlineErr;
+      }
+      if (e?.status === 502 || e?.status === 503 || /invalid server response/i.test(msg)) {
+        // The device IS online — the residents service itself is down.
+        throw new Error(
+          'Registration service is temporarily unavailable — the residents ledger could not be reached. Please try again in a few minutes.',
+        );
       }
       throw e;
     }
