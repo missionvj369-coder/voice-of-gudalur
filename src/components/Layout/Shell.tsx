@@ -5,9 +5,8 @@ import { useLanguage, type Language } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import {
   Flame, User, LogIn, LogOut, Menu, X, PenLine, BookOpen,
-  Map as MapIcon, PawPrint, IdCard, UserPlus, RotateCcw, Instagram, Facebook,
+  Map as MapIcon, PawPrint, IdCard, UserPlus, Instagram, Facebook,
 } from 'lucide-react';
-import { INTRO_SEEN_KEY } from '../OpeningAnimation';
 import { OPEN_REGISTER_EVENT, OPEN_LOGIN_EVENT } from '../../pages/about_helpers';
 import { GudalurIdModal } from '../GudalurIdModal';
 
@@ -125,13 +124,13 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             </circle>
           </svg>
         </div>
-        <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-[#1B5E20]/90 backdrop-blur-md border-b border-[#AED581]/30 flex items-center">
+        <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-gradient-to-r from-[#8DC63F] via-[#A9C84B] to-[#C9D84E] border-b border-[#1B5E20]/25 shadow-sm flex items-center">
           <div className="max-w-5xl mx-auto w-full px-4 flex items-center justify-between">
             <div className="flex items-center gap-2 cursor-pointer" onClick={openIdModal}>
-              <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-[#AED581] to-[#81C784] flex items-center justify-center shrink-0">
-                <Flame size={12} className="text-[#1B5E20]" />
+              <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-[#1B5E20] to-[#2E7D32] flex items-center justify-center shrink-0">
+                <Flame size={12} className="text-[#F5F5F5]" />
               </div>
-              <span className="font-black text-xs text-[#F5F5F5] tracking-wider whitespace-nowrap">VOICE OF GUDALUR</span>
+              <span className="font-black text-xs text-[#123B0D] tracking-wider whitespace-nowrap">VOICE OF GUDALUR</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -139,19 +138,19 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 type="button"
                 onClick={openIdModal}
                 title={profile ? `${profile.name} — ${profile.gudalurId} — tap for ID card` : 'Register / Login'}
-                className="flex items-center gap-1.5 rounded-full bg-[#AED581]/20 border border-[#AED581]/40 hover:bg-[#AED581]/30 transition pl-0.5 pr-1 py-0.5 shrink-0"
+                className="flex items-center gap-1.5 rounded-full bg-[#1B5E20]/10 border border-[#1B5E20]/30 hover:bg-[#1B5E20]/20 transition pl-0.5 pr-1 py-0.5 shrink-0"
               >
                 {profile ? (
                   <>
-                    <span className="h-6 w-6 rounded-full bg-gradient-to-br from-[#AED581] to-[#81C784] flex items-center justify-center text-[10px] font-black text-[#1B5E20]">
+                    <span className="h-6 w-6 rounded-full bg-[#1B5E20] flex items-center justify-center text-[10px] font-black text-[#F5F5F5]">
                       {profile.name.trim().charAt(0).toUpperCase()}
                     </span>
-                    <span className="hidden sm:inline font-mono text-[9px] font-bold text-[#AED581] tracking-wide">
+                    <span className="hidden sm:inline font-mono text-[9px] font-bold text-[#1B5E20] tracking-wide">
                       {profile.gudalurId}
                     </span>
                   </>
                 ) : (
-                  <span className="h-6 w-6 rounded-full bg-[#AED581]/40 flex items-center justify-center text-[#1B5E20]">
+                  <span className="h-6 w-6 rounded-full bg-[#1B5E20]/15 flex items-center justify-center text-[#123B0D]">
                     <User size={12} />
                   </span>
                 )}
@@ -161,7 +160,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 onClick={() => setMenuOpen(true)}
                 title="Menu"
                 aria-label="Open menu"
-                className="rounded-lg p-1.5 bg-[#AED581]/20 border border-[#AED581]/40 hover:bg-[#AED581]/30 text-[#F5F5F5] transition shrink-0"
+                className="rounded-lg p-1.5 bg-[#1B5E20]/10 border border-[#1B5E20]/30 hover:bg-[#1B5E20]/20 text-[#123B0D] transition shrink-0"
               >
                 <Menu size={14} />
               </button>
@@ -241,16 +240,6 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                   <DrawerLink to="/about" icon={<BookOpen size={16} />} label={t('mnu.about')} onNavigate={() => setMenuOpen(false)} />
                   <DrawerLink to="/corridors" icon={<MapIcon size={16} />} label={t('mnu.corridors')} onNavigate={() => setMenuOpen(false)} />
                   <DrawerLink to="/sightings" icon={<PawPrint size={16} />} label={t('mnu.sightings')} onNavigate={() => setMenuOpen(false)} />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      try { sessionStorage.removeItem(INTRO_SEEN_KEY); } catch { /* ignore */ }
-                      window.location.reload();
-                    }}
-                    className="flex w-full items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-[#F5F5F5]/85 hover:text-[#F5F5F5] hover:bg-[#388E3C]/40 transition"
-                  >
-                    <RotateCcw size={16} /> {t('mnu.replay')}
-                  </button>
                 </nav>
 
                 <div className="border-t border-[#AED581]/20 px-3 py-4 space-y-3 shrink-0">

@@ -1,10 +1,10 @@
 import React, { lazy, Suspense, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { Shell } from './components/Layout/Shell';
-import { OpeningAnimation, INTRO_SEEN_KEY } from './components/OpeningAnimation';
+import { OpeningAnimation } from './components/OpeningAnimation';
 
 // Route-level code splitting — every page downloads only when first visited.
 const SignPetitionPage = lazy(() => import('./pages/SignPetitionPage').then((m) => ({ default: m.SignPetitionPage })));
@@ -15,6 +15,7 @@ const OfficialsPortalPage = lazy(() => import('./pages/OfficialsPortalPage').the
 const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage').then((m) => ({ default: m.AdminLoginPage })));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })));
 const OfficialLoginPage = lazy(() => import('./pages/OfficialLoginPage').then((m) => ({ default: m.OfficialLoginPage })));
+const SightingsPage = lazy(() => import('./pages/SightingsPage').then((m) => ({ default: m.SightingsPage })));
 
 const RouteFallback: React.FC = () => (
   <div className="min-h-[60vh] flex items-center justify-center" role="status" aria-label="Loading page">
@@ -33,33 +34,15 @@ const AdminRoutes: React.FC = () => (
   </Suspense>
 );
 
-/** Animal sightings launch page — opens after the government system integration. */
-const SightingsPage: React.FC = () => {
-  const { t } = useLanguage();
-  return (
-  <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-5">
-    <div className="text-5xl" aria-hidden>🐘</div>
-    <h1 className="text-2xl font-black text-white">{t('sght.title')}</h1>
-    <p className="text-sm text-emerald-50/90 leading-relaxed">
-      {t('sght.sub')}
-    </p>
-    <Link
-      to="/"
-      className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-lg"
-    >
-      {t('sght.btn')}
-    </Link>
-  </div>
-  );
-};
-
 const AppContent: React.FC = () => {
   const { loading } = useAuth();
-  // The opening animation plays once per session (skipped for reduced-motion users).
+  // The opening animation plays on EVERY visit — every fresh load of the site
+  // (new tab, new session, coming back later) starts with the animation.
+  // Only users who prefer reduced motion skip it. Login state is unaffected:
+  // the session/profile is restored underneath while the animation plays.
   const [introDone, setIntroDone] = useState<boolean>(() => {
     try {
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
-      return sessionStorage.getItem(INTRO_SEEN_KEY) === '1';
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     } catch {
       return true;
     }

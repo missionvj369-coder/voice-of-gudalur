@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-export const INTRO_SEEN_KEY = 'vog_intro_seen';
-
 /**
  * OPENING ANIMATION — the whole platform vision in ~10 seconds.
  *
@@ -20,7 +18,7 @@ export const INTRO_SEEN_KEY = 'vog_intro_seen';
  * prefer reduced motion.
  */
 
-/** Timeline anchors (seconds). */
+/** Timeline anchors (seconds) — the Kural phase is extended for comfortable reading. */
 const T = {
   convergeStart: 1.2,
   impact: 4.2,
@@ -29,8 +27,8 @@ const T = {
   lanesEnd: 8.8,
   brandStart: 8.8,
   kuralStart: 10.4,
-  kuralEnd: 18.0,
-  end: 19.5,
+  kuralEnd: 20.5,
+  end: 22.0,
 };
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -678,11 +676,8 @@ export const OpeningAnimation: React.FC<{ onFinish: () => void }> = ({ onFinish 
   const finish = useCallback(() => {
     if (doneRef.current) return;
     doneRef.current = true;
-    try {
-      sessionStorage.setItem(INTRO_SEEN_KEY, '1');
-    } catch {
-      /* private mode — intro just replays next visit */
-    }
+    // The animation now plays on EVERY visit — no "seen" flag is stored,
+    // so nothing needs to be persisted here.
     setFading(true);
     window.setTimeout(() => onFinish(), 620);
   }, [onFinish]);

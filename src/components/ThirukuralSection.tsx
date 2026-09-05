@@ -25,7 +25,7 @@ const MagicText: React.FC<{ text: string; delay?: number }> = ({ text, delay = 0
           }
           return prev + 1;
         });
-      }, 200);
+      }, 340);
       return () => clearInterval(interval);
     }, delay);
     return () => clearTimeout(timer);
@@ -45,7 +45,7 @@ const MagicText: React.FC<{ text: string; delay?: number }> = ({ text, delay = 0
           transition={{ duration: 0.4, ease: 'easeOut' }}
           className="inline-block"
           style={{
-            marginRight: '0.25em',
+            marginRight: i < words.length - 1 ? '0.34em' : 0,
             textShadow: i < visibleWords ? '0 0 8px rgba(76, 175, 80, 0.4)' : 'none',
           }}
         >
@@ -87,7 +87,7 @@ export const ThirukuralSection: React.FC = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentLangIndex((prev) => (prev + 1) % athirukural.languages.length);
-    }, 6000);
+    }, 12000);
     return () => clearInterval(interval);
   }, []);
 
@@ -116,7 +116,7 @@ export const ThirukuralSection: React.FC = () => {
           <AnimatePresence mode="wait">
             <motion.div key={currentLangIndex} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.5 }} className="w-full">
               <p className="text-lg sm:text-xl md:text-2xl font-bold leading-relaxed mb-4 text-green-900">
-                <MagicText text={currentKural.text} delay={300} />
+                <MagicText text={currentKural.text} delay={600} />
               </p>
             </motion.div>
           </AnimatePresence>

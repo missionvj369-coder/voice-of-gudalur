@@ -378,15 +378,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setUser(null);
     persistProfile(null);
-    // Clear ALL locally-stored data on logout so the next user starts fresh
+    // Clear ALL locally-stored data on logout. In Gudalur one phone is often
+    // shared by several residents — the next registration/login must start
+    // perfectly fresh (no leftover profile, petition or queue data).
     try {
-      // Clear pending records
+      // Clear pending offline records
       localStorage.removeItem('og_pending_signatures');
       localStorage.removeItem('og_pending_emails');
-      // Clear petition data
+      // Clear petition data (the next resident on this phone signs themselves)
       localStorage.removeItem('vog_petition_signed');
       localStorage.removeItem('vog_petition_result');
-      // Clear intro seen flag
+      // Clear cached public stats
+      localStorage.removeItem('vog_stats_cache');
+      // Session-scoped UI caches
       sessionStorage.removeItem('vog_intro_seen');
     } catch {
       /* best-effort */
