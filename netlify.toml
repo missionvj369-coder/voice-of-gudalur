@@ -1,6 +1,6 @@
 # VOICE OF GUDALUR — Netlify configuration
 [build]
-  command = "npm run build"
+  command = "npm run build && npm run db:migrate && npm run db:seed"
   publish = "dist"
   functions = "netlify/functions"
 

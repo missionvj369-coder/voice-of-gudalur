@@ -10,7 +10,7 @@
  * readable csrf_token used for the double-submit CSRF guard on mutations).
  */
 
-export interface ApiError {
+export interface ApiError extends Error {
   error: string;
   status: number;
 }
@@ -46,11 +46,19 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const detail = isHtml
       ? 'the API backend is not routed on this host (got HTML instead of JSON — check the /api/* proxy redirect in netlify.toml AND that DATABASE_URL + SESSION_SECRET are set in Netlify env)'
       : `unrecognized response: ${text.slice(0, 100)}`;
-    const err: ApiError = { error: `Invalid server response — ${detail}`, status: res.ok ? 502 : res.status };
+    const msg = `Invalid server response — ${detail}`;
+    const err = new Error(msg) as ApiError;
+    err.error = msg;
+    err.status = res.ok ? 502 : res.status;
     throw err;
   }
   if (!res.ok) {
-    const err: ApiError = { error: data?.error || `Request failed (${res.status})`, status: res.status };
+    // Throw a REAL Error carrying the server's message — plain objects lost
+    // .message and every server error surfaced as a generic UI toast.
+    const msg = data?.error || `Request failed (${res.status})`;
+    const err = new Error(msg) as ApiError;
+    err.error = msg;
+    err.status = res.status;
     throw err;
   }
   return data as T;

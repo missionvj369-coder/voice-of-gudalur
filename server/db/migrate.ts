@@ -14,6 +14,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { query, queryOne, executeWithRetry, getPool } from './client';
+import { splitSqlStatements, isAlreadyExistsError } from './sqlSplit';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
@@ -85,10 +86,20 @@ export async function up(): Promise<void> {
   console.log(`Applying ${pending.length} migration(s)...`);
   for (const m of pending) {
     const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, m.filename), 'utf8');
+    // Run statement-by-statement (quote/dollar-aware split) so a database
+    // that was partially created by hand converges: "already exists"
+    // statements are skipped while the remaining statements still apply.
+    const statements = splitSqlStatements(sql);
+    for (let i = 0; i < statements.length; i++) {
+      const stmt = statements[i];
+      try {
+        await executeWithRetry(async (tx) => { await tx.query(stmt); });
+      } catch (e: any) {
+        if (!isAlreadyExistsError(e)) throw e;
+        console.log(`    · stmt ${i + 1}/${statements.length} already exists — skipped`);
+      }
+    }
     await executeWithRetry(async (tx) => {
-      // Run migration inside its own transaction; on CockroachDB retry the
-      // whole file is re-applied but CREATE/IF NOT EXISTS guards keep it safe.
-      await tx.query(sql);
       await tx.query('INSERT INTO schema_migrations (version, description) VALUES ($1, $2) ON CONFLICT (version) DO NOTHING', [m.version, m.filename]);
     });
     console.log(`  ${m.version.toString().padStart(3, '0')}  ${m.filename}  OK`);

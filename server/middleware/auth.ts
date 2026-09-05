@@ -73,10 +73,10 @@ export async function createSession(user: SessionUser, userAgent?: string, ip?: 
   const csrfToken = crypto.randomBytes(24).toString('base64url');
 
   await db.execute(
-    `INSERT INTO sessions (identity_id, identity_kind, refresh_token_hash,
+    `INSERT INTO sessions (identity_id, identity_kind, refresh_token, refresh_token_hash,
        user_agent, ip, role, expires_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [user.uid, user.kind, refreshTokenHash, userAgent ?? null, ip ?? null, user.role, expiresAt],
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [user.uid, user.kind, refreshToken, refreshTokenHash, userAgent ?? null, ip ?? null, user.role, expiresAt],
   );
 
   return { accessToken, refreshToken, csrfToken, expiresAt };

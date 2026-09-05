@@ -352,8 +352,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (e?.status === undefined || /failed to fetch|networkerror|load failed/i.test(msg)) {
         throw new Error('No internet connection — login verifies your identity online. Please connect and try again.');
       }
-      if (e?.status === 500 || e?.status === 502) {
+      if (e?.status === 502 || e?.status === 503) {
         throw new Error('Resident service unavailable. Please try again in a moment.');
+      }
+      if (e?.status === 500) {
+        // The server described the failure — surface it (owner-debuggable).
+        throw new Error(String(e?.message || '') || 'Login could not be completed. Please try again.');
       }
       throw new Error('No resident found for these details. Check your mobile number / Gudalur ID, or register first.');
     }

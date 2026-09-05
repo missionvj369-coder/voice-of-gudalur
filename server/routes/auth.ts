@@ -216,7 +216,7 @@ router.post('/lookup', async (req: Request, res: Response) => {
     res.json({ resident: result.resident, csrfToken: result.session.csrfToken });
   } catch (e: any) {
     logger.error('lookup:', e.message);
-    res.status(500).json({ error: 'Login failed' });
+    res.status(500).json({ error: `Login failed — ${e.message}` });
   }
 });
 
