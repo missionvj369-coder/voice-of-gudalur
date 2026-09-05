@@ -50,6 +50,9 @@ const AppContent: React.FC = () => {
     }
   });
 
+  // WCAG 23.3 — honor the user's motion preference for page transitions too.
+  const prefersReducedMotion = introDone;
+
   // Every navigation starts at the top of the page (no mid-page open; no
   // sticky scroll between routes). 100% of sessions start at the top.
   useEffect(() => {
@@ -74,7 +77,7 @@ const AppContent: React.FC = () => {
           key={pathname}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: 'easeOut' }}
+          transition={{ duration: prefersReducedMotion ? 0 : 0.25, ease: 'easeOut' }}
           className="min-h-[50vh]"
         >
           <Suspense fallback={<RouteFallback />}>

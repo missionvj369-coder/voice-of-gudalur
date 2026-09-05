@@ -735,6 +735,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     localStorage.setItem('VoiceOfGudalur_lang', lang);
+    // WCAG 1.3.1 — the <html lang> must match the active language so screen
+    // readers pronounce the content correctly (Tamil, Malayalam, Kannada…).
+    document.documentElement.lang = lang;
   }, [lang]);
 
   const t = (key: string) => {

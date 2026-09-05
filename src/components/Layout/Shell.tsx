@@ -105,7 +105,14 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   return (
     <IdModalContext.Provider value={{ openIdModal, whenRegistered }}>
       <div className="min-h-screen bg-transparent text-[#F5F5F5] font-sans antialiased overflow-x-hidden flex flex-col">
-                {/* Ambient attention layer — lightweight SVG background (no animated divs for low-end devices) */}
+        {/* WCAG 24.1 — keyboard users jump straight to content, past the header. */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[200] focus:bg-amber-500 focus:text-[#1B5E20] focus:px-4 focus:py-2 focus:rounded-lg focus:font-bold focus:shadow-lg"
+        >
+          Skip to main content
+        </a>
+        {/* Ambient attention layer — lightweight SVG background (no animated divs for low-end devices) */}
         <div className="og-ambient" aria-hidden="true">
           <svg
             className="absolute inset-0 w-full h-full -z-1 pointer-events-none"
@@ -168,7 +175,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           </div>
         </header>
 
-        <main className="pt-16 pb-6 flex-1">
+        <main id="main-content" className="pt-16 pb-6 flex-1">
           {children}
         </main>
 

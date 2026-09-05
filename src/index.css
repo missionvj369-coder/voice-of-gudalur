@@ -125,6 +125,14 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* WCAG 2.4.7 — a clear, high-contrast focus ring for keyboard users.
+   Tailwind's outline-none on many custom buttons would otherwise hide focus. */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #AED581;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 /* Remove the browser dropdown ARROW on the locality combobox (datalist input) —
    the field is type-to-filter with its own styled hint, no native chrome. */
 input[list]::-webkit-calendar-picker-indicator {
