@@ -148,6 +148,19 @@ export const authApi = {
   adminAuditLog: () =>
     request<{ events: Array<{ id: string; actor_id: string; actor_kind: string; action: string; target: string; detail: string; ip: string; created_at: string }> }>('/api/admin/audit'),
 
+  /** GET /api/admin/stats — total users + total petition signs + latest hash. */
+  adminStats: () =>
+    request<{ totalUsers: number; totalSigns: number; latestBatch: number; latestHash: string | null }>('/api/admin/stats'),
+
+  /** GET /api/admin/signs — the full petition hash-ledger (downloadable & shareable). */
+  adminSigns: () =>
+    request<{
+      signs: Array<{
+        hash: string; name: string; village: string; phoneLast4: string | null;
+        aadhaarLast4: string | null; batchNo: number; signedAt: string; verifyUrl: string;
+      }>; total: number;
+    }>('/api/admin/signs'),
+
   // ─── Official password login ───────────────────────────────────────
 
   /** POST /api/officials/login — login with email + password. */
@@ -360,6 +373,49 @@ export const configApi = {
   localities: () => request<{ localities: Array<Record<string, unknown>> }>('/api/config/localities'),
 };
 
+// ─────────────────────────────────────────────────────────────
+// Media (posters + videos) — "Support the Movement"
+// ─────────────────────────────────────────────────────────────
+
+export interface MediaItem {
+  id: string;
+  kind: 'poster' | 'video';
+  title: string;
+  description: string | null;
+  url: string;            // data URL
+  mime: string | null;
+  createdAt: string;
+}
+
+export const mediaApi = {
+  /** GET /api/media — every published poster & video. */
+  list: async (): Promise<MediaItem[]> => {
+    try {
+      const r = await request<{ media: MediaItem[] }>('/api/media');
+      return r.media || [];
+    } catch {
+      return [];
+    }
+  },
+
+  /** POST /api/media — admin upload (multipart: file, kind, title, description). */
+  upload: (input: { kind: 'poster' | 'video'; title: string; description?: string; file: File }) => {
+    const form = new FormData();
+    form.append('kind', input.kind);
+    form.append('title', input.title);
+    if (input.description) form.append('description', input.description);
+    form.append('file', input.file);
+    return request<{ id: string; ok: boolean; message: string }>('/api/media', {
+      method: 'POST',
+      body: form,
+    });
+  },
+
+  /** DELETE /api/media/:id — admin removes a poster/video. */
+  remove: (id: string) =>
+    request<{ ok: boolean }>(`/api/media/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+};
+
 export default {
   auth: authApi,
   petitions: petitionApi,
@@ -367,4 +423,5 @@ export default {
   wildlife: wildlifeApi,
   officials: officialsApi,
   config: configApi,
+  media: mediaApi,
 };

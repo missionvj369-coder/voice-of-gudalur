@@ -29,6 +29,8 @@ import officialsRoutes from './server/routes/officials';
 import adminRoutes from './server/routes/admin';
 import adminOfficialsRoutes from './server/routes/adminOfficials';
 import adminOfficialActionsRoutes from './server/routes/adminOfficialActions';
+import adminStatsRoutes from './server/routes/adminStats';
+import mediaRoutes from './server/routes/media';
 import configRoutes from './server/routes/config';
 
 // â”€â”€ Open-source AI clients (no proprietary API keys) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -414,9 +416,11 @@ Role:
   app.use('/api/admin', adminRoutes);
   app.use('/api/admin', adminOfficialsRoutes);
   app.use('/api/admin', adminOfficialActionsRoutes);
+  app.use('/api/admin', adminStatsRoutes);
 
   app.use('/api/config', publicRateLimiter, configRoutes);
   // Media storage: using CockroachDB only (Storj object storage removed).
+  app.use('/api/media', mediaRoutes);
 
   // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // AI TRANSCRIPTION â€” self-hosted Whisper (Apache-2.0) converts voice reports to civic text

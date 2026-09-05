@@ -57,6 +57,10 @@ export default defineConfig(() => {
       securityHeadersPlugin(),
       VitePWA({
         registerType: 'autoUpdate',
+        // We register the service worker ourselves from main.tsx (virtual:pwa-register)
+        // so updates auto-skipWaiting and auto-refresh in every browser — Safari
+        // included. The plugin must NOT inject its own registration script.
+        injectRegister: false,
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
         manifest: {
           name: 'Voice of Gudalur - Wildlife & Citizen Platform',
@@ -80,6 +84,10 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
+          skipWaiting: true,
+          clientsClaim: true,
+          cleanupOutdatedCaches: true,
+          disableDevLogs: true,
           // Precache the app shell + the small ZBar wasm (~100 KB) so QR
           // scanning works offline. The heavy HuggingFace ort-wasm AI model
           // (23+ MB) is loaded on-demand at runtime — exclude it from

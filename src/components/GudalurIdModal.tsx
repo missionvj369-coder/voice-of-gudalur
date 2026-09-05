@@ -19,10 +19,10 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
   
   const [name, setName] = useState(profile?.name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
-  const [localityId, setLocalityId] = useState(profile?.localityId || GUDALUR_LOCALITIES[0].id);
-  const [localityText, setLocalityText] = useState(profile?.localityName || GUDALUR_LOCALITIES[0].name);
+  const [localityId, setLocalityId] = useState(profile?.localityId || '');
+  const [localityText, setLocalityText] = useState(profile?.localityName || '');
   const [customPlaceName, setCustomPlaceName] = useState(profile?.customPlaceName || '');
-  const [pincode, setPincode] = useState(profile?.pincode || '643211');
+  const [pincode, setPincode] = useState(profile?.pincode || '');
   const [email, setEmail] = useState(profile?.email || '');
   const [copied, setCopied] = useState(false);
   // The ID card is always shown first to registered residents — never the registration form again.

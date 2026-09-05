@@ -22,6 +22,14 @@
 /registerSW.js
   Cache-Control: no-cache
 
+# The HTML document must revalidate on EVERY visit so every browser — Safari,
+# iOS, Android — picks up a freshly deployed build immediately. The service
+# worker then activates the new version and the app refreshes itself once.
+/
+  Cache-Control: no-cache
+/*.html
+  Cache-Control: no-cache
+
 /manifest.webmanifest
   Content-Type: application/manifest+json
   Cache-Control: no-cache

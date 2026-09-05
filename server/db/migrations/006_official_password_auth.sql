@@ -4,6 +4,11 @@
 -- Admin (PLATFORM_ADMIN) manages official access at /admin.
 -- =====================================================================
 
+-- Backfill: live databases created from an earlier base schema predate the
+-- users.password_hash column (001 was applied before it was added there).
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS password_hash STRING;
+
 -- Password storage for officials (email + password login)
 ALTER TABLE officials
     ADD COLUMN IF NOT EXISTS password_hash STRING;

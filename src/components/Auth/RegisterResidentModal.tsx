@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Phone, MapPin, User, CheckCircle2, Loader2, ShieldCheck, Search, ChevronDown, LogIn } from 'lucide-react';
+import { X, Phone, MapPin, User, CheckCircle2, Loader2, ShieldCheck, Search, ChevronDown, LogIn, LocateFixed } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { GUDALUR_LOCALITIES } from '../../data/gudalurMasterData';
@@ -24,23 +24,56 @@ interface RegisterResidentModalProps {
 export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
   isOpen, onClose, onSuccess, onRegistered, onNeedLogin,
 }) => {
-  const { registerResident, userCoords } = useAuth();
+  const { registerResident, userCoords, acquireLiveLocation } = useAuth();
   const { t } = useLanguage();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [localityId, setLocalityId] = useState(GUDALUR_LOCALITIES[0].id);
+  const [localityId, setLocalityId] = useState('');
   const [customPlaceName, setCustomPlaceName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [placeSearch, setPlaceSearch] = useState(GUDALUR_LOCALITIES[0].name);
+  const [placeSearch, setPlaceSearch] = useState('');
   const [showPlaceDropdown, setShowPlaceDropdown] = useState(false);
   const [filteredLocalities, setFilteredLocalities] = useState(GUDALUR_LOCALITIES);
+  const [locating, setLocating] = useState(false);
   const placeInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const locality = useMemo(
-    () => GUDALUR_LOCALITIES.find((l) => l.id === localityId) ?? GUDALUR_LOCALITIES[0],
+    () => (localityId ? GUDALUR_LOCALITIES.find((l) => l.id === localityId) ?? null : null),
     [localityId],
   );
+
+  /** Autofill Place + Pincode from the live GPS location (nearest locality). */
+  const handleLocate = async () => {
+    setLocating(true);
+    try {
+      let coords = userCoords;
+      if (!coords) coords = await acquireLiveLocation();
+      if (!coords) {
+        toast.error("Location unavailable. Please type your area name.");
+        setLocating(false);
+        return;
+      }
+      // Find the nearest Gudalur locality to the live coordinates.
+      let nearest = GUDALUR_LOCALITIES[0];
+      let nearestKm = Number.MAX_VALUE;
+      GUDALUR_LOCALITIES.forEach((loc) => {
+        if (typeof loc.lat !== 'number' || typeof loc.lng !== 'number') return;
+        const dLat = (loc.lat - coords.lat) * 111.32;
+        const dLng = (loc.lng - coords.lng) * 111.32 * Math.cos((coords.lat * Math.PI) / 180);
+        const km = Math.sqrt(dLat * dLat + dLng * dLng);
+        if (km < nearestKm) { nearestKm = km; nearest = loc; }
+      });
+      setLocalityId(nearest.id);
+      setPlaceSearch(nearest.name);
+      setShowPlaceDropdown(false);
+      toast.success(`Location found — ${nearest.name} · ${nearest.pincode}`);
+    } catch {
+      toast.error("Could not read your location. Please type your area name.");
+    } finally {
+      setLocating(false);
+    }
+  };
 
   // Filter localities based on search input
   useEffect(() => {
@@ -97,8 +130,16 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
       toast.error(t('reg.phone_required'));
       return;
     }
+    if (!locality && !placeSearch.trim()) {
+      toast.error(t('reg.place_required') || 'Please type or select your place');
+      return;
+    }
     
-    // Check if phone number already exists
+    // If typed a full place name not in the dropdown, register it as a new/free place.
+    const useManual = !locality && placeSearch.trim() !== '';
+    const chosenLocalityId = locality ? locality.id : (useManual ? 'gudalur-town' : '');
+    const chosenPincode = locality ? locality.pincode || '643211' : '643211';
+    //   Check if phone number already exists
     setIsSubmitting(true);
     try {
       // First check if phone is already registered
@@ -119,9 +160,9 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
       const profile = await registerResident({
         name: name.trim(),
         phone: digits,
-        localityId,
-        customPlaceName: customPlaceName.trim() || undefined,
-        pincode: locality.pincode || '643211',
+        localityId: chosenLocalityId,
+        customPlaceName: (useManual ? placeSearch.trim() : customPlaceName.trim()) || undefined,
+        pincode: chosenPincode,
         lat: userCoords?.lat,
         lng: userCoords?.lng,
       });
@@ -129,7 +170,8 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
       setName('');
       setPhone('');
       setCustomPlaceName('');
-      setPlaceSearch(GUDALUR_LOCALITIES[0].name);
+      setPlaceSearch('');
+      setLocalityId('');
       onSuccess?.();
       onRegistered?.({
         gudalurId: profile.gudalurId,
@@ -225,32 +267,51 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('reg.place')} *</label>
-                <div className="relative">
-                  <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
-                  <input
-                    ref={placeInputRef}
-                    type="text"
-                    value={placeSearch}
-                    onChange={(e) => {
-                      setPlaceSearch(e.target.value);
-                      setShowPlaceDropdown(true);
-                    }}
-                    onFocus={() => setShowPlaceDropdown(true)}
-                    placeholder={t('reg.place_placeholder') || 'Type your area name...'}
-                    className="w-full pl-10 pr-10 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition text-slate-900 bg-white placeholder:text-slate-400"
-                    autoComplete="off"
-                  />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                    <input
+                      ref={placeInputRef}
+                      type="text"
+                      value={placeSearch}
+                      onChange={(e) => {
+                        setPlaceSearch(e.target.value);
+                        setShowPlaceDropdown(true);
+                      }}
+                      onFocus={() => setShowPlaceDropdown(true)}
+                      placeholder={t('reg.place_placeholder') || 'Type your area name...'}
+                      className="w-full pl-10 pr-10 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition text-slate-900 bg-white placeholder:text-slate-400"
+                      autoComplete="off"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPlaceDropdown(!showPlaceDropdown)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <ChevronDown size={16} className={`transition-transform ${showPlaceDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setShowPlaceDropdown(!showPlaceDropdown)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    onClick={() => { void handleLocate(); }}
+                    disabled={locating}
+                    className="shrink-0 px-3 py-3 rounded-2xl bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 hover:opacity-90 transition disabled:opacity-50"
+                    title="Autofill place & pincode from my location"
                   >
-                    <ChevronDown size={16} className={`transition-transform ${showPlaceDropdown ? 'rotate-180' : ''}`} />
+                    {locating ? <Loader2 size={14} className="animate-spin" /> : <LocateFixed size={14} />}
+                    <span className="hidden sm:inline">My Location</span>
                   </button>
                 </div>
+                {/* Short helper: type to search, pick, or type the full name */}
                 <p className="text-[11px] text-slate-400 mt-1.5">
-                  {t('reg.pincode').replace('{n}', locality.pincode || '')} · {filteredLocalities.length} areas
+                  {t('reg.place_hint') || 'Type & select from list — if absent, type the full place name'}
+                  {locality ? ` · ${t('reg.pincode').replace('{n}', locality.pincode || '')}` : ''}
                 </p>
+                {!locality && placeSearch.trim() !== '' && filteredLocalities.length === 0 && (
+                  <p className="text-[11px] text-amber-600 mt-1 font-bold">
+                    {t('reg.place_manual') || 'Will be registered as a new place'}
+                  </p>
+                )}
                 
                 {/* Searchable Dropdown */}
                 <AnimatePresence>

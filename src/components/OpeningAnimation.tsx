@@ -27,8 +27,8 @@ const T = {
   lanesEnd: 8.8,
   brandStart: 8.8,
   kuralStart: 10.4,
-  kuralEnd: 20.5,
-  end: 22.0,
+  kuralEnd: 22.5,
+  end: 24.0,
 };
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -559,32 +559,55 @@ function drawKural(ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
   ctx.font = `700 ${Math.min(W * 0.032, 22)}px 'Segoe UI', system-ui, sans-serif`;
   ctx.fillText('கைம்மாறு வேண்டா கடப்பாடு', W / 2, H * 0.18);
 
-  // Main kural text with magic effect - draw word by word to preserve Indic script
+  // Main kural text with magic effect — draw word by word to preserve Indic script.
+  // Spacing matches the printed order exactly: a single even word gap, lines are
+  // word-wrapped and each one is centred so the kural never clips on small phones.
   const kuralText = 'கைம்மாறு வேண்டா கடப்பாடு மாரிமாட்டு என்னாற்றும் கொல்லோ உலகு.';
   const words = kuralText.split(' ');
-  const wordDelay = 0.3;
-  const startY = H * 0.30;
-  const fontSize = Math.min(W * 0.038, 28);
+  const wordDelay = 0.45;
+  const startY = H * 0.28;
+  const leading = Math.min(H * 0.06, 46);
+  const fontSize = Math.min(W * 0.036, 28);
+  const gap = Math.round(fontSize * 0.38); // one even word-space
   ctx.font = `800 ${fontSize}px 'Segoe UI', system-ui, sans-serif`;
 
-  // Calculate total width to center the text
-  const totalWidth = words.reduce((acc, word, i) => {
-    return acc + ctx.measureText(word).width + (i < words.length - 1 ? fontSize * 0.3 : 0);
-  }, 0);
-  let xPos = (W - totalWidth) / 2;
-
-  // Draw each word with staggered animation
+  // Greedy word-wrap into centred lines (each word appears once, in order).
+  const widths = words.map((word) => ctx.measureText(word).width);
+  const maxW = W * 0.92;
+  const lines: { start: number; count: number; total: number }[] = [];
+  let curStart = 0;
+  let curCount = 0;
+  let curW = 0;
   words.forEach((word, i) => {
-    const wordA = clamp01((t - T.kuralStart - 0.8 - i * wordDelay) / 0.4);
-    if (wordA > 0) {
-      const yOffset = (1 - wordA) * 20;
-      ctx.fillStyle = `rgba(27,94,32,${wordA})`;
-      // Add glow effect
-      ctx.shadowColor = `rgba(76,175,80,${wordA * 0.6})`;
-      ctx.shadowBlur = 10 * wordA;
-      ctx.fillText(word, xPos, startY + yOffset);
-      ctx.shadowBlur = 0;
-      xPos += ctx.measureText(word).width + fontSize * 0.3;
+    const sep = curCount ? gap : 0;
+    if (curCount && curW + sep + widths[i] > maxW) {
+      lines.push({ start: curStart, count: curCount, total: curW });
+      curStart = i;
+      curCount = 1;
+      curW = widths[i];
+    } else {
+      curCount += 1;
+      curW += sep + widths[i];
+    }
+  });
+  if (curCount) lines.push({ start: curStart, count: curCount, total: curW });
+
+  // Draw each line, centred, with a slow word-by-word reveal.
+  lines.forEach((line, li) => {
+    const lineY = startY + li * leading;
+    let x = (W - line.total) / 2;
+    for (let k = 0; k < line.count; k++) {
+      const wi = line.start + k;
+      const wordA = clamp01((t - T.kuralStart - 0.8 - wi * wordDelay) / 0.4);
+      if (wordA > 0) {
+        const yOffset = (1 - wordA) * 20;
+        ctx.fillStyle = `rgba(27,94,32,${wordA})`;
+        ctx.shadowColor = `rgba(76,175,80,${wordA * 0.6})`;
+        ctx.shadowBlur = 10 * wordA;
+        ctx.fillText(words[wi], x, lineY + yOffset);
+        ctx.shadowBlur = 0;
+      }
+      if (k < line.count - 1) x += widths[wi] + gap;
     }
   });
 

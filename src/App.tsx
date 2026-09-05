@@ -1,5 +1,6 @@
-import React, { lazy, Suspense, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
@@ -36,6 +37,7 @@ const AdminRoutes: React.FC = () => (
 
 const AppContent: React.FC = () => {
   const { loading } = useAuth();
+  const { pathname } = useLocation();
   // The opening animation plays on EVERY visit — every fresh load of the site
   // (new tab, new session, coming back later) starts with the animation.
   // Only users who prefer reduced motion skip it. Login state is unaffected:
@@ -47,6 +49,12 @@ const AppContent: React.FC = () => {
       return true;
     }
   });
+
+  // Every navigation starts at the top of the page (no mid-page open; no
+  // sticky scroll between routes). 100% of sessions start at the top.
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname]);
 
   if (loading) {
     return (
@@ -60,20 +68,30 @@ const AppContent: React.FC = () => {
     <>
       {!introDone && <OpeningAnimation onFinish={() => setIntroDone(true)} />}
       <Shell>
-      <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          {/* Clean homepage — the Right to Life petition sign-in. */}
-          <Route path="/" element={<SignPetitionPage />} />
-          <Route path="/sign-petition" element={<SignPetitionPage />} />
-          {/* Original home content lives as a topic inside the menu. */}
-          <Route path="/about" element={<Manifesto />} />
-          <Route path="/corridors" element={<ClosedCorridorsPage />} />
-          <Route path="/sightings" element={<SightingsPage />} />
-          <Route path="/verify-sign" element={<VerifySignPage />} />
-          <Route path="/officials" element={<OfficialsPortalPage />} />
-          <Route path="*" element={<SignPetitionPage />} />
-        </Routes>
-      </Suspense>
+        {/* Elegant low-latency page transitions — a light fade + lift that
+            never blocks content (LCP-safe: the page paints on frame one). */}
+        <motion.div
+          key={pathname}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+          className="min-h-[50vh]"
+        >
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              {/* Clean homepage — the Right to Life petition sign-in. */}
+              <Route path="/" element={<SignPetitionPage />} />
+              <Route path="/sign-petition" element={<SignPetitionPage />} />
+              {/* Original home content lives as a topic inside the menu. */}
+              <Route path="/about" element={<Manifesto />} />
+              <Route path="/corridors" element={<ClosedCorridorsPage />} />
+              <Route path="/sightings" element={<SightingsPage />} />
+              <Route path="/verify-sign" element={<VerifySignPage />} />
+              <Route path="/officials" element={<OfficialsPortalPage />} />
+              <Route path="*" element={<SignPetitionPage />} />
+            </Routes>
+          </Suspense>
+        </motion.div>
       </Shell>
     </>
   );

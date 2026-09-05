@@ -2,11 +2,11 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
-import { petitionApi } from "../services/api";
+import { petitionApi, mediaApi, type MediaItem } from "../services/api";
 import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal";
 import { ThirukuralSection } from "../components/ThirukuralSection";
 import ShareSocialModal from "../components/ShareSocial/ShareSocialModal";
-import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2 } from "lucide-react";
+import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2, ImageIcon, Video, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface PlaceCount {
@@ -37,7 +37,16 @@ export const SignPetitionPage: React.FC = () => {
   const [total, setTotal] = useState<number | null>(null);
   const [places, setPlaces] = useState<PlaceCount[]>([]);
   const [hasSigned, setHasSigned] = useState(false);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [shareActive, setShareActive] = useState<{ id: string; title: string; description: string; imageUrl?: string; videoUrl?: string; createdAt: string } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Load admin-published movement media (posters + videos) for the Support the Movement section.
+  useEffect(() => {
+    let alive = true;
+    mediaApi.list().then((items) => { if (alive) setMediaItems(items); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   // Check if user has already signed
   useEffect(() => {
@@ -212,10 +221,10 @@ export const SignPetitionPage: React.FC = () => {
   }, [result, profile]);
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-2xl mx-auto px-3 py-3 sm:px-4 sm:py-8 space-y-3 sm:space-y-6">
       {/* Hero — petition + live counter */}
-      <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-6 text-center space-y-3">
-        <h1 className="text-2xl font-black text-slate-900">{t("home.title")}</h1>
+      <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4 sm:p-6 text-center space-y-3">
+        <h1 className="text-xl sm:text-2xl font-black text-slate-900">{t("home.title")}</h1>
         <p className="text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
           {t("home.subtitle")}
         </p>
@@ -231,9 +240,9 @@ export const SignPetitionPage: React.FC = () => {
       </div>
 
       {!profile && (
-        <div className="rounded-2xl bg-white border border-slate-200 p-6 text-center space-y-4">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
-            <IdCard size={26} className="text-white" />
+        <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-6 text-center space-y-3 sm:space-y-4">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+            <IdCard size={24} className="text-white" />
           </div>
           <p className="text-sm text-slate-600">
             {t("home.need_register")}
@@ -248,10 +257,9 @@ export const SignPetitionPage: React.FC = () => {
       )}
 
       {profile && !hasSigned && (
-        <div className="rounded-2xl bg-white border border-slate-200 p-6 space-y-4">
-          <div className="text-center mb-4">
-            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center mb-2">
-              <Shield size={32} className="text-white" />
+        <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-6 space-y-4">
+          <div className="text-center mb-3"><div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center mb-2">
+              <Shield size={24} className="text-white" />
             </div>
             <h3 className="font-bold text-slate-900">Your ID Card</h3>
           </div>
@@ -446,15 +454,78 @@ export const SignPetitionPage: React.FC = () => {
         </Link>
       </div>
 
+      {/* Support the Movement — posters & videos published by admin, shareable */}
+      {(mediaItems.length > 0) && (
+        <div className="rounded-3xl border border-[#AED581]/40 bg-white/95 p-4 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-black text-[#1B5E20] flex items-center gap-2">
+              <Sparkles size={15} className="text-emerald-600" /> Support the Movement
+            </h2>
+            <button
+              onClick={() => setShowShareModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:opacity-90 transition"
+            >
+              <Share2 size={13} /> Share All
+            </button>
+          </div>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Share our posters and videos — WhatsApp, Facebook, Instagram, Snapchat, ShareChat or Telegram.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {mediaItems.slice(0, 9).map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => {
+                  setShareActive({
+                    id: m.id,
+                    title: m.title,
+                    description: m.description || '',
+                    imageUrl: m.kind === 'poster' ? m.url : undefined,
+                    videoUrl: m.kind === 'video' ? m.url : undefined,
+                    createdAt: m.createdAt,
+                  });
+                  setShowShareModal(true);
+                }}
+                className="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                {m.kind === 'poster' ? (
+                  <img src={m.url} alt={m.title} loading="lazy" className="w-full h-32 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
+                ) : (
+                  <video src={m.url} className="w-full h-32 sm:h-40 object-cover" muted playsInline preload="metadata" />
+                )}
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pt-8 pb-2">
+                  <p className="text-[11px] font-bold text-white truncate">{m.title}</p>
+                  {m.description && <p className="text-[10px] text-slate-300 line-clamp-1">{m.description}</p>}
+                </div>
+                <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                  <span className="p-1.5 rounded-lg bg-black/50 text-white backdrop-blur">
+                    {m.kind === 'poster' ? <ImageIcon size={12} /> : <Video size={12} />}
+                  </span>
+                  <span className="p-1.5 rounded-lg bg-emerald-600 text-white">
+                    <Share2 size={12} />
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Thirukural Section */}
       <ThirukuralSection />
 
       {/* Share Social Modal */}
       <ShareSocialModal
         isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        posters={[]}
-        videos={[]}
+        onClose={() => { setShowShareModal(false); setShareActive(null); }}
+        activeItem={shareActive}
+        posters={mediaItems
+          .filter((m) => m.kind === 'poster')
+          .map((m) => ({ id: m.id, title: m.title, description: m.description || '', imageUrl: m.url, createdAt: m.createdAt }))}
+        videos={mediaItems
+          .filter((m) => m.kind === 'video')
+          .map((m) => ({ id: m.id, title: m.title, description: m.description || '', videoUrl: m.url, createdAt: m.createdAt }))}
       />
 
       <RegisterResidentModal 

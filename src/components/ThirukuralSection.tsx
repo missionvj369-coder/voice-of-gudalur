@@ -25,7 +25,7 @@ const MagicText: React.FC<{ text: string; delay?: number }> = ({ text, delay = 0
           }
           return prev + 1;
         });
-      }, 340);
+      }, 420);
       return () => clearInterval(interval);
     }, delay);
     return () => clearTimeout(timer);
@@ -87,7 +87,7 @@ export const ThirukuralSection: React.FC = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentLangIndex((prev) => (prev + 1) % athirukural.languages.length);
-    }, 12000);
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -116,7 +116,7 @@ export const ThirukuralSection: React.FC = () => {
           <AnimatePresence mode="wait">
             <motion.div key={currentLangIndex} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.5 }} className="w-full">
               <p className="text-lg sm:text-xl md:text-2xl font-bold leading-relaxed mb-4 text-green-900">
-                <MagicText text={currentKural.text} delay={600} />
+                <MagicText text={currentKural.text} delay={440} />
               </p>
             </motion.div>
           </AnimatePresence>

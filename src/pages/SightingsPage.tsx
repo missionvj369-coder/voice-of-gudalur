@@ -2,9 +2,10 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight, BellRing, CheckCircle2, Landmark, Navigation,
-  PawPrint, ShieldAlert, Users,
+  ShieldAlert, Users,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { ElephantIcon, TigerIcon } from '../components/AnimalIcons';
 
 /**
  * ANIMAL SIGHTINGS — the community sighting feed is wired for launch.
@@ -61,8 +62,14 @@ export const SightingsPage: React.FC = () => {
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
       {/* Hero */}
       <div className="text-center space-y-3">
-        <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-900/30">
-          <PawPrint size={30} className="text-white" />
+        <div className="flex items-center justify-center gap-3">
+          <div className="w-14 h-14 rounded-3xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center shadow-lg shadow-emerald-900/30">
+            <ElephantIcon size={30} className="text-white" />
+          </div>
+          <span className="w-8 text-emerald-300 font-black text-lg">+</span>
+          <div className="w-14 h-14 rounded-3xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-emerald-900/30">
+            <TigerIcon size={30} className="text-white" />
+          </div>
         </div>
         <h1 className="text-2xl font-black text-white">{t('sght.title')}</h1>
         <p className="text-sm text-emerald-50/90 leading-relaxed max-w-xl mx-auto">{t('sght.sub')}</p>
