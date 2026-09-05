@@ -430,6 +430,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
 
     'reg.title': 'Register — Get your Gudalur ID',
     'reg.subtitle': 'No OTP needed. Just your name, mobile number and place — one number, one registration.',
+    'reg.login_cta': 'Already registered? Login here',
     'reg.name': 'Full Name',
     'reg.phone': 'Mobile Number',
     'reg.place': 'Your Place (Gudalur & Nilgiris)',
@@ -511,6 +512,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
 
     'reg.title': 'பதிவு — உங்கள் கூடலூர் ஐடி பெறுக',
     'reg.subtitle': 'OTP தேவையில்லை. பெயர், கைபேசி எண் மற்றும் இடம் மட்டும் போதும் — ஒரு எண், ஒரே பதிவு.',
+    'reg.login_cta': 'ஏற்கனவே பதிவு செய்துவிட்டீர்களா? இங்கே உள்நுழையுங்கள்',
     'reg.name': 'முழு பெயர்',
     'reg.phone': 'கைபேசி எண்',
     'reg.place': 'உங்கள் இடம் (கூடலூர் & நீலகிரி)',
@@ -592,6 +594,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
 
     'reg.title': 'രജിസ്റ്റർ — നിങ്ങളുടെ ഗൂഡല്ലൂർ ഐഡി നേടുക',
     'reg.subtitle': 'OTP ആവശ്യമില്ല. പേര്, മൊബൈൽ നമ്പർ, സ്ഥലം മാത്രം — ഒരു നമ്പർ, ഒരു രജിസ്ട്രേഷൻ.',
+    'reg.login_cta': 'ഇതിനകം രജിസ്റ്റർ ചെയ്തോ? ഇവിടെ ലോഗിൻ ചെയ്യുക',
     'reg.name': 'മുഴുവൻ പേര്',
     'reg.phone': 'മൊബൈൽ നമ്പർ',
     'reg.place': 'നിങ്ങളുടെ സ്ഥലം (ഗൂഡല്ലൂർ & നീലഗിരി)',
@@ -673,6 +676,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
 
     'reg.title': 'ನೋಂದಣಿ — ನಿಮ್ಮ ಗೂಡಲೂರು ಐಡಿ ಪಡೆಯಿರಿ',
     'reg.subtitle': 'OTP ಅಗತ್ಯವಿಲ್ಲ. ಹೆಸರು, ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಮತ್ತು ಸ್ಥಳ ಮಾತ್ರ — ಒಂದು ಸಂಖ್ಯೆ, ಒಂದು ನೋಂದಣಿ.',
+    'reg.login_cta': 'ಈಗಾಗಲೇ ನೋಂದಾಯಿಸಿದ್ದೀರಾ? ಇಲ್ಲಿ ಲಾಗಿನ್ ಮಾಡಿ',
     'reg.name': 'ಪೂರ್ಣ ಹೆಸರು',
     'reg.phone': 'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ',
     'reg.place': 'ನಿಮ್ಮ ಸ್ಥಳ (ಗೂಡಲೂರು & ನೀಲಗಿರಿ)',

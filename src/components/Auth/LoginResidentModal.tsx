@@ -65,39 +65,47 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A3D0A]/80 backdrop-blur-md overflow-y-auto">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 16 }}
-            className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200"
-          >
-            <button
-              type="button"
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
-              aria-label="Close"
+        /* Scroll-safe overlay: heading + close button can NEVER be clipped,
+           and the card is capped to the screen height so it always fits. */
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-[#0A3D0A]/80 backdrop-blur-md">
+          <div className="flex min-h-full items-center justify-center p-3 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="relative my-auto flex w-full max-w-md flex-col overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-200 max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)]"
             >
-              <X size={18} />
-            </button>
+              {/* Pinned header — heading + close button always visible */}
+              <div className="relative shrink-0 border-b border-slate-100 px-5 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="absolute right-3 top-3 p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+                  aria-label="Close"
+                >
+                  <X size={18} />
+                </button>
 
-            <div className="space-y-1.5 mb-6 pr-8">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
-                  <ShieldCheck size={20} />
+                <div className="space-y-1.5 pr-10">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
+                      <ShieldCheck size={20} />
+                    </div>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+                      {lang === 'ta' ? 'குடிமகன் உள்நுழைவு' : 'Resident Login'}
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {lang === 'ta'
+                      ? 'உங்கள் தொலைபேசி எண் அல்லது கூடலூர் ஐடி எண் — இவற்றில் ஏதேனும் ஒன்றை மட்டும் பயன்படுத்தவும் — கடவுச்சொல் தேவையில்லை.'
+                      : 'Sign in with your mobile number OR your Gudalur ID — either one works. No password needed.'}
+                  </p>
                 </div>
-                <h3 className="text-lg font-black text-slate-900 leading-tight">
-                  {lang === 'ta' ? 'குடிமகன் உள்நுழைவு' : 'Resident Login'}
-                </h3>
               </div>
-              <p className="text-xs text-slate-500 font-medium">
-                {lang === 'ta'
-                  ? 'உங்கள் தொலைபேசி எண் அல்லது கூடலூர் ஐடி எண் — இவற்றில் ஏதேனும் ஒன்றை மட்டும் பயன்படுத்தவும் — கடவுச்சொல் தேவையில்லை.'
-                  : 'Sign in with your mobile number OR your Gudalur ID — either one works. No password needed.'}
-              </p>
-            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+                {/* Scrollable form body — only the fields scroll, header/footer stay put */}
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4 sm:px-6">
               <p className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
                 {lang === 'ta'
                   ? 'தொலைபேசி எண் அல்லது கூடலூர் ஐடி — இரண்டில் ஒன்றை மட்டும் உள்ளிடவும்.'
@@ -142,37 +150,43 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
                 </p>
               </div>
 
-              <button
-                type="submit"
-                disabled={isLoggingIn}
-                className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2 disabled:opacity-60"
-              >
-                {isLoggingIn ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <>
-                    <LogIn size={18} />
-                    <span>{lang === 'ta' ? 'உள்நுழை' : 'Login to My Resident Card'}</span>
-                  </>
-                )}
-              </button>
+                </div>
 
-              {onNeedRegister && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onNeedRegister();
-                  }}
-                  className="w-full text-center text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:underline"
-                >
-                  {lang === 'ta'
-                    ? 'இன்னும் பதிவு செய்யவில்லையா? புதிய குடிமக்கள் அட்டை உருவாக்குக'
-                    : 'Not registered yet? Create your Resident Card'}
-                </button>
-              )}
-            </form>
-          </motion.div>
+                {/* Pinned footer — Login + Register link always reachable, no scrolling needed */}
+                <div className="shrink-0 space-y-3 border-t border-slate-100 bg-white px-5 py-4 sm:px-6">
+                  <button
+                    type="submit"
+                    disabled={isLoggingIn}
+                    className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {isLoggingIn ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <>
+                        <LogIn size={18} />
+                        <span>{lang === 'ta' ? 'உள்நுழை' : 'Login to My Resident Card'}</span>
+                      </>
+                    )}
+                  </button>
+
+                  {onNeedRegister && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onNeedRegister();
+                      }}
+                      className="w-full text-center text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:underline"
+                    >
+                      {lang === 'ta'
+                        ? 'இன்னும் பதிவு செய்யவில்லையா? புதிய குடிமக்கள் அட்டை உருவாக்குக'
+                        : 'Not registered yet? Create your Resident Card'}
+                    </button>
+                  )}
+                </div>
+              </form>
+            </motion.div>
+          </div>
         </div>
       )}
     </AnimatePresence>

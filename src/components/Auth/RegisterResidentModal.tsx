@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Phone, MapPin, User, CheckCircle2, Loader2, ShieldCheck, Search, ChevronDown } from 'lucide-react';
+import { X, Phone, MapPin, User, CheckCircle2, Loader2, ShieldCheck, Search, ChevronDown, LogIn } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { GUDALUR_LOCALITIES } from '../../data/gudalurMasterData';
+import { OPEN_LOGIN_EVENT } from '../../pages/about_helpers';
 import toast from 'react-hot-toast';
 
 interface RegisterResidentModalProps {
@@ -11,6 +12,8 @@ interface RegisterResidentModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   onRegistered?: (profile: { gudalurId: string; name: string; phone: string }) => void;
+  /** Switches this registration form to the Login modal (for already-registered residents). */
+  onNeedLogin?: () => void;
 }
 
 /**
@@ -19,7 +22,7 @@ interface RegisterResidentModalProps {
  * index; duplicates are pointed to Login). Aadhaar verification comes later.
  */
 export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
-  isOpen, onClose, onSuccess, onRegistered,
+  isOpen, onClose, onSuccess, onRegistered, onNeedLogin,
 }) => {
   const { registerResident, userCoords } = useAuth();
   const { t } = useLanguage();
@@ -75,6 +78,13 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  /** "Already registered?" → hand over to the Login modal (local handler, or the global Shell bus). */
+  const handleNeedLogin = () => {
+    if (onNeedLogin) onNeedLogin();
+    else window.dispatchEvent(new Event(OPEN_LOGIN_EVENT));
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,37 +152,46 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A3D0A]/80 backdrop-blur-md overflow-y-auto">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 16 }}
-            className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200"
-          >
-            <button
-              type="button"
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
-              aria-label="Close"
+        /* Scroll-safe overlay: the inner wrapper scrolls as a whole, so the top of the
+           card (heading + close button) can NEVER be clipped — and the card itself is
+           capped to the screen height so the layout always fits the device screen. */
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-[#0A3D0A]/80 backdrop-blur-md">
+          <div className="flex min-h-full items-center justify-center p-3 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="relative my-auto flex w-full max-w-md flex-col overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-200 max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)]"
             >
-              <X size={18} />
-            </button>
+              {/* Pinned header — heading + close button always visible */}
+              <div className="relative shrink-0 border-b border-slate-100 px-5 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="absolute right-3 top-3 p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+                  aria-label="Close"
+                >
+                  <X size={18} />
+                </button>
 
-            <div className="space-y-1.5 mb-6 pr-8">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
-                  <ShieldCheck size={20} />
+                <div className="space-y-1.5 pr-10">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
+                      <ShieldCheck size={20} />
+                    </div>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+                      {t('reg.title')}
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {t('reg.subtitle')}
+                  </p>
                 </div>
-                <h3 className="text-lg font-black text-slate-900 leading-tight">
-                  {t('reg.title')}
-                </h3>
               </div>
-              <p className="text-xs text-slate-500">
-                {t('reg.subtitle')}
-              </p>
-            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+                {/* Scrollable form body — only the fields scroll, header/footer stay put */}
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4 sm:px-6">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('reg.name')} *</label>
                 <div className="relative">
@@ -281,20 +300,35 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-lg shadow-emerald-700/20 transition flex items-center justify-center gap-2 disabled:opacity-60"
-              >
-                {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-                <span>{isSubmitting ? t('reg.submitting') : t('reg.submit')}</span>
-              </button>
+                </div>
 
-              <p className="text-[10px] text-slate-400 text-center leading-relaxed">
-                {t('reg.already')}
-              </p>
-            </form>
-          </motion.div>
+                {/* Pinned footer — Submit + Login always reachable, no scrolling needed */}
+                <div className="shrink-0 space-y-3 border-t border-slate-100 bg-white px-5 py-4 sm:px-6">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-lg shadow-emerald-700/20 transition flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                    <span>{isSubmitting ? t('reg.submitting') : t('reg.submit')}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleNeedLogin}
+                    className="w-full py-2.5 rounded-2xl border-2 border-emerald-600 text-emerald-700 font-bold text-xs hover:bg-emerald-50 transition flex items-center justify-center gap-2"
+                  >
+                    <LogIn size={14} />
+                    <span>{t('reg.login_cta')}</span>
+                  </button>
+
+                  <p className="text-[10px] text-slate-400 text-center leading-relaxed">
+                    {t('reg.already')}
+                  </p>
+                </div>
+              </form>
+            </motion.div>
+          </div>
         </div>
       )}
     </AnimatePresence>

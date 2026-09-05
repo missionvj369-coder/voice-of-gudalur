@@ -8,7 +8,7 @@ import {
   Map as MapIcon, PawPrint, IdCard, UserPlus, RotateCcw, Instagram, Facebook,
 } from 'lucide-react';
 import { INTRO_SEEN_KEY } from '../OpeningAnimation';
-import { OPEN_REGISTER_EVENT } from '../../pages/about_helpers';
+import { OPEN_REGISTER_EVENT, OPEN_LOGIN_EVENT } from '../../pages/about_helpers';
 import { GudalurIdModal } from '../GudalurIdModal';
 
 import { LoginResidentModal } from '../Auth/LoginResidentModal';
@@ -91,6 +91,16 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     const onOpenRegister = () => setRegisterModalOpen(true);
     window.addEventListener(OPEN_REGISTER_EVENT, onOpenRegister);
     return () => window.removeEventListener(OPEN_REGISTER_EVENT, onOpenRegister);
+  }, []);
+
+  // RegisterResidentModals anywhere in the app can ask Shell to swap to Login.
+  React.useEffect(() => {
+    const onOpenLogin = () => {
+      setRegisterModalOpen(false);
+      setLoginModalOpen(true);
+    };
+    window.addEventListener(OPEN_LOGIN_EVENT, onOpenLogin);
+    return () => window.removeEventListener(OPEN_LOGIN_EVENT, onOpenLogin);
   }, []);
 
   return (
@@ -308,7 +318,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
         <GudalurIdModal isOpen={idModalOpen} onClose={() => setIdModalOpen(false)} />
         <LoginResidentModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onNeedRegister={() => { setLoginModalOpen(false); setRegisterModalOpen(true); }} />
-        <RegisterResidentModal isOpen={registerModalOpen} onClose={() => setRegisterModalOpen(false)} onSuccess={() => { setRegisterModalOpen(false); }} />
+        <RegisterResidentModal isOpen={registerModalOpen} onClose={() => setRegisterModalOpen(false)} onSuccess={() => { setRegisterModalOpen(false); }} onNeedLogin={() => { setRegisterModalOpen(false); setLoginModalOpen(true); }} />
       </div>
     </IdModalContext.Provider>
   );

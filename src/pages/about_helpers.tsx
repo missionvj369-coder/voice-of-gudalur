@@ -8,6 +8,9 @@ import { useLanguage } from '../context/LanguageContext';
  */
 export const OPEN_REGISTER_EVENT = 'vog:open-register';
 
+/** Bus event — any RegisterResidentModal without a local login modal can ask Shell to open Login. */
+export const OPEN_LOGIN_EVENT = 'vog:open-login';
+
 export const GetGDRCard: React.FC<{ className?: string }> = ({ className }) => {
   const { t } = useLanguage();
   return (
