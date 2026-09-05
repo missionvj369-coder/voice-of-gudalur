@@ -8,6 +8,7 @@
  * Deduplication via client idempotencyKey OR server source_ref.
  */
 import { db } from '../client';
+import { parseIdemResponse } from '../idempotency';
 
 export interface WildlifeIncidentInput {
   type: string;
@@ -26,12 +27,12 @@ export type SyncedIncident = { id: string; isNew: boolean };
 export async function upsertWildlifeIncident(input: WildlifeIncidentInput): Promise<SyncedIncident> {
   return db.withTransaction<SyncedIncident>(async (tx) => {
     if (input.idempotencyKey) {
-      const resp = await tx.queryOne<{ id: string }>(
-        `SELECT (response->>'id')::string AS "id"
-         FROM sync_idempotency WHERE idempotency_key = $1 AND kind = 'incident'`,
+      const resp = await tx.queryOne<{ response: string | Record<string, unknown> | null }>(
+        `SELECT response FROM sync_idempotency WHERE idempotency_key = $1 AND kind = 'incident'`,
         [input.idempotencyKey],
       );
-      if (resp) return { id: resp.id, isNew: false };
+      const parsed = parseIdemResponse<{ id: string }>(resp?.response);
+      if (parsed?.id) return { id: String(parsed.id), isNew: false };
     }
 
     const result = await tx.query<{ id: string }>(
@@ -75,12 +76,12 @@ export interface AnimalSightingInput {
 export async function upsertAnimalSighting(input: AnimalSightingInput): Promise<{ id: string; isNew: boolean }> {
   return db.withTransaction<{ id: string; isNew: boolean }>(async (tx) => {
     if (input.idempotencyKey) {
-      const resp = await tx.queryOne<{ id: string }>(
-        `SELECT (response->>'id')::string AS "id"
-         FROM sync_idempotency WHERE idempotency_key = $1 AND kind = 'sighting'`,
+      const resp = await tx.queryOne<{ response: string | Record<string, unknown> | null }>(
+        `SELECT response FROM sync_idempotency WHERE idempotency_key = $1 AND kind = 'sighting'`,
         [input.idempotencyKey],
       );
-      if (resp) return { id: resp.id, isNew: false };
+      const parsed = parseIdemResponse<{ id: string }>(resp?.response);
+      if (parsed?.id) return { id: String(parsed.id), isNew: false };
     }
 
     const result = await tx.query<{ id: string }>(

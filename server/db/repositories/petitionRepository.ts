@@ -14,6 +14,7 @@
  */
 import crypto from 'crypto';
 import { db, PoolClient } from '../client';
+import { parseIdemResponse } from '../idempotency';
 
 export interface PetitionSignInput {
   userUid?: string;
@@ -63,20 +64,21 @@ function phoneLast4(phone: string): string | undefined {
  */
 export async function recordPetitionSign(input: PetitionSignInput): Promise<PetitionSignResult> {
   return db.withTransaction<PetitionSignResult>(async (tx) => {
-    // 1. Idempotency (safe retry / offline sync).
+    // 1. Idempotency (safe retry / offline sync). The payload is stored as
+    // JSON text — parse in JS (the JSONB `->>` operator is invalid on the
+    // STRING column and used to throw on every sign attempt).
     if (input.idempotencyKey) {
-      const idem = await tx.queryOne<{ sign_hash: string; batch_no: number }>(
-        `SELECT (response->>'signHash')::string AS "sign_hash",
-                (response->>'batchNo')::int  AS "batch_no"
-         FROM sync_idempotency WHERE idempotency_key = $1`,
+      const idem = await tx.queryOne<{ response: string | Record<string, unknown> | null }>(
+        `SELECT response FROM sync_idempotency WHERE idempotency_key = $1`,
         [input.idempotencyKey],
       );
-      if (idem) {
+      const parsed = parseIdemResponse<{ signHash: string; batchNo: number }>(idem?.response);
+      if (parsed?.signHash) {
         return {
-          signHash: idem.sign_hash,
-          batchNo: idem.batch_no,
+          signHash: parsed.signHash,
+          batchNo: parsed.batchNo,
           isDuplicate: false,
-          verifyUrl: `/verify-sign?hash=${idem.sign_hash}`,
+          verifyUrl: `/verify-sign?hash=${parsed.signHash}`,
         };
       }
     }

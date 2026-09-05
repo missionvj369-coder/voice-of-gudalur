@@ -59,7 +59,7 @@ router.post('/sign', requireAuth, async (req: Request, res: Response) => {
     });
   } catch (e: any) {
     logger.error('petition sign:', e.message);
-    res.status(500).json({ error: 'Could not record signature' });
+    res.status(500).json({ error: `Could not record signature — ${e.message}` });
   }
 });
 

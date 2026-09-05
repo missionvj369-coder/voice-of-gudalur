@@ -13,6 +13,7 @@
  */
 import crypto from 'crypto';
 import { db } from '../client';
+import { parseIdemResponse } from '../idempotency';
 
 export interface ManifestoSignatureInput {
   name: string;
@@ -29,16 +30,17 @@ export interface ManifestoSignatureInput {
  */
 export async function recordManifestoSignature(input: ManifestoSignatureInput) {
   return db.withTransaction<{ signatureId: number; isDuplicate: boolean; count: number }>(async (tx) => {
-    // Idempotency (offline sync / retry safety).
+    // Idempotency (offline sync / retry safety) — parse the JSON payload in
+    // JS; `response->>'…'` is invalid on the STRING column.
     if (input.idempotencyKey) {
-      const idem = await tx.queryOne<{ signature_id: number }>(
-        `SELECT (response->>'signatureId')::int AS "signature_id"
-         FROM sync_idempotency WHERE idempotency_key = $1 AND kind = 'endorsement'`,
+      const idem = await tx.queryOne<{ response: string | Record<string, unknown> | null }>(
+        `SELECT response FROM sync_idempotency WHERE idempotency_key = $1 AND kind = 'endorsement'`,
         [input.idempotencyKey],
       );
-      if (idem) {
+      const parsed = parseIdemResponse<{ signatureId: number }>(idem?.response);
+      if (parsed?.signatureId != null) {
         const count = await tx.queryOne<{ c: number }>('SELECT count(*) AS c FROM manifesto_signatures');
-        return { signatureId: idem.signature_id, isDuplicate: true, count: Number(count?.c ?? 0) };
+        return { signatureId: Number(parsed.signatureId), isDuplicate: true, count: Number(count?.c ?? 0) };
       }
     }
 
@@ -113,12 +115,12 @@ export interface ManifestoSubmissionInput {
 export async function recordManifestoSubmission(input: ManifestoSubmissionInput) {
   return db.withTransaction<{ docketRef: string; submissionId: number; isDuplicate: boolean }>(async (tx) => {
     if (input.idempotencyKey) {
-      const idem = await tx.queryOne<{ docket_ref: string }>(
-        `SELECT (response->>'docketRef')::string AS "docket_ref"
-         FROM sync_idempotency WHERE idempotency_key = $1 AND kind = 'submission'`,
+      const idem = await tx.queryOne<{ response: string | Record<string, unknown> | null }>(
+        `SELECT response FROM sync_idempotency WHERE idempotency_key = $1 AND kind = 'submission'`,
         [input.idempotencyKey],
       );
-      if (idem) return { docketRef: idem.docket_ref, submissionId: 0, isDuplicate: true };
+      const parsed = parseIdemResponse<{ docketRef: string }>(idem?.response);
+      if (parsed?.docketRef) return { docketRef: parsed.docketRef, submissionId: 0, isDuplicate: true };
     }
 
     const existing = await tx.queryOne<{ id: number; docket_ref: string }>(
