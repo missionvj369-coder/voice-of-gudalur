@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { BadgeCheck, PenLine, ScrollText } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, readLocalSignature } from '../context/AuthContext';
 import { CorridorMap } from '../components/CorridorMap';
 import { GrievanceTicket } from '../components/GrievanceTicket';
 import { GetGDRCard } from './about_helpers';
@@ -20,14 +20,12 @@ export const Manifesto: React.FC = () => {
   const { t } = useLanguage();
   const { profile } = useAuth();
   const [total, setTotal] = useState<number | null>(null);
-  // "Petition Signed" — once signed on this device, the CTA becomes untouchable.
-  const [hasSigned, setHasSigned] = useState<boolean>(() => {
-    try { return localStorage.getItem('vog_petition_signed') === '1'; } catch { return false; }
-  });
+  // "Petition Signed" — the CTA locks ONLY for a real server-issued (VG-*) sign.
+  const [hasSigned, setHasSigned] = useState<boolean>(() => readLocalSignature().signed);
 
   React.useEffect(() => {
     const sync = () => {
-      try { setHasSigned(localStorage.getItem('vog_petition_signed') === '1'); } catch { /* ignore */ }
+      try { setHasSigned(readLocalSignature().signed); } catch { /* ignore */ }
     };
     window.addEventListener('vog:petition-signed', sync);
     window.addEventListener('storage', sync);

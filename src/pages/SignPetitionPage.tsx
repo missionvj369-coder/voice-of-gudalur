@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth, readLocalSignature, isRealGudalurId } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { petitionApi, mediaApi, type MediaItem } from "../services/api";
 import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal";
@@ -50,18 +50,13 @@ export const SignPetitionPage: React.FC = () => {
     return () => { alive = false; };
   }, []);
 
-  // Check if user has already signed
+  // Check if user has already signed — only a server-issued (VG-*) sign hash
+  // counts as real; synthetic local placeholders are purged by the helper.
   useEffect(() => {
-    const signed = localStorage.getItem("vog_petition_signed") === "1";
+    const { signed, result } = readLocalSignature();
     setHasSigned(signed);
-    if (signed && profile) {
-      // Load previous sign data
-      const savedResult = localStorage.getItem("vog_petition_result");
-      if (savedResult) {
-        try {
-          setResult(JSON.parse(savedResult));
-        } catch { /* ignore */ }
-      }
+    if (signed && profile && result) {
+      setResult(result);
     }
   }, [profile]);
 
@@ -109,7 +104,9 @@ export const SignPetitionPage: React.FC = () => {
   }, []);
 
   const handleSign = useCallback(async () => {
-    if (!profile) {
+    // Signing requires a REAL Gudalur ID issued online by the server. A local
+    // / synthetic card (OFFLINE-*) must never reach the petition ledger.
+    if (!profile || !isRealGudalurId(profile.gudalurId)) {
       setShowRegister(true);
       return;
     }
@@ -120,7 +117,7 @@ export const SignPetitionPage: React.FC = () => {
     setBusy(true);
     const signedAt = new Date().toISOString();
     const resultData = {
-      hash: `LOCAL-${Date.now().toString(36).toUpperCase()}`,
+      hash: "",
       verifyUrl: `${window.location.origin}/verify-sign`,
       batchNo: 1,
       signedAt,

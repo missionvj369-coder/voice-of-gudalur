@@ -64,6 +64,65 @@ function normalizePhone(raw: string): string {
   return digits.startsWith('91') && digits.length === 12 ? digits.slice(2) : digits;
 }
 
+/**
+ * A Gudalur ID is REAL only when the official server issued it
+ * (GD-YYYY-XXXXXX) and saved it in the residents (users) ledger. Anything else
+ * (e.g. a locally invented "OFFLINE-*" card) is NOT a registered resident.
+ */
+export function isRealGudalurId(id?: string | null): boolean {
+  return typeof id === 'string' && /^GD-\d{4}-[0-9A-F]{6}$/.test(id);
+}
+
+/** The locally-cached petition signature state (mirrors SignPetitionPage result). */
+export interface LocalSignatureResult {
+  hash: string;
+  verifyUrl: string;
+  batchNo: number;
+  signedAt: string;
+  name: string;
+  gudalurId: string;
+  locality: string;
+}
+
+/**
+ * Read the locally-cached petition signature. A sign is REAL only when the
+ * backend returned a server-side hash (VG-*). Stale synthetic entries
+ * (LOCAL-* / local-only placeholders) are purged so nobody ever appears
+ * "signed" without a verifiable ledger row.
+ */
+export function readLocalSignature(): { signed: boolean; result: LocalSignatureResult | null } {
+  try {
+    if (localStorage.getItem('vog_petition_signed') !== '1') return { signed: false, result: null };
+    const raw = localStorage.getItem('vog_petition_result');
+    if (!raw) return { signed: false, result: null };
+    const result = JSON.parse(raw) as LocalSignatureResult;
+    const hash = result?.hash;
+    if (typeof hash !== 'string' || !hash.startsWith('VG-')) {
+      // Stale synthetic sign — no real ledger entry behind it.
+      localStorage.removeItem('vog_petition_signed');
+      localStorage.removeItem('vog_petition_result');
+      return { signed: false, result: null };
+    }
+    return { signed: true, result };
+  } catch {
+    return { signed: false, result: null };
+  }
+}
+
+/** Purge locally-cached "signed" state that is not backed by a real server hash. */
+function clearSyntheticLocalData(): void {
+  try {
+    const raw = localStorage.getItem('vog_petition_result');
+    const hash = raw ? (JSON.parse(raw) as Record<string, unknown>)?.hash : null;
+    if (typeof hash !== 'string' || !hash.startsWith('VG-')) {
+      localStorage.removeItem('vog_petition_signed');
+      localStorage.removeItem('vog_petition_result');
+    }
+  } catch {
+    /* best-effort */
+  }
+}
+
 /** Map a server resident/session payload (camelCase) to the app's UserProfile. */
 function toUserProfile(r: any): UserProfile {
   return {
@@ -117,7 +176,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(() => {
     try {
       const saved = localStorage.getItem(PROFILE_KEY);
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+      const parsed = JSON.parse(saved) as UserProfile;
+      // A profile is shown only when the official server issued its Gudalur ID.
+      return parsed && isRealGudalurId(parsed.gudalurId) ? parsed : null;
     } catch {
       return null;
     }
@@ -183,9 +245,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       } catch {
-        // Offline â€” keep the cached resident card so the app stays usable.
+        // Server unreachable: only a card issued by the official server can be
+        // shown. Synthetic local registrations (OFFLINE-* / res_*) are NOT real
+        // residents — they are dropped so nobody signs under a fake identity.
         const cached = readCachedProfile();
-        if (cached) setProfile(cached);
+        if (cached && isRealGudalurId(cached.gudalurId)) {
+          setProfile(cached); // genuine resident card cached on this device
+        } else {
+          clearSyntheticLocalData();
+          persistProfile(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -206,7 +275,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     aadhaarRef?: string;
   }): Promise<UserProfile> => {
     const loc = GUDALUR_LOCALITIES.find((l) => l.id === data.localityId);
-    const locName = data.customPlaceName?.trim() || loc?.name || 'Gudalur Taluk';
     const phone = normalizePhone(data.phone);
     if (phone.length !== 10) {
       throw new Error('A valid 10-digit mobile number is required');
@@ -239,33 +307,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (e?.status === 409 || /duplicate|already registered|unique key/i.test(msg)) {
         throw duplicateError();
       }
+      // There is NO offline registration. A Gudalur ID is a real, verifiable
+      // identity: only the server generates it (GD-YYYY-XXXXXX), saves it in
+      // the residents (users) ledger and issues the session cookie. If the
+      // server cannot be reached, fail loudly instead of inventing an
+      // unverifiable "OFFLINE-*" card that officials could never confirm.
       if (e?.status === undefined || e?.status === 502 || /failed to fetch|networkerror|load failed|invalid server response/i.test(msg)) {
-        // Offline fallback: still issue a local unique ID and cache the card.
-        const fallback: UserProfile = {
-          uid: `res_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          name: data.name.trim(),
-          phone,
-          localityId: data.localityId,
-          localityName: locName,
-          customPlaceName: data.customPlaceName?.trim() || undefined,
-          pincode: data.pincode.trim() || loc?.pincode || '643212',
-          email: data.email?.trim() || undefined,
-          gudalurId: `OFFLINE-${Date.now().toString(36).toUpperCase()}`,
-          role: 'LOCAL_MEMBER',
-          verificationLevel: 'REGISTERED',
-          isBloodDonor: false,
-          bloodGroup: undefined,
-          lat: data.lat || userCoords?.lat || loc?.lat,
-          lng: data.lng || userCoords?.lng || loc?.lng,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          issuesReported: 0,
-          issuesSupported: 0,
-          representationsCreated: 0,
-          alertsAcknowledged: 0,
-        };
-        persistProfile(fallback);
-        return fallback;
+        const offlineErr = new Error(
+          'No internet connection — Gudalur IDs are issued online only and saved in the residents ledger. Please connect to the internet and try again.',
+        ) as Error & { code?: string };
+        offlineErr.code = 'OFFLINE_REQUIRED';
+        throw offlineErr;
       }
       throw e;
     }
@@ -290,17 +342,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(toAuthUser(prof));
       return prof;
     } catch (e: any) {
-      const cached = readCachedProfile();
-      const phoneMatch = hasPhone && cached?.phone === p;
-      const idMatch = hasId && cached?.gudalurId?.toUpperCase() === gid;
-      const offline = e?.status === undefined || /failed to fetch|networkerror|load failed/i.test(String(e?.message || ''));
-      if (offline && cached && (phoneMatch || idMatch)) {
-        persistProfile(cached);
-        return cached;
+      const msg = String(e?.message || '');
+      if (e?.status === undefined || /failed to fetch|networkerror|load failed/i.test(msg)) {
+        throw new Error('No internet connection — login verifies your identity online. Please connect and try again.');
+      }
+      if (e?.status === 500 || e?.status === 502) {
+        throw new Error('Resident service unavailable. Please try again in a moment.');
       }
       throw new Error('No resident found for these details. Check your mobile number / Gudalur ID, or register first.');
     }
-    };
+  };
 
   const updateLocality = async (localityId: string, customPlaceName?: string, pincode?: string) => {
     const loc = GUDALUR_LOCALITIES.find((l) => l.id === localityId);

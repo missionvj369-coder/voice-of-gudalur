@@ -2,7 +2,7 @@
 import { NavLink } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { useLanguage, type Language } from '../../context/LanguageContext';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, readLocalSignature } from '../../context/AuthContext';
 import {
   Flame, User, LogIn, LogOut, Menu, X, PenLine, BookOpen,
   Map as MapIcon, PawPrint, IdCard, UserPlus, Instagram, Facebook,
@@ -59,9 +59,9 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  // "Once signed, everywhere shows it" — the petition gratitude chip in the menu.
+  // "Once signed, everywhere shows it" — only a REAL server-issued (VG-*) sign.
   const supportRecorded = (() => {
-    try { return localStorage.getItem('vog_petition_signed') === '1'; } catch { return false; }
+    try { return readLocalSignature().signed; } catch { return false; }
   })();
   const [readyQueue, setReadyQueue] = useState<{ id: number; fn: () => void }[]>([]);
 
