@@ -4,6 +4,15 @@
   publish = "dist"
   functions = "netlify/functions"
 
+# ── Build environment ───────────────────────────────────────────────
+# Force npm to always install devDependencies (vite, vite-plugin-pwa,
+# @vitejs/plugin-react, etc.) — they are required by the build step but
+# Netlify may run with NODE_ENV=production which skips them.
+# NPM_FLAGS is more reliable than .npmrc for this.
+[build.environment]
+  NPM_FLAGS = "--include=dev"
+  NODE_ENV = "production"
+
 [functions]
   node_bundler = "esbuild"
   # vite is only dynamically imported by the local dev server (startServer);
