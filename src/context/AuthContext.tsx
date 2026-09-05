@@ -172,6 +172,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     /** Restore a server session on boot (httpOnly cookies only). */
   useEffect(() => {
     void acquireLiveLocation();
+    // Hard cap so `loading` can never hang forever (a stalled /api/me must
+    // not leave the app frozen on a green loading screen after the intro).
+    const bootTimer = window.setTimeout(() => setLoading(false), 8000);
     (async () => {
       try {
         const { user: u } = await authApi.me();
@@ -187,6 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const cached = readCachedProfile();
         if (cached) setProfile(cached);
       } finally {
+        window.clearTimeout(bootTimer);
         setLoading(false);
       }
     })();

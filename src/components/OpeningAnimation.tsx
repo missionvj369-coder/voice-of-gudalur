@@ -27,8 +27,8 @@ const T = {
   lanesEnd: 8.8,
   brandStart: 8.8,
   kuralStart: 10.4,
-  kuralEnd: 22.5,
-  end: 24.0,
+  kuralEnd: 16.5,
+  end: 18.0,
 };
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -568,8 +568,9 @@ function drawKural(ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
   const startY = H * 0.28;
   const leading = Math.min(H * 0.06, 46);
   const fontSize = Math.min(W * 0.036, 28);
-  const gap = Math.round(fontSize * 0.38); // one even word-space
   ctx.font = `800 ${fontSize}px 'Segoe UI', system-ui, sans-serif`;
+  // Use the natural space glyph width so the spacing matches the original text exactly.
+  const gap = ctx.measureText(' ').width;
 
   // Greedy word-wrap into centred lines (each word appears once, in order).
   const widths = words.map((word) => ctx.measureText(word).width);
@@ -702,7 +703,7 @@ export const OpeningAnimation: React.FC<{ onFinish: () => void }> = ({ onFinish 
     // The animation now plays on EVERY visit — no "seen" flag is stored,
     // so nothing needs to be persisted here.
     setFading(true);
-    window.setTimeout(() => onFinish(), 620);
+    window.setTimeout(() => onFinish(), 700);
   }, [onFinish]);
 
   useEffect(() => {
@@ -733,6 +734,10 @@ export const OpeningAnimation: React.FC<{ onFinish: () => void }> = ({ onFinish 
     let last = start;
     let raf = 0;
 
+    // Safety timeout: force-finish if the animation ever hangs (e.g. tab
+    // throttling in a background window stops rAF from firing).
+    const safety = window.setTimeout(() => finishRef.current(), (T.end + 3) * 1000);
+
     const frame = (now: number) => {
       const t = (now - start) / 1000;
       const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
@@ -742,21 +747,33 @@ export const OpeningAnimation: React.FC<{ onFinish: () => void }> = ({ onFinish 
         if (c.x > w + 260) c.x = -260;
       }
 
-      ctx.clearRect(0, 0, w, h);
-      ctx.save();
-      // impact screen shake (decaying)
-      if (t >= T.impact && t < T.impact + 0.5) {
-        const k = 1 - (t - T.impact) / 0.5;
-        ctx.translate((Math.random() - 0.5) * 22 * k, (Math.random() - 0.5) * 16 * k);
+      // Guard: if any single phase throws (bad font, canvas edge case…), we
+      // refuse to hang the screen — finish cleanly instead of freezing on a
+      // drawn frame (e.g. the deep-green brand screen) forever.
+      try {
+        ctx.clearRect(0, 0, w, h);
+        ctx.save();
+        // impact screen shake (decaying)
+        if (t >= T.impact && t < T.impact + 0.5) {
+          const k = 1 - (t - T.impact) / 0.5;
+          ctx.translate((Math.random() - 0.5) * 22 * k, (Math.random() - 0.5) * 16 * k);
+        }
+        if (t < T.failureEnd) drawPhase1(ctx, w, h, t, clouds);
+        else if (t < T.rebootEnd) drawReboot(ctx, w, h, t);
+        else if (t < T.lanesEnd) drawLanes(ctx, w, h, t, clouds);
+        else if (t < T.kuralStart) drawBrand(ctx, w, h, t);
+        else drawKural(ctx, w, h, t, clouds);
+        ctx.restore();
+      } catch (err) {
+        // Never let a drawing error block the site — skip straight to the end.
+        console.warn('[OpeningAnimation] draw error, finishing:', err);
+        clearTimeout(safety);
+        finishRef.current();
+        return;
       }
-      if (t < T.failureEnd) drawPhase1(ctx, w, h, t, clouds);
-      else if (t < T.rebootEnd) drawReboot(ctx, w, h, t);
-      else if (t < T.lanesEnd) drawLanes(ctx, w, h, t, clouds);
-      else if (t < T.kuralStart) drawBrand(ctx, w, h, t);
-      else drawKural(ctx, w, h, t, clouds);
-      ctx.restore();
 
       if (t >= T.end) {
+        clearTimeout(safety);
         finishRef.current();
         return; // stop the loop; the CSS fade hands over to the website
       }
@@ -766,6 +783,7 @@ export const OpeningAnimation: React.FC<{ onFinish: () => void }> = ({ onFinish 
 
     return () => {
       cancelAnimationFrame(raf);
+      clearTimeout(safety);
       window.removeEventListener('resize', resize);
     };
   }, []);

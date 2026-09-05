@@ -38,7 +38,7 @@ const MagicText: React.FC<{ text: string; delay?: number }> = ({ text, delay = 0
 
   let wordCount = 0;
   return (
-    <span className="inline-block">
+    <span className="inline-block whitespace-pre-wrap">
       {segments.map((segment, i) => {
         if (!segment.trim()) {
           // Preserve exact whitespace from original text
