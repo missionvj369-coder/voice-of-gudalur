@@ -6,7 +6,7 @@ import { petitionApi, mediaApi, type MediaItem } from "../services/api";
 import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal";
 import { ThirukuralSection } from "../components/ThirukuralSection";
 import ShareSocialModal from "../components/ShareSocial/ShareSocialModal";
-import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2, ImageIcon, Video, Sparkles } from "lucide-react";
+import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2, ImageIcon, Video, Sparkles, Hash } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface PlaceCount {
@@ -39,6 +39,8 @@ export const SignPetitionPage: React.FC = () => {
   const [hasSigned, setHasSigned] = useState(false);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [shareActive, setShareActive] = useState<{ id: string; title: string; description: string; imageUrl?: string; videoUrl?: string; createdAt: string } | null>(null);
+  const [ledger, setLedger] = useState<Array<{ hash: string; name: string; village: string; phoneLast4: string | null; batchNo: number; signedAt: string; verifyUrl: string }>>([]);
+  const [ledgerTotal, setLedgerTotal] = useState<number | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load admin-published movement media (posters + videos) for the Support the Movement section.
@@ -83,6 +85,12 @@ export const SignPetitionPage: React.FC = () => {
         }
       } catch { /* ignore */ }
     }
+    // Live hash ledger — public, updates with the same 10s heartbeat.
+    try {
+      const l = await petitionApi.ledger();
+      setLedger(l?.signs ?? []);
+      setLedgerTotal(l?.total ?? 0);
+    } catch { /* ledger stays as-is offline */ }
   }, []);
 
   useEffect(() => {
@@ -400,8 +408,58 @@ export const SignPetitionPage: React.FC = () => {
         
         {/* Total Count */}
         <div className="text-center py-4">
-          <p className="text-4xl font-black text-emerald-900">{total !== null ? total.toLocaleString('en-IN') : '...'}</p>
+          <p className="text-4xl font-black text-emerald-900">{ledgerTotal !== null ? ledgerTotal.toLocaleString('en-IN') : (total !== null ? total.toLocaleString('en-IN') : '...')}</p>
           <p className="text-xs text-emerald-700 mt-1">Petitions Signed</p>
+        </div>
+
+        {/* Live Signature Ledger — public: every sign is a clickable, verifiable hash */}
+        <div className="rounded-2xl border border-emerald-200 bg-white/90 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600">
+            <p className="text-xs font-black text-white flex items-center gap-1.5">
+              <Hash size={13} /> Live Signature Ledger
+            </p>
+            <span className="text-[10px] font-bold text-emerald-100">
+              {ledgerTotal !== null ? `${ledgerTotal.toLocaleString('en-IN')} hashes` : '…'}
+            </span>
+          </div>
+          {ledger.length === 0 ? (
+            <p className="text-xs text-slate-500 text-center py-5">
+              No signatures yet — be the first. Every sign becomes a public, verifiable hash.
+            </p>
+          ) : (
+            <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+              {ledger.map((s) => (
+                <Link
+                  key={s.hash}
+                  to={`/verify-sign?id=${encodeURIComponent(s.hash)}`}
+                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-emerald-50 transition group"
+                >
+                  <span className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                    <Hash size={13} />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-mono text-[11px] font-bold text-slate-900 truncate group-hover:text-emerald-700">
+                      {s.hash}
+                    </span>
+                    <span className="block text-[10px] text-slate-500">
+                      {s.name} · {s.village || 'Gudalur'} · Batch #{s.batchNo}
+                    </span>
+                  </span>
+                  <span className="text-right shrink-0">
+                    <span className="block text-[10px] font-bold text-emerald-700">View</span>
+                    <span className="block text-[9px] text-slate-400">
+                      {new Date(s.signedAt).toLocaleDateString('en-IN')}
+                    </span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+          <div className="px-4 py-2 bg-emerald-50 border-t border-emerald-100">
+            <p className="text-[9px] text-emerald-700 text-center leading-relaxed">
+              🔒 Tap any hash to see the signer's details — phone numbers are blurred and never shown.
+            </p>
+          </div>
         </div>
 
         {/* Places Leaderboard */}

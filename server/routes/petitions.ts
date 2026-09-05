@@ -148,6 +148,37 @@ router.get('/sign-stats', async (_req: Request, res: Response) => {
   }
 });
 
+/** GET /api/petitions/ledger — PUBLIC live hash ledger (any user or non-user).
+ *  Every signature with its hash; phone is NEVER sent raw — only last-4,
+ *  rendered blurred on the client. Same privacy posture as /verify/:hash. */
+router.get('/ledger', async (_req: Request, res: Response) => {
+  try {
+    const total = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
+    const rows = await db.query<{
+      sign_hash: string; full_name: string; village: string; phone_last4: string | null;
+      batch_no: number; created_at: string;
+    }>(
+      `SELECT sign_hash, full_name, village, phone_last4, batch_no, created_at
+       FROM petition_signs ORDER BY created_at DESC LIMIT 500`,
+    );
+    res.json({
+      total: Number(total?.count ?? 0),
+      signs: rows.rows.map((r) => ({
+        hash: r.sign_hash,
+        name: r.full_name,
+        village: r.village,
+        phoneLast4: r.phone_last4,
+        batchNo: r.batch_no,
+        signedAt: r.created_at,
+        verifyUrl: `/verify-sign?id=${encodeURIComponent(r.sign_hash)}`,
+      })),
+    });
+  } catch (e: any) {
+    logger.error('ledger:', e.message);
+    res.json({ total: 0, signs: [] });
+  }
+});
+
 /** GET /api/petitions/:id — petition detail. */
 router.get('/:id', async (req: Request, res: Response) => {
   const row = await db.queryOne<{

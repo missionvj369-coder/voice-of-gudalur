@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   BadgeCheck, Clock, Copy, Download, Flame, Hash, IdCard, Link2,
-  Loader2, MapPin, Phone, Search, Share2, ShieldCheck, ShieldX, User,
+  Loader2, Lock, MapPin, Phone, Search, Share2, ShieldCheck, ShieldX, User,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { GrievanceTicket } from "../components/GrievanceTicket";
@@ -294,7 +294,7 @@ export const VerifySignPage: React.FC = () => {
               <div className="rounded-xl border border-slate-200 divide-y divide-slate-100">
                 <Row icon={<User size={14} />} label="Signed by" value={data.full_name} />
                 <Row icon={<MapPin size={14} />} label="Place" value={data.village || "—"} />
-                <Row icon={<Phone size={14} />} label="Phone" value={`••••${data.phone_last4 ?? "—"}`} mono />
+                <Row icon={<Phone size={14} />} label="Phone — blurred, never shown" value={`+91 ••••• ${data.phone_last4 ?? ""}`} mono blur />
                 <Row icon={<IdCard size={14} />} label="Aadhaar" value={`••••${data.aadhaar_last4 ?? "—"}`} mono />
                 <Row icon={<Hash size={14} />} label="Batch" value={`#${data.batch_no ?? 1}`} />
               </div>
@@ -348,12 +348,29 @@ export const VerifySignPage: React.FC = () => {
 };
 
 /** Professional detail row used in the signer-details block. */
-const Row: React.FC<{ icon: React.ReactNode; label: string; value?: string; mono?: boolean }> = ({ icon, label, value, mono }) => (
+const Row: React.FC<{ icon: React.ReactNode; label: string; value?: string; mono?: boolean; blur?: boolean }> = ({ icon, label, value, mono, blur }) => (
   <div className="flex items-center gap-3 px-4 py-2.5">
     <span className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">{icon}</span>
     <div className="min-w-0 flex-1">
       <p className="text-[10px] text-slate-500 uppercase font-bold">{label}</p>
-      <p className={`font-bold text-slate-900 text-sm truncate ${mono ? "font-mono tracking-widest" : ""}`}>{value}</p>
+      {blur ? (
+        <p className="flex items-center gap-2">
+          {/* The raw number NEVER leaves the server — only masked digits are
+              rendered, under a frosted blur so the privacy is visible. */}
+          <span
+            className="font-mono font-bold text-slate-900 text-sm tracking-widest blur-[3px] select-none pointer-events-none"
+            aria-hidden="true"
+          >
+            {value}
+          </span>
+          <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 uppercase tracking-wide shrink-0">
+            <Lock size={9} /> Protected
+          </span>
+          <span className="sr-only">Phone number is hidden for privacy</span>
+        </p>
+      ) : (
+        <p className={`font-bold text-slate-900 text-sm truncate ${mono ? "font-mono tracking-widest" : ""}`}>{value}</p>
+      )}
     </div>
   </div>
 );

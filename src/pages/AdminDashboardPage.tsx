@@ -21,25 +21,39 @@ export const AdminDashboardPage: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [signs, setSigns] = useState<Array<{ hash: string; name: string; village: string; batchNo: number; signedAt: string; verifyUrl: string }>>([]);
 
+  /** Silent refresh — stats + hash ledger (no loading spinner). */
+  const refreshData = useCallback(async () => {
+    const [s, signsData] = await Promise.all([
+      authApi.adminStats(),
+      authApi.adminSigns(),
+    ]);
+    setStats(s);
+    setSigns((signsData as any).signs || []);
+  }, []);
+
   const load = useCallback(async () => {
+    setLoading(true);
     try {
-      const [s, m, signsData] = await Promise.all([
-        authApi.adminStats(),
+      const [, m] = await Promise.all([
+        refreshData(),
         mediaApi.list(),
-        authApi.adminSigns(),
       ]);
-      setStats(s);
       setMedia(m as MediaItem[]);
-      setSigns((signsData as any).signs || []);
     } catch (e: any) {
       if (e?.status === 401 || e?.status === 403) { navigate('/admin'); return; }
       toast.error('Failed to load dashboard');
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  }, [navigate, refreshData]);
 
   useEffect(() => { load(); }, [load]);
+
+  /** LIVE: silent refresh every 15s — stats + hash-ledger update in place. */
+  useEffect(() => {
+    const t = setInterval(() => { void refreshData().catch(() => {}); }, 15000);
+    return () => clearInterval(t);
+  }, [refreshData]);
 
   const upload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,6 +173,46 @@ export const AdminDashboardPage: React.FC = () => {
                 <p className="text-[10px] text-slate-400 mt-1 break-all font-mono flex items-center gap-1">
                   <Hash size={10} className="shrink-0" /> {stats?.latestHash ?? 'No signatures yet'}
                 </p>
+              </div>
+            </div>
+
+            {/* LIVE — every hash under the live count */}
+            <div className="rounded-2xl bg-[#2E7D32] border border-[#AED581]/20 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 bg-[#1B5E20]">
+                <p className="text-xs font-black text-[#AED581] flex items-center gap-2">
+                  <Hash size={13} /> Live Signature Hashes
+                </p>
+                <span className="flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-300">LIVE · {signs.length}</span>
+                </span>
+              </div>
+              {signs.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-5">No signatures yet — hashes appear here live.</p>
+              ) : (
+                <div className="max-h-60 overflow-y-auto divide-y divide-[#AED581]/10">
+                  {signs.slice(0, 30).map((s) => (
+                    <a
+                      key={s.hash}
+                      href={s.verifyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 px-5 py-2 hover:bg-[#1B5E20]/60 transition"
+                    >
+                      <Hash size={11} className="text-[#AED581] shrink-0" />
+                      <span className="flex-1 min-w-0 font-mono text-[10px] font-bold text-white truncate">{s.hash}</span>
+                      <span className="text-[10px] text-slate-400 truncate max-w-[40%]">{s.name} · {s.village || 'Gudalur'}</span>
+                      <span className="text-[9px] text-slate-500 shrink-0">B#{s.batchNo}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+              <div className="px-5 py-2 bg-[#1B5E20] flex items-center justify-between">
+                <span className="text-[9px] text-slate-500">Auto-refreshes every 15s · tap a hash to verify</span>
+                <button onClick={() => setTab('petitions')} className="text-[9px] font-bold text-[#AED581] hover:text-white">View full ledger →</button>
               </div>
             </div>
 

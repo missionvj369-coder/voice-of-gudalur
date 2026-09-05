@@ -249,6 +249,16 @@ export const petitionApi = {
   signStats: () =>
     request<{ total: number; places: Array<{ place: string; count: number }> }>('/api/petitions/sign-stats'),
 
+  /** GET /api/petitions/ledger — PUBLIC live hash ledger (anyone can read; phone masked). */
+  ledger: () =>
+    request<{
+      total: number;
+      signs: Array<{
+        hash: string; name: string; village: string; phoneLast4: string | null;
+        batchNo: number; signedAt: string; verifyUrl: string;
+      }>;
+    }>('/api/petitions/ledger'),
+
   list: () =>
     request<{ petitions: Array<Record<string, unknown>> }>('/api/petitions/list'),
 
