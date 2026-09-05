@@ -59,11 +59,7 @@ const AppContent: React.FC = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [pathname]);
 
-  if (loading && introDone) {
-    // Only show the green loading screen AFTER the intro animation has
-    // finished (auth restores underneath while the animation plays). Never
-    // let this green screen become the first thing a visitor sees or block
-    // the site when auth hangs.
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#1B5E20]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent"></div>

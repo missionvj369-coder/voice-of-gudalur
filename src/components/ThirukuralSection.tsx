@@ -12,19 +12,14 @@ interface Cloud {
 
 const MagicText: React.FC<{ text: string; delay?: number }> = ({ text, delay = 0 }) => {
   const [visibleWords, setVisibleWords] = useState(0);
-  // Preserve exact spacing: split on spaces but keep track of original spacing
-  const segments = text.split(/(\s+)/).filter(Boolean);
-  const wordIndices = segments.reduce<number[]>((acc, seg, i) => {
-    if (seg.trim()) acc.push(i);
-    return acc;
-  }, []);
+  const words = text.split(' ');
 
   useEffect(() => {
     setVisibleWords(0);
     const timer = setTimeout(() => {
       const interval = setInterval(() => {
         setVisibleWords((prev) => {
-          if (prev >= wordIndices.length) {
+          if (prev >= words.length) {
             clearInterval(interval);
             return prev;
           }
@@ -34,38 +29,29 @@ const MagicText: React.FC<{ text: string; delay?: number }> = ({ text, delay = 0
       return () => clearInterval(interval);
     }, delay);
     return () => clearTimeout(timer);
-  }, [text, delay, wordIndices.length]);
+  }, [text, delay, words.length]);
 
-  let wordCount = 0;
   return (
-    <span className="inline-block whitespace-pre-wrap">
-      {segments.map((segment, i) => {
-        if (!segment.trim()) {
-          // Preserve exact whitespace from original text
-          return <span key={i}>{segment}</span>;
-        }
-        const currentWordIndex = wordCount;
-        wordCount++;
-        const isVisible = currentWordIndex < visibleWords;
-        return (
-          <motion.span
-            key={i}
-            initial={{ opacity: 0, y: 10 }}
-            animate={
-              isVisible
-                ? { opacity: 1, y: 0 }
-                : { opacity: 0, y: 10 }
-            }
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="inline-block"
-            style={{
-              textShadow: isVisible ? '0 0 8px rgba(76, 175, 80, 0.4)' : 'none',
-            }}
-          >
-            {segment}
-          </motion.span>
-        );
-      })}
+    <span className="inline-block">
+      {words.map((word, i) => (
+        <motion.span
+          key={i}
+          initial={{ opacity: 0, y: 10 }}
+          animate={
+            i < visibleWords
+              ? { opacity: 1, y: 0 }
+              : { opacity: 0, y: 10 }
+          }
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+          className="inline-block"
+          style={{
+            marginRight: i < words.length - 1 ? '0.34em' : 0,
+            textShadow: i < visibleWords ? '0 0 8px rgba(76, 175, 80, 0.4)' : 'none',
+          }}
+        >
+          {word}
+        </motion.span>
+      ))}
     </span>
   );
 };

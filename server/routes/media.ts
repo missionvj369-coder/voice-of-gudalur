@@ -88,44 +88,6 @@ router.post('/', requireAuth, requireRole('ADMIN', 'PLATFORM_ADMIN'), upload.sin
   }
 });
 
-/** PATCH /api/media/:id — admin edits title / description (no file change). */
-router.patch('/:id', requireAuth, requireRole('ADMIN', 'PLATFORM_ADMIN'), async (req: Request, res: Response) => {
-  try {
-    const { title, description } = req.body || {};
-    const updates: string[] = [];
-    const params: any[] = [];
-    let i = 1;
-    if (typeof title === 'string' && title.trim()) {
-      updates.push(`title = $${i++}`);
-      params.push(title.trim());
-    }
-    if (typeof description === 'string') {
-      updates.push(`description = $${i++}`);
-      params.push(description.trim() || null);
-    }
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'Provide title or description to update.' });
-    }
-    updates.push(`updated_at = now()`);
-    params.push(req.params.id);
-    const result = await db.query(
-      `UPDATE media_posts SET ${updates.join(', ')} WHERE id = $${i} AND active = TRUE`,
-      params,
-    );
-    if (!result.rowCount) {
-      return res.status(404).json({ error: 'Media not found.' });
-    }
-    await logAudit({
-      actorId: req.user!.uid, actorKind: 'user', action: 'EDIT_MEDIA',
-      target: `media_posts/${req.params.id}`, detail: { title }, ip: req.ip,
-    });
-    res.json({ ok: true, message: 'Media updated.' });
-  } catch (e: any) {
-    logger.error('media edit:', e.message);
-    res.status(500).json({ error: 'Edit failed' });
-  }
-});
-
 /** DELETE /api/media/:id — admin removes a poster/video (soft delete). */
 router.delete('/:id', requireAuth, requireRole('ADMIN', 'PLATFORM_ADMIN'), async (req: Request, res: Response) => {
   try {

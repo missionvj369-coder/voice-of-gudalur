@@ -172,9 +172,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     /** Restore a server session on boot (httpOnly cookies only). */
   useEffect(() => {
     void acquireLiveLocation();
-    // Hard cap so `loading` can never hang forever (a stalled /api/me must
-    // not leave the app frozen on a green loading screen after the intro).
-    const bootTimer = window.setTimeout(() => setLoading(false), 8000);
     (async () => {
       try {
         const { user: u } = await authApi.me();
@@ -190,7 +187,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const cached = readCachedProfile();
         if (cached) setProfile(cached);
       } finally {
-        window.clearTimeout(bootTimer);
         setLoading(false);
       }
     })();
@@ -240,20 +236,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return prof;
     } catch (e: any) {
       const msg = String(e?.message || '');
-            if (e?.status === 409 || /duplicate|already registered|unique key/i.test(msg)) {
+      if (e?.status === 409 || /duplicate|already registered|unique key/i.test(msg)) {
         throw duplicateError();
       }
-      // Only use the offline fallback for genuine network errors (no Response
-      // object at all => truly offline). A 502 means the server IS reachable
-      // but the backend Function isn't working — silently creating an
-      // "OFFLINE-{timestamp}" Gudalur ID there masks the real problem and
-      // produces data that can never be reconciled. Throw instead so the UI
-      // surfaces the real error to the user.
-      const isTrueOffline =
-        e?.status === undefined &&
-        /failed to fetch|networkerror|load failed|typeerror/i.test(msg);
-      if (isTrueOffline) {
-        console.warn('[AuthContext.registerResident] Offline — creating cached profile (will sync when online)');
+      if (e?.status === undefined || e?.status === 502 || /failed to fetch|networkerror|load failed|invalid server response/i.test(msg)) {
+        // Offline fallback: still issue a local unique ID and cache the card.
         const fallback: UserProfile = {
           uid: `res_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           name: data.name.trim(),

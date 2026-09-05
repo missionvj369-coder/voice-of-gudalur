@@ -10,13 +10,8 @@
 # Netlify may run with NODE_ENV=production which skips them.
 # This fixes the "vite: not found" error.
 [build.environment]
-  # Force npm to ALWAYS install devDependencies — the Netlify Function bundler
-  # (esbuild, configured below) needs @types/* and the server source files.
-  # Netlify runs builds with NODE_ENV=production by default, which makes npm
-  # skip devDependencies. Setting NODE_ENV=development forces npm to install
-  # everything, then the build itself overrides to production for the final bundle.
-  NODE_ENV = "development"
   NPM_FLAGS = "--include=dev"
+  NODE_ENV = "production"
 
 # ── API (Netlify Function — the Express backend itself) ─────────────────────
 # server.ts#createApp() is wrapped with serverless-http in
