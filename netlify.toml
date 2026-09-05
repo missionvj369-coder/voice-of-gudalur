@@ -1,6 +1,6 @@
 # VOICE OF GUDALUR — Netlify configuration
 [build]
-  command = "node scripts/netlify-install-cache-buster.js && npm run build"
+  command = "npm run build"
   publish = "dist"
   functions = "netlify/functions"
 
@@ -8,12 +8,10 @@
 # Force npm to always install devDependencies (vite, vite-plugin-pwa,
 # @vitejs/plugin-react, etc.) — they are required by the build step but
 # Netlify may run with NODE_ENV=production which skips them.
-# NPM_FLAGS is more reliable than .npmrc for this.
+# This fixes the "vite: not found" error.
 [build.environment]
   NPM_FLAGS = "--include=dev"
   NODE_ENV = "production"
-
-[functions]
   node_bundler = "esbuild"
   # vite is only dynamically imported by the local dev server (startServer);
   # keep it out of the serverless bundle. pg-native is an optional pg binding
