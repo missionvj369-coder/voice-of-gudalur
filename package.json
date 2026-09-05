@@ -4,12 +4,13 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
+        "dev": "tsx server.ts",
     "build": "vite build",
     "preview": "vite build && tsx server.ts --serve-dist",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test": "vitest run",
+    "postinstall": "node scripts/netlify-install-cache-buster.js",
     "db:migrate": "tsx server/db/migrate.ts up",
     "db:status": "tsx server/db/migrate.ts status",
     "db:seed": "tsx server/db/migrate.ts seed"

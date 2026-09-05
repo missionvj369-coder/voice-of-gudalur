@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Shield, LogOut, Users, Image as ImageIcon, Video, Trash2,
+  Shield, LogOut, Users, Image as ImageIcon, Video, Trash2, PenLine,
   Upload, Download, Share2, FileText, Hash, CheckCircle2, Loader2, Link2,
 } from 'lucide-react';
 import { authApi, mediaApi, type MediaItem } from '../services/api';
@@ -19,6 +19,10 @@ export const AdminDashboardPage: React.FC = () => {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [savingId, setSavingId] = useState<string | null>(null);
   const [signs, setSigns] = useState<Array<{ hash: string; name: string; village: string; batchNo: number; signedAt: string; verifyUrl: string }>>([]);
 
   /** Silent refresh — stats + hash ledger (no loading spinner). */
@@ -77,7 +81,7 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
 
-  const removeMedia = async (id: string) => {
+    const removeMedia = async (id: string) => {
     if (!confirm('Remove this media from the frontend?')) return;
     setDeletingId(id);
     try {
@@ -88,6 +92,33 @@ export const AdminDashboardPage: React.FC = () => {
       toast.error('Remove failed');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const startEdit = (item: MediaItem) => {
+    setEditingId(item.id);
+    setEditTitle(item.title);
+    setEditDesc(item.description || '');
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditTitle('');
+    setEditDesc('');
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editTitle.trim()) return toast.error('Title cannot be empty');
+    setSavingId(id);
+    try {
+      const r = await mediaApi.update(id, { title: editTitle.trim(), description: editDesc.trim() || undefined });
+      setMedia((list) => list.map((m) => m.id === id ? { ...m, title: editTitle.trim(), description: editDesc.trim() || null } : m));
+      toast.success(r.message || 'Updated');
+      cancelEdit();
+    } catch (err: any) {
+      toast.error(err?.error || 'Update failed');
+    } finally {
+      setSavingId(null);
     }
   };
 
@@ -356,17 +387,30 @@ export const AdminDashboardPage: React.FC = () => {
                         {m.title}
                       </p>
                       {m.description && <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">{m.description}</p>}
-                      <div className="flex items-center justify-between mt-3">
-                        <span className="text-[10px] text-slate-500">{new Date(m.createdAt).toLocaleDateString('en-IN')}</span>
-                        <button
-                          onClick={()=>{ void removeMedia(m.id); }}
-                          disabled={deletingId === m.id}
-                          className="p-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/40 hover:text-red-200 transition"
-                          title="Delete"
-                        >
-                          {deletingId === m.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14}/>}
-                        </button>
-                      </div>
+                      {editingId === m.id ? (
+                        <div className="space-y-2">
+                          <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} maxLength={100} className="w-full px-2 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs outline-none focus:border-amber-500" placeholder="Title" />
+                          <textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} maxLength={300} rows={2} className="w-full px-2 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs outline-none focus:border-amber-500 resize-none" placeholder="Description (optional)" />
+                          <div className="flex gap-1.5">
+                            <button onClick={() => saveEdit(m.id)} disabled={savingId === m.id} className="flex-1 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-bold hover:bg-amber-500 disabled:opacity-50 flex items-center justify-center gap-1">
+                              {savingId === m.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Save
+                            </button>
+                            <button onClick={cancelEdit} className="py-1.5 px-3 rounded-lg bg-slate-700 text-slate-300 text-xs font-bold hover:bg-slate-600">Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between mt-3">
+                            <span className="text-[10px] text-slate-500">{new Date(m.createdAt).toLocaleDateString('en-IN')}</span>
+                            <div className="flex gap-1.5">
+                              <button onClick={() => startEdit(m)} className="p-2 rounded-lg bg-amber-600/20 text-amber-400 hover:bg-amber-600/40 hover:text-amber-200 transition" title="Edit"><PenLine size={14} /></button>
+                              <button onClick={() => { void removeMedia(m.id); }} disabled={deletingId === m.id} className="p-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/40 hover:text-red-200 transition" title="Delete">
+                                {deletingId === m.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}

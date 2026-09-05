@@ -179,10 +179,23 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
         phone: profile.phone,
       });
       onClose();
-    } catch (err: any) {
+        } catch (err: any) {
       const msg = String((err && err.message) || '');
+      const status = (err && (err as any).status) || 0;
       if ((err && err.code === 'DUPLICATE_PHONE') || /duplicate|already registered|unique key|phone.*exist|mobile.*registered/i.test(msg)) {
         toast.error('Mobile number already registered! Please login instead.', { duration: 6000, icon: '📱' });
+      } else if (status === 502 || /invalid server response|API backend is not routed/i.test(msg)) {
+        toast.error(
+          'Registration service is temporarily unavailable. Please try again in a few minutes. ' +
+          'If this persists, contact support — the server backend may be restarting.',
+          { duration: 8000, icon: '⚠️' },
+        );
+      } else if (status === undefined && /failed to fetch|networkerror|load failed|typeerror/i.test(msg)) {
+        toast.error(
+          'You are offline. Registration is cached locally but won’t be saved until you reconnect. ' +
+          'Refresh or try again when online.',
+          { duration: 8000, icon: '📡' },
+        );
       } else {
         toast.error(msg || t('reg.fail'));
       }

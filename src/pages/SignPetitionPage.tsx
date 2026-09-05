@@ -5,6 +5,7 @@ import { useLanguage } from "../context/LanguageContext";
 import { petitionApi, mediaApi, type MediaItem } from "../services/api";
 import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal";
 import { ThirukuralSection } from "../components/ThirukuralSection";
+import { LanguageSelect } from "../components/LanguageSelect";
 import ShareSocialModal from "../components/ShareSocial/ShareSocialModal";
 import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2, ImageIcon, Video, Sparkles, Hash } from "lucide-react";
 import toast from "react-hot-toast";
@@ -34,6 +35,7 @@ export const SignPetitionPage: React.FC = () => {
   } | null>(null);
   const [showRegister, setShowRegister] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [initialTab, setInitialTab] = useState<'posters' | 'videos'>('posters');
   const [total, setTotal] = useState<number | null>(null);
   const [places, setPlaces] = useState<PlaceCount[]>([]);
   const [hasSigned, setHasSigned] = useState(false);
@@ -516,24 +518,36 @@ export const SignPetitionPage: React.FC = () => {
       </div>
 
       {/* Support the Movement — posters & videos published by admin, shareable */}
-      {(mediaItems.length > 0) && (
-        <div className="rounded-3xl border border-[#AED581]/40 bg-white/95 p-4 sm:p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-black text-[#1B5E20] flex items-center gap-2">
-              <Sparkles size={15} className="text-emerald-600" /> Support the Movement
-            </h2>
-            <button
-              onClick={() => setShowShareModal(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:opacity-90 transition"
-            >
-              <Share2 size={13} /> Share All
-            </button>
-          </div>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Share our posters and videos — WhatsApp, Facebook, Instagram, Snapchat, ShareChat or Telegram.
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {mediaItems.slice(0, 9).map((m) => (
+      <div className="rounded-3xl border border-[#AED581]/40 bg-white/95 p-4 sm:p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-black text-[#1B5E20] flex items-center gap-2">
+            <Sparkles size={15} className="text-emerald-600" /> Support the Movement
+          </h2>
+        </div>
+        <p className="text-xs text-slate-600 leading-relaxed">
+          Share our posters and videos — WhatsApp, Facebook, Instagram, Snapchat, ShareChat or Telegram.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => { setShareActive(null); setShowShareModal(true); setInitialTab('posters'); }}
+            className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-lg shadow-emerald-700/20 hover:shadow-xl transition-all hover:scale-[1.02]"
+          >
+            <ImageIcon size={18} /> Share Posters
+            <span className="text-[10px] opacity-80">({mediaItems.filter((m) => m.kind === 'poster').length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShareActive(null); setShowShareModal(true); setInitialTab('videos'); }}
+            className="flex items-center justify-center gap-2 px-4 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-sm shadow-lg shadow-blue-700/20 hover:shadow-xl transition-all hover:scale-[1.02]"
+          >
+            <Video size={18} /> Share Videos
+            <span className="text-[10px] opacity-80">({mediaItems.filter((m) => m.kind === 'video').length})</span>
+          </button>
+        </div>
+        {mediaItems.length > 0 && (
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {mediaItems.slice(0, 8).map((m) => (
               <button
                 key={m.id}
                 type="button"
@@ -547,40 +561,41 @@ export const SignPetitionPage: React.FC = () => {
                     createdAt: m.createdAt,
                   });
                   setShowShareModal(true);
+                  setInitialTab(m.kind === 'poster' ? 'posters' : 'videos');
                 }}
-                className="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="group relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 {m.kind === 'poster' ? (
-                  <img src={m.url} alt={m.title} loading="lazy" className="w-full h-32 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <img src={m.url} alt={m.title} loading="lazy" className="w-full h-20 sm:h-24 object-cover group-hover:scale-105 transition-transform duration-300" />
                 ) : (
-                  <video src={m.url} className="w-full h-32 sm:h-40 object-cover" muted playsInline preload="metadata" />
+                  <video src={m.url} className="w-full h-20 sm:h-24 object-cover" muted playsInline preload="metadata" />
                 )}
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pt-8 pb-2">
-                  <p className="text-[11px] font-bold text-white truncate">{m.title}</p>
-                  {m.description && <p className="text-[10px] text-slate-300 line-clamp-1">{m.description}</p>}
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 pt-6 pb-1.5">
+                  <p className="text-[9px] font-bold text-white truncate">{m.title}</p>
                 </div>
-                <div className="absolute top-2 right-2 flex items-center gap-1.5">
-                  <span className="p-1.5 rounded-lg bg-black/50 text-white backdrop-blur">
-                    {m.kind === 'poster' ? <ImageIcon size={12} /> : <Video size={12} />}
-                  </span>
-                  <span className="p-1.5 rounded-lg bg-emerald-600 text-white">
-                    <Share2 size={12} />
+                <div className="absolute top-1 right-1">
+                  <span className="p-1 rounded bg-emerald-600 text-white">
+                    <Share2 size={10} />
                   </span>
                 </div>
               </button>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Thirukural Section */}
       <ThirukuralSection />
+
+      {/* Language Selection */}
+      <LanguageSelect />
 
       {/* Share Social Modal */}
       <ShareSocialModal
         isOpen={showShareModal}
         onClose={() => { setShowShareModal(false); setShareActive(null); }}
         activeItem={shareActive}
+        initialTab={initialTab}
         posters={mediaItems
           .filter((m) => m.kind === 'poster')
           .map((m) => ({ id: m.id, title: m.title, description: m.description || '', imageUrl: m.url, createdAt: m.createdAt }))}

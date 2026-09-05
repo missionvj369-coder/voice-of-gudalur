@@ -421,9 +421,16 @@ export const mediaApi = {
     });
   },
 
-  /** DELETE /api/media/:id — admin removes a poster/video. */
+    /** DELETE /api/media/:id — admin removes a poster/video. */
   remove: (id: string) =>
     request<{ ok: boolean }>(`/api/media/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  /** PATCH /api/media/:id — admin edits title / description. */
+  update: (id: string, input: { title?: string; description?: string }) =>
+    request<{ ok: boolean; message: string }>(`/api/media/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
 };
 
 export default {
