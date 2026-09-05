@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Paperclip } from 'lucide-react';
+import { ExternalLink, Paperclip, Mail } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 /**
@@ -86,7 +86,9 @@ export const GrievanceTicket: React.FC<GrievanceTicketProps> = ({ className }) =
   return (
     <div className={className}>
       <div className="mb-4 flex items-center justify-center gap-2">
-        <span className="text-3xl" aria-hidden>📨</span>
+        <span className="w-10 h-10 rounded-xl bg-[#AED581]/15 border border-[#AED581]/30 flex items-center justify-center shrink-0">
+          <Mail size={20} className="text-[#AED581]" />
+        </span>
         <h2 className="text-xl font-serif font-bold text-[#F5F5F5]">
           {t('abt.grv_title')}
         </h2>

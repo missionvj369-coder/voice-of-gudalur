@@ -463,6 +463,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'abt.support_sub': 'Every verified signature strengthens this grievance. Add your voice now.',
     'abt.privacy': 'Privacy-first. Your phone number stays private and is never shown publicly. Zero passwords. Aadhaar verification arrives later.',
     'abt.sign_cta': 'Sign in Petition',
+    'abt.signed_cta': 'Petition Signed',
 
     'crr.title': 'Closed Corridors — Gudalur & Nilgiris',
     'crr.sub': '{n} closed / restricted wildlife corridor checkpoints around Gudalur — forest gates, night-closure sections and elephant-fringe buffers. Keep this list in sync with Gudalur Forest Division notifications.',
@@ -545,6 +546,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'abt.support_sub': 'ஒவ்வொரு சரிபார்க்கப்பட்ட கையெழுத்தும் இந்த மனுவை வலுப்படுத்துகிறது. இப்போதே உங்கள் குரலைச் சேருங்கள்.',
     'abt.privacy': 'தனியுரிமை முதன்மை. உங்கள் கைபேசி எண் தனிப்பட்டது, பொதுவில் காட்டப்படாது. எந்த கடவுச்சொல்லும் இல்லை. ஆதார் சரிபார்ப்பு விரைவில்.',
     'abt.sign_cta': 'மனுவில் கையெழுத்திடு',
+    'abt.signed_cta': 'மனு கையொப்பமிடப்பட்டது',
 
     'crr.title': 'மூடப்பட்ட வன வழித்தடங்கள் — கூடலூர் & நீலகிரி',
     'crr.sub': 'கூடலூரைச் சுற்றியுள்ள {n} மூடப்பட்ட/கட்டுப்படுத்தப்பட்ட வன வழித்தடங்கள் — வன சாவடிகள், இரவு நேர மூடல்கள், யானை எல்லை மண்டலங்கள். வனத்துறை அறிவிப்புகளுடன் இணைத்து வைக்கவும்.',
@@ -627,6 +629,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'abt.support_sub': 'ഓരോ പരിശോധിച്ച ഒപ്പും ഈ പരാതിയെ ശക്തിപ്പെടുത്തുന്നു. ഇപ്പോൾ തന്നെ ചേരൂ.',
     'abt.privacy': 'സ്വകാര്യത പ്രധാനം. നിങ്ങളുടെ മൊബൈൽ നമ്പർ സ്വകാര്യമാണ്, പരസ്യമായി കാണിക്കില്ല. പാസ്വേഡുകളില്ല. ആധാർ പരിശോധന പിന്നീട്.',
     'abt.sign_cta': 'പരാതിയിൽ ഒപ്പിടുക',
+    'abt.signed_cta': 'പരാതി ഒപ്പിട്ടു',
 
     'crr.title': 'അടഞ്ഞ ഇടനാഴികൾ — ഗൂഡല്ലൂർ & നീലഗിരി',
     'crr.sub': 'ഗൂഡല്ലൂരിന് ചുറ്റുമുള്ള {n} അടഞ്ഞ/നിയന്ത്രിത വന്യജീവി ഇടനാഴികൾ — ഫോറസ്റ്റ് ഗേറ്റുകൾ, രാത്രി അടയ്ക്കൽ, ആന അതിർത്തി മേഖലകൾ. വനം വകുപ്പ് അറിയിപ്പുകളുമായി പൊരുത്തപ്പെടുത്തുക.',
@@ -709,6 +712,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'abt.support_sub': 'ಪ್ರತಿ ಪರಿಶೀಲಿತ ಸಹಿಯೂ ಈ ದೂರನ್ನು ಬಲಪಡಿಸುತ್ತದೆ. ಈಗಲೇ ಧ್ವನಿ ಸೇರಿಸಿ.',
     'abt.privacy': 'ಗೌಪ್ಯತೆ ಪ್ರಮುಖ. ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಖಾಸಗಿಯಾಗಿರುತ್ತದೆ, ಸಾರ್ವಜನಿಕವಾಗಿ ತೋರಿಸಲಾಗುವುದಿಲ್ಲ. ಪಾಸ್ವರ್ಡ್ ಇಲ್ಲ. ಆಧಾರ್ ಪರಿಶೀಲನೆ ನಂತರ.',
     'abt.sign_cta': 'ಅರ್ಜಿಗೆ ಸಹಿ ಹಾಕಿ',
+    'abt.signed_cta': 'ಅರ್ಜಿ ಸಹಿ ಆಗಿದೆ',
 
     'crr.title': 'ಮುಚ್ಚಿದ ಕಾರಿಡಾರ್ಗಳು — ಗೂಡಲೂರು & ನೀಲಗಿರಿ',
     'crr.sub': 'ಗೂಡಲೂರು ಸುತ್ತಮುತ್ತಲಿನ {n} ಮುಚ್ಚಿದ/ನಿರ್ಬಂಧಿತ ವನ್ಯಜೀವಿ ಕಾರಿಡಾರ್ಗಳು — ವನ ಚೆಕ್ಪೋಸ್ಟ್ಗಳು, ರಾತ್ರಿ ಮುಚ್ಚುವಿಕೆಗಳು, ಆನೆ ಗಡಿ ವಲಯಗಳು. ವನ ಇಲಾಖೆ ಅಧಿಸೂಚನೆಗಳೊಂದಿಗೆ ಪಟ್ಟಿಯನ್ನು ಅಪ್ಡೇಟ್ ಮಾಡಿ.',

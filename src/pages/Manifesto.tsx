@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { PenLine } from 'lucide-react';
+import { BadgeCheck, PenLine, ScrollText } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { CorridorMap } from '../components/CorridorMap';
@@ -20,6 +20,24 @@ export const Manifesto: React.FC = () => {
   const { t } = useLanguage();
   const { profile } = useAuth();
   const [total, setTotal] = useState<number | null>(null);
+  // "Petition Signed" — once signed on this device, the CTA becomes untouchable.
+  const [hasSigned, setHasSigned] = useState<boolean>(() => {
+    try { return localStorage.getItem('vog_petition_signed') === '1'; } catch { return false; }
+  });
+
+  React.useEffect(() => {
+    const sync = () => {
+      try { setHasSigned(localStorage.getItem('vog_petition_signed') === '1'); } catch { /* ignore */ }
+    };
+    window.addEventListener('vog:petition-signed', sync);
+    window.addEventListener('storage', sync);
+    window.addEventListener('focus', sync);
+    return () => {
+      window.removeEventListener('vog:petition-signed', sync);
+      window.removeEventListener('storage', sync);
+      window.removeEventListener('focus', sync);
+    };
+  }, []);
 
   React.useEffect(() => {
     let alive = true;
@@ -75,10 +93,23 @@ export const Manifesto: React.FC = () => {
 
       {/* Support this grievance — sign in petition */}
       <div className="rounded-3xl border border-amber-200/40 bg-gradient-to-br from-amber-50/90 to-orange-50/80 p-6 text-center space-y-4">
-        <div className="text-4xl" aria-hidden>📜</div>
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
+          <ScrollText size={26} className="text-white" />
+        </div>
         <h2 className="text-lg font-black text-slate-800">{t('abt.support_title')}</h2>
         <p className="text-sm text-slate-700 max-w-md mx-auto">{t('abt.support_sub')}</p>
-        {profile ? (
+        {hasSigned ? (
+          /* After a successful sign — locked, untouchable "Petition Signed" state */
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="You have already signed the petition"
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-lg cursor-not-allowed select-none opacity-95"
+          >
+            <BadgeCheck size={16} /> {t('abt.signed_cta')}
+          </button>
+        ) : profile ? (
           <button
             type="button"
             onClick={() => navigate('/')}

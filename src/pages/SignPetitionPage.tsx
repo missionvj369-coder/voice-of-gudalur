@@ -6,7 +6,7 @@ import { petitionApi } from "../services/api";
 import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal";
 import { ThirukuralSection } from "../components/ThirukuralSection";
 import ShareSocialModal from "../components/ShareSocial/ShareSocialModal";
-import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield } from "lucide-react";
+import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface PlaceCount {
@@ -146,6 +146,8 @@ export const SignPetitionPage: React.FC = () => {
     } catch { /* ignore */ }
     setHasSigned(true);
     setResult(resultData);
+    // Let other screens (e.g. About → "Petition Signed") update instantly.
+    window.dispatchEvent(new Event("vog:petition-signed"));
     setBusy(false);
     void loadStats();
   }, [profile, loadStats, hasSigned, t]);
@@ -230,7 +232,9 @@ export const SignPetitionPage: React.FC = () => {
 
       {!profile && (
         <div className="rounded-2xl bg-white border border-slate-200 p-6 text-center space-y-4">
-          <div className="text-4xl">🪪</div>
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+            <IdCard size={26} className="text-white" />
+          </div>
           <p className="text-sm text-slate-600">
             {t("home.need_register")}
           </p>
@@ -346,18 +350,18 @@ export const SignPetitionPage: React.FC = () => {
 
       {result && (
         <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 space-y-4 text-center">
-          <div className="text-4xl">✅</div>
+          <BadgeCheck size={44} className="mx-auto text-emerald-600" />
           <div>
             <p className="text-sm font-black text-emerald-800">{t("home.recorded")}</p>
             <p className="text-[11px] text-emerald-700 mt-1 break-all font-mono">{result.hash}</p>
             <p className="text-[11px] text-emerald-600 mt-1">{t("home.batch").replace("{n}", String(result.batchNo))}</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button onClick={copyLink} className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs">
-              🔗 {t("home.copy_link")}
+            <button onClick={copyLink} className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5">
+              <Link2 size={13} /> {t("home.copy_link")}
             </button>
-            <button onClick={forwardViaWhatsApp} className="py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">
-              📤 {t("home.share_wa")}
+            <button onClick={forwardViaWhatsApp} className="py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5">
+              <Share2 size={13} /> {t("home.share_wa")}
             </button>
             <button
               onClick={() => { void downloadReceipt(); }}
@@ -431,15 +435,8 @@ export const SignPetitionPage: React.FC = () => {
         )}
       </div>
 
-      {/* Action Buttons */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
-        <Link
-          to="/sign-petition"
-          className="flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
-        >
-          <PenLine size={18} />
-          {t("home.sign_petition_btn") || "Sign the Petition"}
-        </Link>
+      {/* Action Button — the petition sign flow is already above; keep the grievance link only */}
+      <div className="max-w-lg mx-auto">
         <Link
           to="/about"
           className="flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-white border-2 border-emerald-600 text-emerald-700 font-bold text-sm shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
