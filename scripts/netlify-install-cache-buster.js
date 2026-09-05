@@ -15,8 +15,13 @@
  *
  * On Netlify the `CI=true` environment forces a fresh install regardless of cache.
  */
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ESM doesn't have __dirname — derive it
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const ROOT = path.resolve(__dirname, '..');
 const LOCKFILE = path.join(ROOT, 'package-lock.json');
@@ -65,7 +70,8 @@ function signaturesMatch(a, b) {
 const isCI = process.env.CI === 'true' || process.env.NETLIFY === 'true';
 
 if (!isCI) {
-  process.exit(0);
+  process.exitCode = 0;
+  process.exit();
 }
 
 const current = readLockfileSignature();
