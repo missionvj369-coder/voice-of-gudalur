@@ -292,12 +292,24 @@ Role:
 
   // Configure Web Push â€” VAPID keys generated once via `npx web-push generate`
   if (process.env.PUSH_PRIVATE_KEY && process.env.VAPID_EMAIL) {
-    webPush.setVapidDetails(
-      process.env.VAPID_EMAIL,
-      process.env.VITE_PUSH_PUBLIC_KEY || '',
-      process.env.PUSH_PRIVATE_KEY,
-    );
-    console.log('[VOICE] Web Push configured.');
+    // web-push requires the VAPID subject to be a mailto: or https: URL.
+    // A bare email (e.g. "soulconnect@ugtglobal.space") THROWS at
+    // setVapidDetails and — being inside createApp() — would take the whole
+    // API down. Normalize to mailto: and never let push config crash init.
+    const rawSubject = process.env.VAPID_EMAIL.trim();
+    const vapidSubject = /^https?:\/\//i.test(rawSubject) || rawSubject.toLowerCase().startsWith('mailto:')
+      ? rawSubject
+      : `mailto:${rawSubject}`;
+    try {
+      webPush.setVapidDetails(
+        vapidSubject,
+        process.env.VITE_PUSH_PUBLIC_KEY || '',
+        process.env.PUSH_PRIVATE_KEY,
+      );
+      console.log('[VOICE] Web Push configured.');
+    } catch (e: any) {
+      console.warn('[VOICE] Web Push setup failed (push disabled, API keeps running):', e?.message);
+    }
   } else {
     console.warn('[VOICE] PUSH_PRIVATE_KEY not set â€” push notifications disabled.');
   }
