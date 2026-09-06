@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { clusterPlaces, clusterKeyForRaw } from '../../server/utils/placeCluster';
+import { clusterPlaces, clusterKeyForRaw } from '../../../server/utils/placeCluster';
 
 describe('placeCluster — national leaderboard from real typed addresses', () => {
   it('clusters the same city written different ways into one place', () => {

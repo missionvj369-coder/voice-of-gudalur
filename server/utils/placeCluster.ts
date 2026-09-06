@@ -27,6 +27,14 @@ const STOP_WORDS: ReadonlySet<string> = new Set([
   'dist', 'distt', 'district', 'dt', 'state', 'province', 'country', 'union',
   'territory', 'taluk', 'taluq', 'tehsil', 'tehsildar', 'mandal', 'block',
   'suburban', 'suburb', 'zone',
+  // Indian states / UTs — "Kochi, Kerala" must cluster under kochi, not kerala.
+  'andhra', 'arunachal', 'assam', 'bihar', 'chhattisgarh', 'goa', 'gujarat',
+  'haryana', 'himachal', 'pradesh', 'jharkhand', 'karnataka', 'kerala',
+  'maharashtra', 'manipur', 'meghalaya', 'mizoram', 'nagaland', 'odisha',
+  'orissa', 'punjab', 'rajasthan', 'sikkim', 'telangana', 'tripura', 'uttar',
+  'uttarakhand', 'bengal', 'delhi', 'jammu', 'kashmir', 'ladakh',
+  'chandigarh', 'puducherry', 'pondicherry', 'andaman', 'nicobar',
+  'lakshadweep', 'dadra', 'nagar', 'haveli', 'daman', 'diu',
 ]);
 
 /** Street-style tokens that end an address rather than name a place. */
@@ -47,12 +55,15 @@ const SUFFIX_TAGS: ReadonlySet<string> = new Set([
   'springs', 'fountains', 'trade', 'center', 'centre', 'complex',
 ]);
 
-/** Remove 6-digit pincodes and stray punctuation from an address. */
+/** Remove 6-digit pincodes and stray punctuation from an address.
+ *  COMMAS ARE PRESERVED — clusterKeyForRaw picks the most significant place
+ *  from the LAST comma segment (people write the broad place last), so they
+ *  must survive noise-stripping. */
 function stripNoise(raw: string): string {
   return raw
     .toLowerCase()
     .replace(/\b\d{6}\b/g, ' ') // pincodes
-    .replace(/[.,;:"!@#$%^&*()_+=<>{}[\]|~`/]/g, ' ')
+    .replace(/[.;:"!@#$%^&*()_+=<>{}[\]|~`/\\]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }

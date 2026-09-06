@@ -415,7 +415,8 @@ export const mediaApi = {
     return (r.media || []).map((m) => ({
       ...m,
       url: `/api/media/${encodeURIComponent(m.id)}/file`,
-      sizeBytes: m.sizeBytes ?? null,
+      // CockroachDB's pgwire returns INT columns as strings — normalize.
+      sizeBytes: m.sizeBytes != null ? Number(m.sizeBytes) : null,
     }));
   },
 

@@ -26,8 +26,14 @@ import { logger } from '../utils/logger';
 const router = Router();
 
 // Netlify Functions response ceiling is 6,291,556 bytes. We cap every uploaded
-// file at 5 MB so the binary response for a single item always fits.
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
+// file at 4.5 MB: base64 inflates 4/3× (→ ~6.0 MB) and the JSON wrapper adds a
+// little more, so a single item's response always fits inside the cap.
+const MAX_FILE_BYTES = Math.floor(4.5 * 1024 * 1024);
+
+/** True when running inside the Netlify Functions runtime. */
+function isNetlify(): boolean {
+  return process.env.NETLIFY === 'true' || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -104,9 +110,21 @@ router.get('/:id/file', async (req: Request, res: Response) => {
     if (!parsed) return res.status(404).json({ error: 'Media payload unavailable' });
 
     res.setHeader('Content-Type', parsed.mime || row.mime || 'application/octet-stream');
-    res.setHeader('Content-Length', String(parsed.buffer.length));
     res.setHeader('Cache-Control', 'public, max-age=3600');
     res.setHeader('X-Content-Type-Options', 'nosniff');
+
+    if (isNetlify()) {
+      // serverless-http stringifies Buffer bodies via Buffer.toString('utf8'),
+      // which inflates binary past Netlify's 6 MB response cap. So on Netlify
+      // send the payload as a BASE64 STRING plus an internal marker header; the
+      // wrapper in netlify/functions/api.ts flips it to isBase64Encoded:true so
+      // Netlify serves the decoded bytes back to the browser. Local/dev still
+      // sends real binary (our test server decodes nothing).
+      res.setHeader('X-VOG-Binary', '1');
+      return res.send(parsed.buffer.toString('base64'));
+    }
+
+    res.setHeader('Content-Length', String(parsed.buffer.length));
     res.send(parsed.buffer);
   } catch (e: any) {
     logger.error('media file:', e.message);
@@ -143,7 +161,7 @@ router.post('/', requireAuth, requireRole('ADMIN', 'PLATFORM_ADMIN'), upload.sin
   } catch (e: any) {
     logger.error('media upload:', e.message);
     if (String(e?.message || '').includes('larger than')) {
-      return res.status(400).json({ error: 'File too large. Maximum allowed size is 5 MB per file.' });
+      return res.status(400).json({ error: 'File too large. Maximum allowed size is 4.5 MB per file.' });
     }
     res.status(500).json({ error: e.message || 'Upload failed' });
   }
