@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS media_posts (
     file_url    STRING,               -- optional external URL (future)
     mime        STRING,
     size_bytes  INT,
-    created_by  STRING REFERENCES users(uid),
+    created_by  STRING REFERENCES users(uid),  -- nullable: allows upload even if user record is missing
     active      BOOL NOT NULL DEFAULT TRUE,
     created_at  TIMESTAMPTZ DEFAULT now() NOT NULL
 );
