@@ -92,7 +92,10 @@ router.post('/voice', requireAuth, async (req: Request, res: Response) => {
     const { addVoicePetition } = await import('../db/repositories/wildlifeRepository');
     const user = req.user!;
     const result = await addVoicePetition({
-      placeName: req.body.placeName || user.localityName || 'Gudalur',
+      // National movement: the place ALWAYS comes from the supporter's own
+      // typed address / live GPS — never a hard-coded "Gudalur" default that
+      // would mis-attribute a sign-up from any other district of India.
+      placeName: req.body.placeName || user.localityName || '',
       language: req.body.language,
       audioUrl: req.body.audioUrl,
       transcript: req.body.transcript,

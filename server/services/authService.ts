@@ -87,7 +87,14 @@ export async function registerResident(input: RegisterInput) {
 
   const uid = crypto.randomUUID();
   const gudalurId = await allocateGudalurId();
-  const localityName = (await db.queryOne('SELECT name FROM locality WHERE id = $1', [input.localityId]))?.name ?? 'Gudalur Taluk';
+  // The typed address IS the place record for national supporters. A legacy
+  // locality lookup is only a fallback for older Gudalur-town registrations;
+  // it is NEVER allowed to force a Gudalur value onto an outsider.
+  const typedAddress = (input.address || input.customPlaceName || '').trim();
+  const lookedUp = input.localityId
+    ? (await db.queryOne('SELECT name FROM locality WHERE id = $1', [input.localityId]))?.name ?? ''
+    : '';
+  const localityName = (input.localityName?.trim() || typedAddress || lookedUp || '').trim();
 
   await db.withTransaction(async (tx) => {
     await tx.query(
@@ -97,8 +104,8 @@ export async function registerResident(input: RegisterInput) {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'LOCAL_MEMBER','PHONE_VERIFIED',
                $10,$11,$12,$13)`,
       [uid, phone, gudalurId, input.name.trim(), input.email?.trim(),
-       input.localityId, localityName, input.customPlaceName?.trim() || undefined,
-       input.pincode, false, undefined, input.lat, input.lng],
+       input.localityId ?? null, localityName, typedAddress || undefined,
+       input.pincode?.trim() || undefined, false, undefined, input.lat, input.lng],
     );
   });
 
@@ -108,7 +115,7 @@ export async function registerResident(input: RegisterInput) {
   return {
     resident: {
       uid, phone, gudalurId, name: input.name.trim(), email: input.email, localityId: input.localityId,
-      localityName, customPlaceName: input.customPlaceName, pincode: input.pincode, role: 'LOCAL_MEMBER',
+      localityName, customPlaceName: typedAddress, pincode: input.pincode, role: 'LOCAL_MEMBER',
       verificationLevel: 'PHONE_VERIFIED',
       lat: input.lat, lng: input.lng, createdAt: Date.now(), updatedAt: Date.now(),
     },
@@ -128,8 +135,11 @@ export async function loginResident(phone, gudalurId) {
 }
 
 export interface RegisterInput {
-  name: string; phone: string; localityId: string; customPlaceName?: string;
-  pincode: string; email?: string; lat?: number; lng?: number;
+  name: string; phone: string; localityId?: string; customPlaceName?: string;
+  /** The full address typed by the user (ANY district/state across India). */
+  address?: string;
+  localityName?: string;
+  pincode?: string; email?: string; lat?: number; lng?: number;
 }
 
 export function normalizePhone(phone: string) {

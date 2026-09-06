@@ -14,10 +14,13 @@ interface AuthContextType {
     registerResident: (data: {
     name: string;
     phone: string;
-    localityId: string;
+    localityId?: string;
     customPlaceName?: string;
+    /** Full free-text address — typed by the supporter from ANYWHERE in India. */
+    address?: string;
+    localityName?: string;
     email?: string;
-    pincode: string;
+    pincode?: string;
     lat?: number;
     lng?: number;
   }) => Promise<UserProfile>;
@@ -28,7 +31,10 @@ interface AuthContextType {
   /** Update an existing resident's details IN PLACE - same Gudalur ID, same ledger row, never a new creation. */
   updateResident: (fields: {
     name?: string; phone?: string; email?: string;
-    localityId?: string; customPlaceName?: string; pincode?: string;
+    localityId?: string; customPlaceName?: string;
+    /** Full free-text address — the supporter's own details, not a preset place. */
+    address?: string;
+    pincode?: string;
     lat?: number; lng?: number;
   }) => Promise<UserProfile>;
 }
@@ -222,10 +228,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           resolve(coords);
         },
         (err) => {
+          // NEVER fabricate coordinates. A rejected prompt or an error must not
+          // silently place a Coimbatore supporter in "Gudalur taluk" — that is
+          // exactly the false live-tracking users reported. We return null and
+          // the caller falls back to the supporter's own typed address.
           console.warn('Geolocation acquisition notice:', err.message);
-          const fallback = { lat: 11.5034, lng: 76.4912 };
-          setUserCoords(fallback);
-          resolve(fallback);
+          resolve(null);
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
       );
@@ -264,18 +272,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const registerResident = async (data: {
     name: string;
     phone: string;
-    localityId: string;
+    localityId?: string;
     customPlaceName?: string;
+    address?: string;
+    localityName?: string;
     email?: string;
-    pincode: string;
+    pincode?: string;
     lat?: number;
     lng?: number;
     aadhaarVerified?: boolean;
     aadhaarLast4?: string;
     aadhaarRef?: string;
   }): Promise<UserProfile> => {
-    const loc = GUDALUR_LOCALITIES.find((l) => l.id === data.localityId);
     const phone = normalizePhone(data.phone);
+    const typedAddress = (data.address?.trim() || data.customPlaceName?.trim() || '');
     if (phone.length !== 10) {
       throw new Error('A valid 10-digit mobile number is required');
     }
@@ -290,12 +300,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await authApi.register({
         name: data.name.trim(),
         phone,
-        localityId: data.localityId,
-        customPlaceName: data.customPlaceName,
-        pincode: data.pincode.trim() || loc?.pincode || '643212',
+        localityId: data.localityId || '',
+        customPlaceName: typedAddress || data.customPlaceName,
+        address: typedAddress || undefined,
+        localityName: typedAddress || undefined,
+        pincode: data.pincode?.trim() || '',
         email: data.email,
-        lat: data.lat ?? userCoords?.lat ?? loc?.lat,
-        lng: data.lng ?? userCoords?.lng ?? loc?.lng,
+        lat: data.lat ?? userCoords?.lat,
+        lng: data.lng ?? userCoords?.lng,
       });
       if (!res?.resident) throw new Error('Registration failed');
       const prof = applyPlatformAdminOverride(toUserProfile(res.resident));
@@ -390,20 +402,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const updateResident = async (fields: {
     name?: string; phone?: string; email?: string;
-    localityId?: string; customPlaceName?: string; pincode?: string;
+    localityId?: string; customPlaceName?: string;
+    address?: string;
+    pincode?: string;
     lat?: number; lng?: number;
   }): Promise<UserProfile> => {
     if (!profile?.gudalurId) throw new Error('No registered resident to update');
-    const loc = GUDALUR_LOCALITIES.find((l) => l.id === (fields.localityId ?? profile.localityId));
+    // The typed address is the source of truth — it replaces any locality that
+    // a preset Gudalur list might have forced onto this supporter's record.
+    const typedAddress = fields.address?.trim() || fields.customPlaceName?.trim();
     const updated: UserProfile = {
       ...profile,
       name: fields.name?.trim() || profile.name,
       phone: fields.phone?.trim() || profile.phone,
       email: fields.email?.trim() ?? profile.email,
       localityId: fields.localityId ?? profile.localityId,
-      localityName: fields.customPlaceName || loc?.name || profile.localityName,
-      customPlaceName: fields.customPlaceName ?? profile.customPlaceName,
-      pincode: fields.pincode?.trim() || loc?.pincode || profile.pincode,
+      localityName: typedAddress || profile.localityName,
+      customPlaceName: typedAddress ?? profile.customPlaceName,
+      pincode: fields.pincode?.trim() || profile.pincode,
       lat: fields.lat ?? profile.lat,
       lng: fields.lng ?? profile.lng,
       updatedAt: Date.now(),
@@ -417,6 +433,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: updated.email ?? null,
         localityId: updated.localityId,
         customPlaceName: updated.customPlaceName ?? null,
+        address: updated.customPlaceName || updated.localityName || null,
+        localityName: updated.localityName || null,
         pincode: updated.pincode,
         lat: updated.lat ?? null,
         lng: updated.lng ?? null,

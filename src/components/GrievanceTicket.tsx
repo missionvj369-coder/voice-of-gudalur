@@ -12,8 +12,13 @@ import { useLanguage } from '../context/LanguageContext';
  */
 export const GRIEVANCE_URL = 'https://cmhelpline.tnega.org/portal/en/ticket/35665012410302427';
 
-const GRIEVANCE = {
+/** The official CM Helpline reference embedded on every receipt/certificate. */
+export const GRIEVANCE_REFERENCE = 'TN/ENVFOR/NLG/P/PORTAL/03SEP26/18982473';
+
+export const GRIEVANCE = {
   id: '18982473',
+  officialReference: GRIEVANCE_REFERENCE,
+  portalTicket: '35665012410302427',
   title: 'Wildlife Sanctuaries Related (TN/ENVFOR/NLG/P/PORTAL/03SEP26/18982473)',
   status: 'Pending Action',
   statusColor: 'bg-amber-500/20 text-amber-300 border-amber-400/40',

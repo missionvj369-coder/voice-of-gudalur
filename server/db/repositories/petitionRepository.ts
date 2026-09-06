@@ -158,6 +158,7 @@ export async function recordPetitionSign(input: PetitionSignInput): Promise<Peti
 export async function verifyPetitionSign(signHash: string) {
   return db.queryOne<{
     sign_hash: string;
+    gdr_id: string | null;
     full_name: string;
     village: string;
     phone_last4: string | null;
@@ -166,7 +167,7 @@ export async function verifyPetitionSign(signHash: string) {
     signed_at: string;
     verified: boolean;
   }>(
-    'SELECT sign_hash, full_name, village, phone_last4, aadhaar_last4, batch_no, ' +
+    'SELECT sign_hash, gdr_id, full_name, village, phone_last4, aadhaar_last4, batch_no, ' +
     'created_at AS signed_at, TRUE AS verified ' +
     'FROM petition_signs WHERE sign_hash = $1',
     [signHash],

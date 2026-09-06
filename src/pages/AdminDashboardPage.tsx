@@ -132,7 +132,7 @@ export const AdminDashboardPage: React.FC = () => {
       `${stats ? `Latest batch: *#${stats.latestBatch}*\n` : ''}` +
       `${stats?.latestHash ? `Latest hash: \`${stats.latestHash}\`\n` : ''}` +
       `Verify any signature at ${window.location.origin}/verify-sign\n\n` +
-      signs.slice(0, 25).map((s) => `• ${s.hash} — ${s.name} (${s.village || 'Gudalur'})`).join('\n');
+      signs.slice(0, 25).map((s) => `• ${s.hash} — ${s.name} (${s.village || 'Not specified'})`).join('\n');
     if (navigator.share) {
       navigator.share({ title: 'Voice of Gudalur Petition Ledger', text }).catch(() => {});
     } else {
@@ -204,7 +204,7 @@ export const AdminDashboardPage: React.FC = () => {
                     >
                       <Hash size={11} className="text-[#AED581] shrink-0" />
                       <span className="flex-1 min-w-0 font-mono text-[10px] font-bold text-white truncate">{s.hash}</span>
-                      <span className="text-[10px] text-slate-400 truncate max-w-[40%]">{s.name} · {s.village || 'Gudalur'}</span>
+                      <span className="text-[10px] text-slate-400 truncate max-w-[40%]">{s.name} · {s.village || 'Not specified'}</span>
                       <span className="text-[9px] text-slate-500 shrink-0">B#{s.batchNo}</span>
                     </a>
                   ))}
@@ -266,7 +266,7 @@ export const AdminDashboardPage: React.FC = () => {
                       <p className="font-mono text-[11px] font-bold text-[#AED581] break-all flex items-center gap-1.5">
                         <Hash size={11} className="shrink-0"/> {s.hash}
                       </p>
-                      <p className="text-xs text-slate-300 mt-0.5">{s.name} · {s.village || 'Gudalur'} · Batch #{s.batchNo}</p>
+                      <p className="text-xs text-slate-300 mt-0.5">{s.name} · {s.village || 'Not specified'} · Batch #{s.batchNo}</p>
                       <p className="text-[10px] text-slate-500 font-mono">{new Date(s.signedAt).toLocaleString('en-IN')}</p>
                     </div>
                     <div className="flex gap-1.5 shrink-0">

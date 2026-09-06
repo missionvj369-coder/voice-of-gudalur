@@ -100,10 +100,10 @@ export const authApi = {
       body: JSON.stringify(input),
     }),
 
-  /** POST /api/auth/register — create a resident (issues a Gudalur ID + session). */
+  /** POST /api/auth/register — create a supporter (issues a Digital Supporter ID + session). */
   register: (input: {
-    name: string; phone: string; localityId: string; customPlaceName?: string;
-    pincode: string; email?: string; lat?: number; lng?: number;
+    name: string; phone: string; localityId?: string; customPlaceName?: string;
+    address?: string; localityName?: string; pincode?: string; email?: string; lat?: number; lng?: number;
   }) =>
     request<{ resident: AuthUser }>('/api/auth/register', {
       method: 'POST',
@@ -242,7 +242,7 @@ export interface PetitionSignResult {
 }
 
 export const petitionApi = {
-  sign: (input: { lat?: number; lng?: number; idempotencyKey?: string }) =>
+  sign: (input: { address?: string; lat?: number; lng?: number; idempotencyKey?: string }) =>
     request<PetitionSignResult>('/api/petitions/sign', {
       method: 'POST',
       body: JSON.stringify(input),

@@ -6,10 +6,12 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { GrievanceTicket } from "../components/GrievanceTicket";
+import { buildVerifiedSignatureReceipt } from "../utils/grievanceReceipt";
 
 interface VerifyResult {
   valid: boolean;
   sign_hash?: string;
+  gdr_id?: string;
   full_name?: string;
   village?: string;
   phone_last4?: string;
@@ -100,82 +102,24 @@ export const VerifySignPage: React.FC = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
   }, [data, hash, verifyUrl]);
 
-  /** Professional PDF receipt — machine-verifiable proof, not a plain sheet. */
+  /** Professional PDF receipt — the Mudhalvarin Mugavari grievance page + the signed details. */
   const downloadReceipt = useCallback(async () => {
     if (!data?.valid) return;
     try {
-      const { jsPDF } = await import("jspdf");
-      const doc = new jsPDF({ unit: "pt", format: "a4" });
-      const left = 60;
-      const width = 595;
-
-      // Official green header band
-      doc.setFillColor(27, 94, 32);
-      doc.rect(0, 0, width, 100, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
-      doc.text(`${APP_NAME} (${APP_SHORT})`, left, 42);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-      doc.text("Signature Verification Receipt — Right to Life Petition", left, 64);
-      doc.text("Submitted grievance: Mudhalvarin Mugavari · cmhelpline.tnega.org", left, 80);
-
-      doc.setTextColor(15, 23, 42);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.text("This signature is GENUINE and recorded on the public docket ledger.", left, 134);
-
-      doc.setFontSize(10);
-      const rows: [string, string][] = [
-        ["Signed by", `${data.full_name ?? "—"}${data.village ? ` · ${data.village}` : ""}`],
-        ["Phone (masked)", `••••${data.phone_last4 ?? "—"}`],
-        ["Aadhaar (masked)", `••••${data.aadhaar_last4 ?? "—"}`],
-        ["Batch", `#${data.batch_no ?? 1}`],
-        ["Signed on (UTC)", data.created_at ? new Date(data.created_at).toISOString() : "—"],
-        ["Verified on", verifiedAtRef.current ? new Date(verifiedAtRef.current).toISOString() : new Date().toISOString()],
-      ];
-      let y = 164;
-      rows.forEach(([label, value]) => {
-        doc.setTextColor(100, 116, 139);
-        doc.setFont("helvetica", "normal");
-        doc.text(label, left, y);
-        doc.setTextColor(15, 23, 42);
-        doc.setFont("helvetica", "bold");
-        doc.text(value, left + 150, y);
-        y += 24;
+      await buildVerifiedSignatureReceipt({
+        signer: {
+          name: data.full_name || "—",
+          gdrId: data.gdr_id || "—",
+          address: data.village || "—",
+          phoneLast4: data.phone_last4 || undefined,
+          aadhaarLast4: data.aadhaar_last4 || undefined,
+        },
+        batchNo: data.batch_no ?? 1,
+        signHash: data.sign_hash ?? hash,
+        signedAtUTC: data.created_at || new Date().toISOString(),
+        verifiedAtUTC: verifiedAtRef.current || new Date().toISOString(),
+        verifyUrl,
       });
-
-      doc.setTextColor(100, 116, 139);
-      doc.setFont("helvetica", "normal");
-      doc.text("Signature hash", left, y + 6);
-      doc.setTextColor(15, 23, 42);
-      doc.setFont("courier", "bold");
-      const hashLines = doc.splitTextToSize(data.sign_hash ?? hash, 380);
-      doc.text(hashLines, left + 150, y + 6);
-      y += 24 + (hashLines.length - 1) * 12;
-
-      doc.setTextColor(100, 116, 139);
-      doc.setFont("helvetica", "normal");
-      doc.text("Verify online", left, y + 6);
-      doc.setTextColor(27, 94, 32);
-      doc.setFont("helvetica", "bold");
-      const urlLines = doc.splitTextToSize(verifyUrl, 380);
-      doc.text(urlLines, left + 150, y + 6);
-      y += 24 + (urlLines.length - 1) * 12;
-
-      doc.setDrawColor(27, 94, 32);
-      doc.setLineWidth(1);
-      doc.line(left, y + 12, width - 60, y + 12);
-      doc.setTextColor(120);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.text(
-        "Privacy-first: only masked details are shown publicly. This receipt is machine-verifiable —\nofficials can confirm the signature hash at the URL above.",
-        left,
-        y + 30,
-      );
-      doc.save(`vog-verification-${(data.sign_hash ?? hash).slice(0, 12)}.pdf`);
     } catch {
       toast.error("Could not generate the receipt. Please try again.");
     }
@@ -293,7 +237,7 @@ export const VerifySignPage: React.FC = () => {
               {/* Signer details — masked, privacy-first */}
               <div className="rounded-xl border border-slate-200 divide-y divide-slate-100">
                 <Row icon={<User size={14} />} label="Signed by" value={data.full_name} />
-                <Row icon={<MapPin size={14} />} label="Place" value={data.village || "—"} />
+                <Row icon={<MapPin size={14} />} label="Place / Address" value={data.village || "—"} />
                 <Row icon={<Phone size={14} />} label="Phone — blurred, never shown" value={`+91 ••••• ${data.phone_last4 ?? ""}`} mono blur />
                 <Row icon={<IdCard size={14} />} label="Aadhaar" value={`••••${data.aadhaar_last4 ?? "—"}`} mono />
                 <Row icon={<Hash size={14} />} label="Batch" value={`#${data.batch_no ?? 1}`} />

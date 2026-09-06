@@ -229,13 +229,21 @@ router.patch('/me', requireAuth, async (req: Request, res: Response) => {
     const email = typeof f.email === 'string' && f.email.trim() ? f.email.trim() : undefined;
     const localityId = typeof f.localityId === 'string' ? f.localityId : undefined;
     const customPlaceName = typeof f.customPlaceName === 'string' ? f.customPlaceName : undefined;
+    /** Free-text address — the source of truth for a national supporter's place. */
+    const address = typeof f.address === 'string' ? f.address.trim() : undefined;
     const pincode = typeof f.pincode === 'string' ? f.pincode : undefined;
     const lat = typeof f.lat === 'number' ? f.lat : undefined;
     const lng = typeof f.lng === 'number' ? f.lng : undefined;
     const phone = typeof f.phone === 'string' ? normalizePhone(f.phone) : undefined;
 
     let localityName: string | undefined;
-    if (localityId) {
+    if (typeof f.localityName === 'string' && f.localityName.trim()) {
+      // Explicit locality name (the typed address) wins — never re-derive from
+      // a Gudalur locality table for supporters elsewhere in India.
+      localityName = f.localityName.trim();
+    } else if (address) {
+      localityName = address;
+    } else if (localityId) {
       localityName = (await db.queryOne<{ name: string }>('SELECT name FROM locality WHERE id = $1', [localityId]))?.name;
     }
     await db.execute(
@@ -252,7 +260,7 @@ router.patch('/me', requireAuth, async (req: Request, res: Response) => {
          updated_at  = now()
        WHERE uid = $1`,
       [req.user!.uid, name ?? null, email ?? null, phone ?? null, localityId ?? null,
-       localityName ?? null, customPlaceName ?? null, pincode ?? null,
+       localityName ?? null, (address || customPlaceName) ?? null, pincode ?? null,
        lat ?? null, lng ?? null],
     );
         const row = await db.queryOne<any>(

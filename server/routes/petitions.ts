@@ -13,6 +13,7 @@ import { recordPetitionSign, verifyPetitionSign, listPetitionSigns } from '../db
 import { requireAuth, requireRole, logAudit } from '../middleware/auth';
 import { db } from '../db/client';
 import { logger } from '../utils/logger';
+import { clusterPlaces } from '../utils/placeCluster';
 
 const router = Router();
 
@@ -30,7 +31,14 @@ router.post('/sign', requireAuth, async (req: Request, res: Response) => {
       userUid: user.uid,
       gdrId: user.gudalurId ?? '',
       fullName: user.name,
-      village: user.localityName,
+      // The NATIONAL address the supporter typed at registration/edit time is
+      // the source of truth for the place column — never the legacy locality
+      // name. Anyone from anywhere in India can sign and the district/state is
+      // read from their own details.
+      village:
+        typeof req.body?.address === 'string' && req.body.address.trim()
+          ? req.body.address.trim()
+          : (user.localityName ?? ''),
       phone: user.phone ?? '',
       aadhaarLast4: resident?.aadhaar_last4 ?? undefined,
       aadhaarRef: resident?.aadhaar_ref ?? undefined,
@@ -72,6 +80,7 @@ router.get('/verify/:hash', async (req: Request, res: Response) => {
     res.json({
       valid: true,
       sign_hash: row.sign_hash,
+      gdr_id: row.gdr_id,
       full_name: row.full_name,
       village: row.village,
       phone_last4: row.phone_last4,
@@ -126,21 +135,27 @@ router.get('/list', async (_req: Request, res: Response) => {
   res.json({ petitions: rows.rows });
 });
 
-/** GET /api/petitions/sign-stats — public live totals + per-place leaderboard (highest first). */
+/** GET /api/petitions/sign-stats — public live totals + national per-place leaderboard (highest first). */
 router.get('/sign-stats', async (_req: Request, res: Response) => {
   try {
     const total = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
+    // Read every DISTINCT registered address (village column now stores the
+    // free-text address people typed across India). Places are NEVER pre-set:
+    // we cluster the actual typed addresses and rank the clusters by count.
     const places = await db.query<{ place: string; count: number }>(
-      `SELECT COALESCE(NULLIF(village, ''), 'Gudalur') AS place, COUNT(*)::int AS count
+      `SELECT village AS place, COUNT(*)::int AS count
        FROM petition_signs
-       GROUP BY 1
-       ORDER BY count DESC, place ASC
-       LIMIT 60`,
+       WHERE village IS NOT NULL AND village <> ''
+       GROUP BY village`,
     );
-    // CockroachDB returns COUNT(*) (INT8) as strings through pg — coerce to numbers.
+    // CockroachDB returns COUNT(*) (INT8) as strings through pg — coerce to
+    // numbers, then derive "most supported places" from the real data.
+    const clustered = clusterPlaces(
+      places.rows.map((r) => ({ place: String(r.place), count: Number(r.count) })),
+    );
     res.json({
       total: Number(total?.count ?? 0),
-      places: places.rows.map((r) => ({ place: String(r.place), count: Number(r.count) })),
+      places: clustered.slice(0, 15),
     });
   } catch (e: any) {
     logger.error('sign-stats:', e.message);

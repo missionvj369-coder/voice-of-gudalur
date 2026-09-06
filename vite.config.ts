@@ -39,7 +39,7 @@ const securityHeaders: Record<string, string> = {
     "img-src 'self' data: blob: https:",
     "media-src 'self' data: blob: https:",
     "frame-src 'self' blob: https://cmhelpline.tnega.org",
-    "connect-src 'self' https://huggingface.co https://*.huggingface.co https://gateway.storjshare.io",
+    "connect-src 'self' https://huggingface.co https://*.huggingface.co https://gateway.storjshare.io https://api.bigdatacloud.net",
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
