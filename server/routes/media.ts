@@ -1,12 +1,21 @@
 /**
  * Voice of Gudalur — Media posts (posters + videos) for "Support the Movement".
  *
- *   GET    /api/media        — public list of active posters & videos
- *   POST   /api/media        — admin upload (multipart: file, kind, title, description)
- *   DELETE /api/media/:id    — admin delete
+ *   GET    /api/media            — public list of active posters & videos (METADATA ONLY)
+ *   GET    /api/media/:id/file   — binary payload of a single poster/video
+ *   POST   /api/media            — admin upload (multipart: file, kind, title, description)
+ *   DELETE /api/media/:id        — admin delete (soft)
  *
- * All writes require an ADMIN / PLATFORM_ADMIN session. Media is stored in
- * CockroachDB as a base64 data URL (no external object storage).
+ * WHY metadata-only list? The Netlify Functions response payload is capped at
+ * ~6 MB. Media is stored as base64 data URLs INSIDE CockroachDB, so returning
+ * every file's payload inline blew past that cap ("Function.ResponseSizeTooLarge"
+ * → 502) the moment more than a single small poster existed — the frontend then
+ * silently showed zero media. The list therefore returns tiny metadata and each
+ * file is streamed individually through GET /api/media/:id/file (one item per
+ * request, always well under the cap). Uploads are capped at 5 MB so a single
+ * item's binary response also stays within the limit.
+ *
+ * All writes require an ADMIN / PLATFORM_ADMIN session.
  */
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
@@ -16,11 +25,13 @@ import { logger } from '../utils/logger';
 
 const router = Router();
 
-// In-memory storage: the file is read straight into a buffer, base64-encoded
-// and saved in the database as a data URL. Limit — posters 8 MB, videos 40 MB.
+// Netlify Functions response ceiling is 6,291,556 bytes. We cap every uploaded
+// file at 5 MB so the binary response for a single item always fits.
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 40 * 1024 * 1024 },
+  limits: { fileSize: MAX_FILE_BYTES },
   fileFilter: (_req: Request, file: Express.Multer.File, cb: (err: Error | null, ok: boolean) => void) => {
     const ok = /^image\/(png|jpe?g|webp|gif|avif)$/.test(file.mimetype) || /^video\/(mp4|webm|quicktime)$/.test(file.mimetype);
     if (ok) cb(null, true);
@@ -28,15 +39,33 @@ const upload = multer({
   },
 });
 
-/** GET /api/media — public list (active only, newest first). */
+interface MediaRow {
+  id: string;
+  kind: string;
+  title: string;
+  description: string | null;
+  data_url: string | null;
+  file_url: string | null;
+  mime: string | null;
+  size_bytes: number | null;
+  created_at: string;
+}
+
+/** Parse `data:<mime>;base64,<payload>` → { mime, buffer } or null. */
+function parseDataUrl(dataUrl: string | null): { mime: string; buffer: Buffer } | null {
+  if (!dataUrl) return null;
+  const m = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(dataUrl);
+  if (!m) return null;
+  const mime = m[1] || 'application/octet-stream';
+  if (m[2]) return { mime, buffer: Buffer.from(m[3], 'base64') };
+  return { mime, buffer: Buffer.from(m[3], 'utf8') };
+}
+
+/** GET /api/media — metadata ONLY (no payloads), newest first. */
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    const rows = await db.query<{
-      id: string; kind: string; title: string; description: string | null;
-      data_url: string | null; file_url: string | null; mime: string | null;
-      created_at: string;
-    }>(
-      `SELECT id, kind, title, description, data_url, file_url, mime, created_at
+    const rows = await db.query<MediaRow>(
+      `SELECT id, kind, title, description, mime, size_bytes, created_at
        FROM media_posts WHERE active = TRUE ORDER BY created_at DESC`,
     );
     res.json({
@@ -45,14 +74,43 @@ router.get('/', async (_req: Request, res: Response) => {
         kind: r.kind,
         title: r.title,
         description: r.description,
-        url: r.data_url || r.file_url,
         mime: r.mime,
+        sizeBytes: r.size_bytes,
         createdAt: r.created_at,
       })),
     });
   } catch (e: any) {
     logger.error('media list:', e.message);
     res.status(500).json({ error: 'Failed to load media' });
+  }
+});
+
+/** GET /api/media/:id/file — stream a single media file as binary. */
+router.get('/:id/file', async (req: Request, res: Response) => {
+  try {
+    const row = await db.queryOne<MediaRow>(
+      `SELECT id, kind, title, description, data_url, file_url, mime, size_bytes, created_at
+       FROM media_posts WHERE id = $1 AND active = TRUE`,
+      [req.params.id],
+    );
+    if (!row) return res.status(404).json({ error: 'Media not found' });
+
+    // External URL (legacy Storj) → redirect the browser there.
+    if (!row.data_url && row.file_url) {
+      return res.redirect(302, row.file_url);
+    }
+
+    const parsed = parseDataUrl(row.data_url);
+    if (!parsed) return res.status(404).json({ error: 'Media payload unavailable' });
+
+    res.setHeader('Content-Type', parsed.mime || row.mime || 'application/octet-stream');
+    res.setHeader('Content-Length', String(parsed.buffer.length));
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.send(parsed.buffer);
+  } catch (e: any) {
+    logger.error('media file:', e.message);
+    res.status(500).json({ error: 'Failed to load media file' });
   }
 });
 
@@ -84,6 +142,9 @@ router.post('/', requireAuth, requireRole('ADMIN', 'PLATFORM_ADMIN'), upload.sin
     res.status(201).json({ id: row?.id, ok: true, message: `${kind === 'video' ? 'Video' : 'Poster'} published on the public frontend.` });
   } catch (e: any) {
     logger.error('media upload:', e.message);
+    if (String(e?.message || '').includes('larger than')) {
+      return res.status(400).json({ error: 'File too large. Maximum allowed size is 5 MB per file.' });
+    }
     res.status(500).json({ error: e.message || 'Upload failed' });
   }
 });

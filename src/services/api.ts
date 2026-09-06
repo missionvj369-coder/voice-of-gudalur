@@ -400,21 +400,27 @@ export interface MediaItem {
   kind: 'poster' | 'video';
   title: string;
   description: string | null;
-  url: string;            // data URL
+  url: string;            // binary URL: /api/media/:id/file
   mime: string | null;
+  sizeBytes: number | null;
   createdAt: string;
 }
 
 export const mediaApi = {
-  /** GET /api/media — every published poster & video. */
+  /** GET /api/media — every published poster & video (metadata only). */
   list: async (): Promise<MediaItem[]> => {
-    try {
-      const r = await request<{ media: MediaItem[] }>('/api/media');
-      return r.media || [];
-    } catch {
-      return [];
-    }
+    // Do NOT swallow errors silently anymore — that's how the 502 from the
+    // Netlify response-size cap turned into "published: 0". Surface it.
+    const r = await request<{ media: Array<Omit<MediaItem, 'url'>> }>('/api/media');
+    return (r.media || []).map((m) => ({
+      ...m,
+      url: `/api/media/${encodeURIComponent(m.id)}/file`,
+      sizeBytes: m.sizeBytes ?? null,
+    }));
   },
+
+  /** GET /api/media/:id/file — binary payload for a single poster/video. */
+  fileUrl: (id: string): string => `/api/media/${encodeURIComponent(id)}/file`,
 
   /** POST /api/media — admin upload (multipart: file, kind, title, description). */
   upload: (input: { kind: 'poster' | 'video'; title: string; description?: string; file: File }) => {
