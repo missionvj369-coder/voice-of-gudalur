@@ -250,12 +250,22 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 </nav>
 
                 <div className="border-t border-[#AED581]/20 px-3 py-4 space-y-3 shrink-0">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-[#AED581]/70 px-0.5">
+                    {t('mnu.language')}
+                  </p>
                   <div className="flex items-center gap-1">
                     {LANGUAGES.map((l) => (
                       <button
                         key={l.code}
                         type="button"
-                        onClick={() => setLang(l.code)}
+                        onClick={() => {
+                          if (l.code === lang) return;
+                          // Store + RELOAD the current page so every string on
+                          // screen re-renders in the freshly selected language.
+                          setLang(l.code);
+                          setMenuOpen(false);
+                          setTimeout(() => window.location.reload(), 60);
+                        }}
                         title={l.label}
                         className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
                           lang === l.code

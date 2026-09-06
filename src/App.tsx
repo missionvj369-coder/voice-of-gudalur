@@ -3,9 +3,10 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { motion } from 'motion/react';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { LanguageProvider } from './context/LanguageContext';
+import { LanguageProvider, useLanguage, type Language } from './context/LanguageContext';
 import { Shell } from './components/Layout/Shell';
 import { OpeningAnimation } from './components/OpeningAnimation';
+import { LanguageGate } from './components/LanguageGate';
 
 // Route-level code splitting — every page downloads only when first visited.
 const SignPetitionPage = lazy(() => import('./pages/SignPetitionPage').then((m) => ({ default: m.SignPetitionPage })));
@@ -37,7 +38,23 @@ const AdminRoutes: React.FC = () => (
 
 const AppContent: React.FC = () => {
   const { loading } = useAuth();
+  const { setLang } = useLanguage();
   const { pathname } = useLocation();
+  // First-visit language gate: shown BEFORE the front page. The chosen
+  // language persists (VoiceOfGudalur_lang_chosen), so returning visitors go
+  // straight into the app in their language.
+  const [langChosen, setLangChosen] = useState<boolean>(() => {
+    try {
+      return !!localStorage.getItem('VoiceOfGudalur_lang_chosen');
+    } catch {
+      return true;
+    }
+  });
+  const handleLanguageChosen = (lang: Language) => {
+    try { localStorage.setItem('VoiceOfGudalur_lang_chosen', '1'); } catch { /* ignore */ }
+    setLang(lang);
+    setLangChosen(true);
+  };
   // The opening animation plays on EVERY visit — every fresh load of the site
   // (new tab, new session, coming back later) starts with the animation.
   // Only users who prefer reduced motion skip it. Login state is unaffected:
@@ -58,6 +75,10 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [pathname]);
+
+  if (!langChosen) {
+    return <LanguageGate onChoose={handleLanguageChosen} />;
+  }
 
   if (loading) {
     return (

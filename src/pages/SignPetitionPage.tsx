@@ -164,12 +164,12 @@ export const SignPetitionPage: React.FC = () => {
       // Backend unavailable - show accurate error (no misleading "offline" message)
       const errorMsg = e?.error || e?.message || "";
       if (errorMsg.includes("502") || errorMsg.includes("DATABASE_URL") || errorMsg.includes("backend")) {
-        toast.error("Petition service unavailable. Please try again in a moment.", {
+        toast.error(t("home.err_unavailable"), {
           duration: 6000,
-          icon: "âš ",
+          icon: "⚠",
         });
       } else {
-        toast.error(errorMsg || "Sign failed");
+        toast.error(errorMsg || t("home.err_sign"));
       }
     }
     // Let other screens (e.g. About â†’ "Petition Signed") update instantly.
@@ -192,11 +192,11 @@ export const SignPetitionPage: React.FC = () => {
     if (!result) return;
     try {
       await navigator.clipboard.writeText(result.verifyUrl);
-      toast.success("Verification link copied");
+      toast.success(t("home.link_copied"));
     } catch {
-      window.prompt("Copy this link:", result.verifyUrl);
+      window.prompt(t("home.copy_prompt"), result.verifyUrl);
     }
-  }, [result]);
+  }, [result, t]);
 
   /** Official receipt â€” the Mudhalvarin Mugavari grievance page + this supporter's signed details. */
   const downloadReceipt = useCallback(async () => {
@@ -297,7 +297,7 @@ export const SignPetitionPage: React.FC = () => {
             disabled={busy}
             className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            {busy ? <><Loader2 size={16} className="animate-spin" /> Signing...</> : <><PenLine size={16} /> {t("home.sign_btn")}</>}
+            {busy ? <><Loader2 size={16} className="animate-spin" /> {t("home.signing")}</> : <><PenLine size={16} /> {t("home.sign_btn")}</>}
           </button>
         </div>
       )}
@@ -508,17 +508,17 @@ export const SignPetitionPage: React.FC = () => {
         <div className="rounded-3xl border border-[#AED581]/40 bg-white/95 p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-black text-[#1B5E20] flex items-center gap-2">
-              <Sparkles size={15} className="text-emerald-600" /> Support the Movement
+              <Sparkles size={15} className="text-emerald-600" /> {t("home.support_title")}
             </h2>
             <button
               onClick={() => setShowShareModal(true)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:opacity-90 transition"
             >
-              <Share2 size={13} /> Share All
+              <Share2 size={13} /> {t("home.share_all")}
             </button>
           </div>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Share our posters and videos â€” WhatsApp, Facebook, Instagram, Snapchat, ShareChat or Telegram.
+            {t("home.share_sub")}
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {mediaItems.slice(0, 9).map((m) => (
@@ -556,8 +556,8 @@ export const SignPetitionPage: React.FC = () => {
                       setShowMediaViewer(true);
                     }}
                     className="p-1.5 rounded-lg bg-black/50 text-white backdrop-blur hover:bg-black/70 transition"
-                    title="View full media"
-                    aria-label="View"
+                    title={t("home.view_media")}
+                    aria-label={t("home.view")}
                   >
                     <Eye size={12} />
                   </button>

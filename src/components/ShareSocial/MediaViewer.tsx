@@ -12,6 +12,7 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Share2, Download, ImageIcon, Video } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export interface MediaItem {
   id: string;
@@ -54,6 +55,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   item,
   onShare,
 }) => {
+  const { t } = useLanguage();
   const imageRef = useRef<HTMLImageElement>(null);
 
   // Close on Escape key
@@ -152,18 +154,18 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
                 onClick={() => onShare(item)}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition"
               >
-                <Share2 size={16} /> Share Media
+                <Share2 size={16} /> {t('media.share')}
               </button>
               <button
                 onClick={handleDownload}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-semibold text-sm transition"
               >
-                <Download size={16} /> Download
+                <Download size={16} /> {t('media.download')}
               </button>
               <button
                 onClick={onClose}
                 className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
-                aria-label="Close viewer"
+                aria-label={t('mv.close')}
               >
                 <X size={20} />
               </button>

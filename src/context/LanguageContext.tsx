@@ -759,6 +759,104 @@ const extraTranslations: Record<Language, Record<string, string>> = {
   },
 };
 
+/** ── Language-gate, menu-language label + strings that were previously
+ *     hardcoded on the homepage, media viewer and share modal. Every key is
+ *     defined in ALL four languages so switching translates everything. ── */
+const siteExtras: Record<Language, Record<string, string>> = {
+  en: {
+    'mnu.language': 'Language',
+    'home.support_title': 'Support the Movement',
+    'home.share_all': 'Share All',
+    'home.share_sub': 'Share our posters and videos — WhatsApp, Facebook, Instagram, Snapchat, ShareChat or Telegram.',
+    'home.view_media': 'View full media',
+    'home.view': 'View',
+    'home.err_unavailable': 'Petition service unavailable. Please try again in a moment.',
+    'home.err_sign': 'Sign failed',
+    'home.link_copied': 'Verification link copied',
+    'home.copy_prompt': 'Copy this link:',
+    'mv.close': 'Close viewer',
+    'ssm.view_media': 'View Media',
+    'ssm.download': 'Download',
+    'ssm.copy_link': 'Copy link',
+    'ssm.all_media': 'All Movement Media',
+    'ssm.posters_videos': 'Posters & Videos',
+    'ssm.tab_posters': 'Posters',
+    'ssm.tab_videos': 'Videos',
+    'ssm.no_posters': 'No posters published yet.',
+    'ssm.no_videos': 'No videos published yet.',
+    'ssm.desktop_note': 'For the best experience, share from a mobile device. On desktop, the media will download.',
+  },
+  ta: {
+    'mnu.language': 'மொழி',
+    'home.support_title': 'இயக்கத்தை ஆதரியுங்கள்',
+    'home.share_all': 'அனைத்தையும் பங்கிடு',
+    'home.share_sub': 'எங்கள் சுவரொட்டிகளையும் வீடியோக்களையும் பங்கிடுங்கள் — WhatsApp, Facebook, Instagram, Snapchat, ShareChat அல்லது Telegram.',
+    'home.view_media': 'முழு ஊடகத்தைக் காண்க',
+    'home.view': 'பார்வை',
+    'home.err_unavailable': 'மனு சேவை கிடைக்கவில்லை. சற்று நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.',
+    'home.err_sign': 'கையொப்பமிடல் தோல்வியடைந்தது',
+    'home.link_copied': 'சரிபார்ப்பு இணைப்பு நகலெடுக்கப்பட்டது',
+    'home.copy_prompt': 'இந்த இணைப்பை நகலெடுக்கவும்:',
+    'mv.close': 'பார்வையை மூடு',
+    'ssm.view_media': 'ஊடகத்தைக் காண்க',
+    'ssm.download': 'பதிவிறக்கு',
+    'ssm.copy_link': 'இணைப்பை நகலெடு',
+    'ssm.all_media': 'அனைத்து இயக்க ஊடகமும்',
+    'ssm.posters_videos': 'சுவரொட்டிகள் & வீடியோக்கள்',
+    'ssm.tab_posters': 'சுவரொட்டிகள்',
+    'ssm.tab_videos': 'வீடியோக்கள்',
+    'ssm.no_posters': 'இன்னும் சுவரொட்டிகள் வெளியிடப்படவில்லை.',
+    'ssm.no_videos': 'இன்னும் வீடியோக்கள் வெளியிடப்படவில்லை.',
+    'ssm.desktop_note': 'சிறந்த அனுபவத்திற்கு மொபைலில் பங்கிடுங்கள். கணினியில் ஊடகம் பதிவிறக்கமாகும்.',
+  },
+  ml: {
+    'mnu.language': 'ഭാഷ',
+    'home.support_title': 'പ്രസ്ഥാനത്തെ പിന്തുണയ്ക്കൂ',
+    'home.share_all': 'എല്ലാം പങ്കിടുക',
+    'home.share_sub': 'ഞങ്ങളുടെ പോസ്റ്ററുകളും വീഡിയോകളും പങ്കിടൂ — WhatsApp, Facebook, Instagram, Snapchat, ShareChat അല്ലെങ്കിൽ Telegram.',
+    'home.view_media': 'പൂർണ്ണ മീഡിയ കാണുക',
+    'home.view': 'കാഴ്ച',
+    'home.err_unavailable': 'ഹർജി സേവനം ലഭ്യമല്ല. കുറച്ചുകഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കൂ.',
+    'home.err_sign': 'സൈൻ പരാജയപ്പെട്ടു',
+    'home.link_copied': 'സ്ഥിരീകരണ ലിങ്ക് പകർത്തി',
+    'home.copy_prompt': 'ഈ ലിങ്ക് പകർത്തുക:',
+    'mv.close': 'വ്യൂവർ അടയ്ക്കുക',
+    'ssm.view_media': 'മീഡിയ കാണുക',
+    'ssm.download': 'ഡൗൺലോഡ്',
+    'ssm.copy_link': 'ലിങ്ക് പകർത്തുക',
+    'ssm.all_media': 'എല്ലാ പ്രസ്ഥാന മീഡിയയും',
+    'ssm.posters_videos': 'പോസ്റ്ററുകളും വീഡിയോകളും',
+    'ssm.tab_posters': 'പോസ്റ്ററുകൾ',
+    'ssm.tab_videos': 'വീഡിയോകൾ',
+    'ssm.no_posters': 'ഇതുവരെ പോസ്റ്ററുകൾ പ്രസിദ്ധീകരിച്ചിട്ടില്ല.',
+    'ssm.no_videos': 'ഇതുവരെ വീഡിയോകൾ പ്രസിദ്ധീകരിച്ചിട്ടില്ല.',
+    'ssm.desktop_note': 'മികച്ച അനുഭവത്തിന് മൊബൈലിൽ നിന്ന് പങ്കിടുക. ഡെസ്ക്ടോപ്പിൽ മീഡിയ ഡൗൺലോഡ് ചെയ്യും.',
+  },
+  kn: {
+    'mnu.language': 'ಭಾಷೆ',
+    'home.support_title': 'ಚಳವಳಿಯನ್ನು ಬೆಂಬಲಿಸಿ',
+    'home.share_all': 'ಎಲ್ಲವನ್ನೂ ಹಂಚಿ',
+    'home.share_sub': 'ನಮ್ಮ ಪೋಸ್ಟರ್‌ಗಳನ್ನು ಮತ್ತು ವೀಡಿಯೊಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ — WhatsApp, Facebook, Instagram, Snapchat, ShareChat ಅಥವಾ Telegram.',
+    'home.view_media': 'ಪೂರ್ಣ ಮಾಧ್ಯಮ ವೀಕ್ಷಿಸಿ',
+    'home.view': 'ವೀಕ್ಷಣೆ',
+    'home.err_unavailable': 'ಮನವಿ ಸೇವೆ ಲಭ್ಯವಿಲ್ಲ. ಸ್ವಲ್ಪ ಹೊತ್ತಿನ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.',
+    'home.err_sign': 'ಸಹಿ ವಿಫಲವಾಗಿದೆ',
+    'home.link_copied': 'ಪರಿಶೀಲನಾ ಲಿಂಕ್ ನಕಲಾಗಿದೆ',
+    'home.copy_prompt': 'ಈ ಲಿಂಕ್ ಅನ್ನು ನಕಲಿಸಿ:',
+    'mv.close': 'ವೀಕ್ಷಕ ಮುಚ್ಚಿ',
+    'ssm.view_media': 'ಮಾಧ್ಯಮ ವೀಕ್ಷಿಸಿ',
+    'ssm.download': 'ಡೌನ್‌ಲೋಡ್',
+    'ssm.copy_link': 'ಲಿಂಕ್ ನಕಲಿಸಿ',
+    'ssm.all_media': 'ಎಲ್ಲಾ ಚಳವಳಿ ಮಾಧ್ಯಮ',
+    'ssm.posters_videos': 'ಪೋಸ್ಟರ್‌ಗಳು & ವೀಡಿಯೊಗಳು',
+    'ssm.tab_posters': 'ಪೋಸ್ಟರ್‌ಗಳು',
+    'ssm.tab_videos': 'ವೀಡಿಯೊಗಳು',
+    'ssm.no_posters': 'ಇನ್ನೂ ಪೋಸ್ಟರ್‌ಗಳನ್ನು ಪ್ರಕಟಿಸಲಾಗಿಲ್ಲ.',
+    'ssm.no_videos': 'ಇನ್ನೂ ವೀಡಿಯೊಗಳನ್ನು ಪ್ರಕಟಿಸಲಾಗಿಲ್ಲ.',
+    'ssm.desktop_note': 'ಉತ್ತಮ ಅನುಭವಕ್ಕಾಗಿ ಮೊಬೈಲ್‌ನಿಂದ ಹಂಚಿಕೊಳ್ಳಿ. ಡೆಸ್ಕ್‌ಟಾಪ್‌ನಲ್ಲಿ ಮಾಧ್ಯಮವು ಡೌನ್‌ಲೋಡ್ ಆಗುತ್ತದೆ.',
+  },
+};
+
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -774,7 +872,12 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [lang]);
 
   const t = (key: string) => {
-    return translations[lang]?.[key] || extraTranslations[lang]?.[key] || extraTranslations['en']?.[key] || key;
+    return translations[lang]?.[key]
+      || extraTranslations[lang]?.[key]
+      || siteExtras[lang]?.[key]
+      || extraTranslations['en']?.[key]
+      || siteExtras['en']?.[key]
+      || key;
   };
 
   return (

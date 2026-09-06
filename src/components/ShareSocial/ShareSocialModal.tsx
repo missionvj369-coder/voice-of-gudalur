@@ -20,6 +20,7 @@ import {
   Video, ExternalLink,
 } from 'lucide-react';
 import { PlatformIcon, PLATFORMS, type PlatformName } from './PlatformIcon';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface Poster {
   id: string;
@@ -83,6 +84,7 @@ const ShareSocialModal: React.FC<ShareSocialModalProps> = ({
   activeItem,
   onViewMedia,
 }) => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'posters' | 'videos'>('posters');
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -248,7 +250,7 @@ const ShareSocialModal: React.FC<ShareSocialModalProps> = ({
             {/* â”€â”€ Header â”€â”€ */}
             <div className="sticky top-0 bg-gradient-to-r from-emerald-600 to-teal-600 p-4 text-white flex items-center justify-between shrink-0">
               <h3 className="font-bold text-lg flex items-center gap-2">
-                <Share2 size={20} /> Share
+                <Share2 size={20} /> {t('media.share')}
               </h3>
               <button onClick={onClose} className="p-1 rounded-full hover:bg-white/20">
                 <X size={20} />
@@ -306,7 +308,7 @@ const ShareSocialModal: React.FC<ShareSocialModalProps> = ({
                       className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s8-8 11-8 11 8 11 8-8 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>{/* eye */}</svg>
-                      View Media
+                      {t('ssm.view_media')}
                     </button>
                   )}
                   <button
@@ -321,13 +323,13 @@ const ShareSocialModal: React.FC<ShareSocialModalProps> = ({
                     {downloading ? (
                       <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
                     ) : <Download size={14} />}
-                    Download
+                    {t('ssm.download')}
                   </button>
                   <button
                     onClick={copyLink}
                     disabled={copied}
                     className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition"
-                    title="Copy link"
+                    title={t('ssm.copy_link')}
                   >
                     {copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={13} />}
                   </button>
@@ -335,7 +337,7 @@ const ShareSocialModal: React.FC<ShareSocialModalProps> = ({
 
                 {!isMobile && (
                   <p className="text-[10px] text-slate-400 text-center">
-                    For the best experience, share from a mobile device. On desktop, the media will download.
+                    {t('ssm.desktop_note')}
                   </p>
                 )}
                             </div>
@@ -344,27 +346,27 @@ const ShareSocialModal: React.FC<ShareSocialModalProps> = ({
             {/* â”€â”€ All Media: Tabs + Lists â”€â”€ */}
             <div className="p-4 border-b border-slate-100 shrink-0">
               <p className="text-xs font-bold text-slate-500 mb-2">
-                {activeItem ? 'All Movement Media' : 'Posters & Videos'}
+                {activeItem ? t('ssm.all_media') : t('ssm.posters_videos')}
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setActiveTab('posters')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold ${activeTab === 'posters' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}
                 >
-                  <ImageIcon size={12} className="inline mr-1" />Posters ({posters.length})
+                  <ImageIcon size={12} className="inline mr-1" />{t('ssm.tab_posters')} ({posters.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('videos')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold ${activeTab === 'videos' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}
                 >
-                  <Video size={12} className="inline mr-1" />Videos ({videos.length})
+                  <Video size={12} className="inline mr-1" />{t('ssm.tab_videos')} ({videos.length})
                 </button>
               </div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-2">
               {activeTab === 'posters' && (posters.length === 0 ? (
-                <p className="text-xs text-slate-400 py-4 text-center">No posters published yet.</p>
+                <p className="text-xs text-slate-400 py-4 text-center">{t('ssm.no_posters')}</p>
               ) : (
                 posters.map((p) => (
                   <div key={p.id} className="flex items-center gap-3 bg-slate-50 rounded-xl p-2">
@@ -377,7 +379,7 @@ const ShareSocialModal: React.FC<ShareSocialModalProps> = ({
                       onClick={() => downloadItem(p.imageUrl, `vog-poster-${p.id}.jpg`, p.id)}
                       disabled={downloading === p.id}
                       className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-emerald-700 shrink-0"
-                      title="Download"
+                      title={t('ssm.download')}
                     >
                       {downloading === p.id ? <div className="w-3 h-3 border border-slate-400 border-t-transparent rounded-full animate-spin" /> : <Download size={14} />}
                     </button>
@@ -385,7 +387,7 @@ const ShareSocialModal: React.FC<ShareSocialModalProps> = ({
                 ))
               ))}
               {activeTab === 'videos' && (videos.length === 0 ? (
-                <p className="text-xs text-slate-400 py-4 text-center">No videos published yet.</p>
+                <p className="text-xs text-slate-400 py-4 text-center">{t('ssm.no_videos')}</p>
               ) : (
                 videos.map((v) => (
                   <div key={v.id} className="flex items-center gap-3 bg-slate-50 rounded-xl p-2">
@@ -400,7 +402,7 @@ const ShareSocialModal: React.FC<ShareSocialModalProps> = ({
                       onClick={() => downloadItem(v.videoUrl, `vog-video-${v.id}.mp4`, v.id)}
                       disabled={downloading === v.id}
                       className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-emerald-700 shrink-0"
-                      title="Download"
+                      title={t('ssm.download')}
                     >
                       {downloading === v.id ? <div className="w-3 h-3 border border-slate-400 border-t-transparent rounded-full animate-spin" /> : <Download size={14} />}
                     </button>
