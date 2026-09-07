@@ -86,9 +86,6 @@ export async function uploadMedia(
       Key: key,
       Body: body,
       ContentType: contentType,
-      // Public-read so the link is directly usable in <img>/<video>.
-      // (The bucket itself is linked via STORJ_PUBLIC_LINK_BASE.)
-      ACL: 'public-read',
     }),
   );
   const url = publicUrl(key);
@@ -119,9 +116,19 @@ export async function checkBucket(): Promise<boolean> {
   }
 }
 
-/** Permanent public URL for an object key (browser-ready, no API hop). */
+/**
+ * Permanent public URL for an object key (browser-ready, no API hop).
+ * Uses /raw/ so the browser receives the actual file bytes, not an HTML page.
+ * (Storj link /s/ = HTML viewer, /raw/ = raw file content)
+ */
 export function publicUrl(key: string): string {
-  if (PUBLIC_LINK_BASE) return `${PUBLIC_LINK_BASE}/${key}`;
+  if (PUBLIC_LINK_BASE) {
+    // Normalize: /s/ → /raw/ (the /s/ shape returns an HTML viewer page)
+    const normalized = PUBLIC_LINK_BASE.includes('/s/')
+      ? PUBLIC_LINK_BASE.replace(/\/s\//, '/raw/')
+      : PUBLIC_LINK_BASE;
+    return `${normalized}/${key}`;
+  }
   // Fallback: gateway path-style URL.
   return `${ENDPOINT}/${BUCKET}/${key}`;
 }
