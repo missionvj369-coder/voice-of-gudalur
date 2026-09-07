@@ -7,6 +7,7 @@ import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal"
 import { ThirukuralSection } from "../components/ThirukuralSection";
 import { buildVerifiedSignatureReceipt } from "../utils/grievanceReceipt";
 import ShareSocialModal from "../components/ShareSocial/ShareSocialModal";
+import MediaGallery from "../components/ShareSocial/MediaGallery";
 import MediaViewer from "../components/ShareSocial/MediaViewer";
 import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2, ImageIcon, Video, Sparkles, Hash } from "lucide-react";
 import toast from "react-hot-toast";
@@ -37,6 +38,7 @@ export const SignPetitionPage: React.FC = () => {
   const [showRegister, setShowRegister] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
   const [viewingMedia, setViewingMedia] = useState<MediaItem | null>(null);
   const [total, setTotal] = useState<number | null>(null);
   const [places, setPlaces] = useState<PlaceCount[]>([]);
@@ -510,12 +512,7 @@ export const SignPetitionPage: React.FC = () => {
             <h2 className="text-sm font-black text-[#1B5E20] flex items-center gap-2">
               <Sparkles size={15} className="text-emerald-600" /> {t("home.support_title")}
             </h2>
-            <button
-              onClick={() => setShowShareModal(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:opacity-90 transition"
-            >
-              <Share2 size={13} /> {t("home.share_all")}
-            </button>
+            
           </div>
           <p className="text-xs text-slate-600 leading-relaxed">
             {t("home.share_sub")}
@@ -536,18 +533,21 @@ export const SignPetitionPage: React.FC = () => {
                   });
                   setShowShareModal(true);
                 }}
-                className="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 {m.kind === 'poster' ? (
-                  <img src={m.url} alt={m.title} loading="lazy" className="w-full h-32 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
+                  /* 4:5 poster — object-contain keeps the full image + headline visible */
+                  <div className="w-full aspect-[4/5] bg-slate-100 overflow-hidden">
+                    <img src={m.url} alt={m.title} loading="lazy" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
+                  </div>
                 ) : (
-                  <video src={m.url} className="w-full h-32 sm:h-40 object-cover" muted playsInline preload="metadata" />
+                  <video src={m.url} className="w-full aspect-video object-cover" muted playsInline preload="metadata" />
                 )}
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pt-8 pb-2">
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pt-7 pb-1.5">
                   <p className="text-[11px] font-bold text-white truncate">{m.title}</p>
                   {m.description && <p className="text-[10px] text-slate-300 line-clamp-1">{m.description}</p>}
                 </div>
-                                <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                <div className="absolute top-2 right-2 flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -568,8 +568,35 @@ export const SignPetitionPage: React.FC = () => {
               </button>
             ))}
           </div>
+          {mediaItems.length > 9 && (
+            <button
+              type="button"
+              onClick={() => setShowGallery(true)}
+              className="w-full py-2.5 rounded-xl border border-emerald-200 text-emerald-700 font-bold text-xs hover:bg-emerald-50 transition flex items-center justify-center gap-1.5"
+            >
+              <ImageIcon size={14} /> {t("home.see_all")} ({mediaItems.length})
+            </button>
+          )}
         </div>
       )}
+
+      {/* Media Gallery (full view) */}
+      <MediaGallery
+        isOpen={showGallery}
+        onClose={() => setShowGallery(false)}
+        media={mediaItems}
+        onShare={(item) => {
+          setShareActive({
+            id: item.id,
+            title: item.title,
+            description: item.description || '',
+            imageUrl: item.kind === 'poster' ? item.url : undefined,
+            videoUrl: item.kind === 'video' ? item.url : undefined,
+            createdAt: item.createdAt,
+          });
+          setShowShareModal(true);
+        }}
+      />
 
       {/* Thirukural Section */}
       <ThirukuralSection />

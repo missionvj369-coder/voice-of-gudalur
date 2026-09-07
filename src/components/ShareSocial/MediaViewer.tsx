@@ -18,10 +18,11 @@ export interface MediaItem {
   id: string;
   kind: 'poster' | 'video';
   title: string;
-  description?: string | null;
+  description: string | null;
   url: string;
-  mime?: string | null;
+  mime: string | null;
   createdAt: string;
+  sizeBytes: number | null;
 }
 
 interface MediaViewerProps {

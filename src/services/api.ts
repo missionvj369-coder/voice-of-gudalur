@@ -400,7 +400,7 @@ export interface MediaItem {
   kind: 'poster' | 'video';
   title: string;
   description: string | null;
-  url: string;            // binary URL: /api/media/:id/file
+  url: string;            // direct media URL (Storj) or /api/media/:id/file fallback
   mime: string | null;
   sizeBytes: number | null;
   createdAt: string;
@@ -411,10 +411,9 @@ export const mediaApi = {
   list: async (): Promise<MediaItem[]> => {
     // Do NOT swallow errors silently anymore — that's how the 502 from the
     // Netlify response-size cap turned into "published: 0". Surface it.
-    const r = await request<{ media: Array<Omit<MediaItem, 'url'>> }>('/api/media');
+    const r = await request<{ media: Array<MediaItem> }>('/api/media');
     return (r.media || []).map((m) => ({
       ...m,
-      url: `/api/media/${encodeURIComponent(m.id)}/file`,
       // CockroachDB's pgwire returns INT columns as strings — normalize.
       sizeBytes: m.sizeBytes != null ? Number(m.sizeBytes) : null,
     }));
