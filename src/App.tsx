@@ -5,7 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider, useLanguage, type Language } from './context/LanguageContext';
 import { Shell } from './components/Layout/Shell';
-import { OpeningAnimation } from './components/OpeningAnimation';
+import OpeningAnimation from './components/OpeningAnimation';
 import { LanguageGate } from './components/LanguageGate';
 
 // Route-level code splitting — every page downloads only when first visited.

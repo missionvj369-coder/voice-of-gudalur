@@ -535,6 +535,132 @@ function drawKural(ctx: CanvasRenderingContext2D, w: number, h: number, adv: num
   ctx.fillStyle = '#a7f3d0';
   ctx.font = '13px system-ui';
   ctx.fillText(KURAL_MEAN, w / 2, h * 0.49);
-  ctx.globalAlpha = 1;
+    ctx.globalAlpha = 1;
   ctx.restore();
+}
+
+/* ── Main component ─────────────────────────────────────────────────── */
+
+export interface OpeningAnimationProps {
+  onFinish: () => void;
+}
+
+export default function OpeningAnimation({ onFinish }: OpeningAnimationProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [size, setSize] = useState({ w: 1, h: 1 });
+    const rafRef = useRef<number>(0);
+  const startRef = useRef<number>(0);
+  const endFiredRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    function handleResize() {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const w = canvas.offsetWidth;
+      const h = canvas.offsetHeight;
+      setSize({ w, h });
+    }
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = false;
+
+    const W = size.w;
+    const H = size.h;
+    if (W < 2) return;
+
+    const mobile = isMobile();
+    const particles = createParticles(W, H, mobile ? 20 : 48);
+    const clouds = makeClouds(W, H);
+
+    const drawFrame = (now: number) => {
+            const start = startRef.current || now;
+      startRef.current = start;
+      const t = (now - start) / 1000;
+            const dt = (t - (window as any)._lastT) || 0;
+      (window as any)._lastT = t;
+
+      canvas.width = W;
+      canvas.height = H;
+
+      ctx.clearRect(0, 0, W, H);
+
+      let phase = 0;
+      if (t >= T.impact) phase = 1;
+      if (t >= T.failureEnd) phase = 2;
+      if (t >= T.rebootEnd) phase = 3;
+      if (t >= T.lanesEnd) phase = 4;
+      if (t >= T.brandStart) phase = 5;
+      if (t >= T.kuralStart) phase = 6;
+
+      // Fade out during final phase
+      const fadeOut = t > T.end - 1.8 ? Math.min(1, (T.end - t) / 1.8) : 1;
+
+      // Phase 1: sky + converge
+      drawSky(ctx, W, H, t, phase);
+      if (phase >= 1) {
+        const shockK = clamp01((t - T.impact) / 0.5);
+        drawShockwave(ctx, W, H, shockK);
+        const glitchK = clamp01((t - (T.impact + 0.3)) / 0.35);
+        if (phase < 2) drawGlitch(ctx, W, H, glitchK);
+      }
+      if (phase >= 2) {
+        drawFailureCard(ctx, W, H, clamp01((t - T.failureEnd + 0.2) / 0.6));
+      }
+      if (phase >= 3) {
+        drawReboot(ctx, W, H, clamp01((t - T.rebootEnd) / 1.0));
+      }
+      if (phase >= 3) {
+        const adv2 = clamp01((t - T.rebootEnd - 0.3) / 1.0);
+        phase2(ctx, W, H, t, adv2, !mobile);
+      }
+      if (phase >= 5) {
+        const bk = clamp01((t - T.brandStart) / 0.8);
+        drawBrand(ctx, W, H, bk);
+      }
+      if (phase >= 6) {
+        const kvk = clamp01((t - T.kuralStart) / 0.8);
+        drawKural(ctx, W, H, kvk);
+      }
+
+      // Particles above sky, below everything else
+      updateParticles(particles, dt || 0.016, W, H);
+      const pAlpha = phase < 1 ? t * 0.5 : phase >= 2 ? (1 - clamp01((t - T.failureEnd) / 0.4)) : 1;
+      drawParticles(ctx, particles, pAlpha * fadeOut, !mobile);
+
+      if (fadeOut < 0.05 && !endFiredRef.current) {
+        endFiredRef.current = true;
+        setTimeout(onFinish, 120);
+      }
+
+      rafRef.current = requestAnimationFrame(drawFrame);
+    };
+
+    rafRef.current = requestAnimationFrame((ts) => {
+      startRef.current = ts;
+      drawFrame(ts);
+    });
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [size, onFinish]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50"
+      style={{
+        background: `linear-gradient(180deg, ${G.deep} 0%, ${G.dark} 100%)`,
+      }}
+    >
+      <canvas ref={canvasRef} className="h-full w-full"></canvas>
+    </div>
+  );
 }
