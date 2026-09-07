@@ -5,7 +5,7 @@ import type { Language } from '../context/LanguageContext';
 
 /**
  * LanguageGate — full-screen first-visit language picker shown BEFORE the app
- * front page (and before the opening animation). Four languages are offered in
+ * front page. Four languages are offered in
  * their own native script so every visitor can read their choice; picking one
  * stores it and the whole app opens in that language. Shown only once — the
  * choice persists in localStorage (VoiceOfGudalur_lang + _lang_chosen).

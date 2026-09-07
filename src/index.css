@@ -51,9 +51,8 @@ body::before {
 
 /* EYE-COMFORT VEIL — like phone "eye protection" mode: a faint warm amber
    sheet softens glare over every reading surface without changing the theme.
-   Sits above normal content (z-40) but below modals (z-50), the menu (z-60)
-   and the opening animation (z-100); pointer-events none, so it never blocks
-   a single tap. */
+   Sits above normal content (z-40) but below modals (z-50) and the menu (z-60);
+   pointer-events none, so it never blocks a single tap. */
 body::after {
   content: '';
   position: fixed;

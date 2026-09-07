@@ -1,5 +1,5 @@
 ﻿import React, { createContext, useContext, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { useLanguage, type Language } from '../../context/LanguageContext';
 import { useAuth, readLocalSignature } from '../../context/AuthContext';
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { OPEN_REGISTER_EVENT, OPEN_LOGIN_EVENT } from '../../pages/about_helpers';
 import { GudalurIdModal } from '../GudalurIdModal';
+import AIPresenter from '../AIPresenter/AIPresenter';
 
 import { LoginResidentModal } from '../Auth/LoginResidentModal';
 import { RegisterResidentModal } from '../Auth/RegisterResidentModal';
@@ -55,6 +56,8 @@ const DrawerLink: React.FC<{
 export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { lang, setLang, t } = useLanguage();
   const { profile, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [idModalOpen, setIdModalOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
@@ -64,6 +67,23 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     try { return readLocalSignature().signed; } catch { return false; }
   })();
   const [readyQueue, setReadyQueue] = useState<{ id: number; fn: () => void }[]>([]);
+
+  // Living-intelligence guide: current route as a human page key.
+  const currentPage = location.pathname === '/'
+    ? 'sign-petition'
+    : location.pathname.replace(/^\//, '').replace(/\/$/, '');
+
+  // Assistant quick-chips -> real app actions (navigate / open modals).
+  const handleAiAction = (action: string) => {
+    switch (action) {
+      case 'register': openIdModal(); break;          // opens register when no profile
+      case 'sign':
+      case 'share': navigate('/'); break;             // petition + posters live on home
+      case 'sightings': navigate('/sightings'); break;
+      case 'about': navigate('/about'); break;
+      default: break;
+    }
+  };
 
   const openIdModal = () => {
     if (profile?.gudalurId) setIdModalOpen(true);
@@ -323,7 +343,18 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         </AnimatePresence>
 
         <GudalurIdModal isOpen={idModalOpen} onClose={() => setIdModalOpen(false)} />
-        <LoginResidentModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onNeedRegister={() => { setLoginModalOpen(false); setRegisterModalOpen(true); }} />
+                <LoginResidentModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onNeedRegister={() => { setLoginModalOpen(false); setRegisterModalOpen(true); }} />
+
+        {/* Living-intelligence AI guide - global, every page, signed-in or not */}
+        <AIPresenter
+          language={lang}
+          currentPage={currentPage}
+          isRegistered={!!profile}
+          hasSigned={supportRecorded}
+          hasShared={false}
+          profile={profile}
+          onAction={handleAiAction}
+        />
         <RegisterResidentModal isOpen={registerModalOpen} onClose={() => setRegisterModalOpen(false)} onSuccess={() => { setRegisterModalOpen(false); }} onNeedLogin={() => { setRegisterModalOpen(false); setLoginModalOpen(true); }} />
       </div>
     </IdModalContext.Provider>

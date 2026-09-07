@@ -9,7 +9,6 @@ import { buildVerifiedSignatureReceipt } from "../utils/grievanceReceipt";
 import ShareSocialModal from "../components/ShareSocial/ShareSocialModal";
 import MediaGallery from "../components/ShareSocial/MediaGallery";
 import MediaViewer from "../components/ShareSocial/MediaViewer";
-import AIPresenter from "../components/AIPresenter/AIPresenter";
 import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2, ImageIcon, Video, Sparkles, Hash } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -644,21 +643,10 @@ export const SignPetitionPage: React.FC = () => {
         }}
       />
 
-      <RegisterResidentModal
+            <RegisterResidentModal
         isOpen={showRegister}
         onClose={() => setShowRegister(false)}
         onRegistered={() => { setShowRegister(false); handleRegistered(); }}
-      />
-
-      {/* AI Presenter — floating voice guide (lazy, zero perf impact) */}
-      <AIPresenter
-        language={lang}
-        currentPage={showGallery ? "media-gallery" : "sign-petition"}
-        isRegistered={!!profile}
-        hasSigned={!!result}
-        hasShared={false}
-        totalSignatures={total ?? 0}
-        mediaCount={mediaItems.length}
       />
     </div>
   );
