@@ -71,18 +71,27 @@ router.get('/', async (_req: Request, res: Response) => {
       `SELECT id, kind, title, description, mime, size_bytes, file_url, created_at
        FROM media_posts WHERE active = TRUE ORDER BY created_at DESC`,
     );
-    res.json({
-      media: rows.rows.map((r) => ({
-        id: r.id,
-        kind: r.kind,
-        title: r.title,
-        description: r.description,
-        mime: r.mime,
-        sizeBytes: r.size_bytes,
-        url: r.file_url || `/api/media/${encodeURIComponent(r.id)}/file`,
-        createdAt: r.created_at,
-      })),
-    });
+    // For Storj-hosted items, generate a fresh presigned URL (the public link
+    // grant is often misconfigured → 401, but presigned URLs always work).
+    const media: Array<Record<string, unknown>> = [];
+    for (const r of rows.rows) {
+      let url: string;
+      if (r.file_url && storj.isStorjConfigured()) {
+        try {
+          const key = storj.urlToKey(r.file_url);
+          url = await storj.presignGet(key);
+        } catch {
+          url = r.file_url; // fall back to stored URL
+        }
+      } else {
+        url = r.file_url || `/api/media/${encodeURIComponent(r.id)}/file`;
+      }
+      media.push({
+        id: r.id, kind: r.kind, title: r.title, description: r.description,
+        mime: r.mime, sizeBytes: r.size_bytes, url, createdAt: r.created_at,
+      });
+    }
+    res.json({ media });
   } catch (e: any) {
     logger.error('media list:', e.message);
     res.status(500).json({ error: 'Failed to load media' });
@@ -99,17 +108,22 @@ router.get('/:id/file', async (req: Request, res: Response) => {
     );
     if (!row) return res.status(404).json({ error: 'Media not found' });
 
-    // Storj-hosted: redirect the browser to the permanent public URL. Media
-    // never transits the API this way, so there is no 6 MB cap and no DB load.
-    if (row.file_url) {
-      return res.redirect(302, row.file_url);
+    // Storj-hosted: redirect to a fresh presigned URL (reliable, no 401).
+    if (row.file_url && storj.isStorjConfigured()) {
+      try {
+        const key = storj.urlToKey(row.file_url);
+        const signed = await storj.presignGet(key);
+        return res.redirect(302, signed);
+      } catch (e: any) {
+        logger.warn(`media file presign failed for ${req.params.id}: ${e?.message}`);
+        // fall through to legacy handling
+      }
     }
 
     // Legacy DB-hosted (base64 data URL) — stream it directly.
     if (row.data_url) {
       const parsed = parseDataUrl(row.data_url);
       if (!parsed) return res.status(404).json({ error: 'Media payload unavailable' });
-
       res.setHeader('Content-Type', parsed.mime || row.mime || 'application/octet-stream');
       res.setHeader('Cache-Control', 'public, max-age=3600');
       res.setHeader('X-Content-Type-Options', 'nosniff');
