@@ -5,7 +5,6 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider, useLanguage, type Language } from './context/LanguageContext';
 import { Shell } from './components/Layout/Shell';
-import OpeningAnimation from './components/OpeningAnimation';
 import { LanguageGate } from './components/LanguageGate';
 
 // Route-level code splitting — every page downloads only when first visited.
@@ -55,20 +54,14 @@ const AppContent: React.FC = () => {
     setLang(lang);
     setLangChosen(true);
   };
-  // The opening animation plays on EVERY visit — every fresh load of the site
-  // (new tab, new session, coming back later) starts with the animation.
-  // Only users who prefer reduced motion skip it. Login state is unaffected:
-  // the session/profile is restored underneath while the animation plays.
-  const [introDone, setIntroDone] = useState<boolean>(() => {
+  // WCAG 2.3.3 — honor the user's motion preference for page transitions.
+  const [prefersReducedMotion] = useState<boolean>(() => {
     try {
       return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     } catch {
-      return true;
+      return false;
     }
   });
-
-  // WCAG 23.3 — honor the user's motion preference for page transitions too.
-  const prefersReducedMotion = introDone;
 
   // Every navigation starts at the top of the page (no mid-page open; no
   // sticky scroll between routes). 100% of sessions start at the top.
@@ -90,7 +83,6 @@ const AppContent: React.FC = () => {
 
   return (
     <>
-      {!introDone && <OpeningAnimation onFinish={() => setIntroDone(true)} />}
       <Shell>
         {/* Elegant low-latency page transitions — a light fade + lift that
             never blocks content (LCP-safe: the page paints on frame one). */}
