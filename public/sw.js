@@ -3,7 +3,7 @@
  * Handles push notifications, notification clicks, and offline fallback.
  * ───────────────────────────────────────────────────────── */
 
-const CACHE_NAME = 'voice-of-gudalur-v1';
+const CACHE_NAME = 'voice-of-gudalur-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Install: pre-cache offline fallback
