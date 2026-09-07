@@ -394,7 +394,7 @@ YOUR MANTRA (end every reply with a variation of):
       const msgs: BrainMsg[] = [
         { role: 'system', content: buildSystemPrompt(langName, live, context) },
         ...(Array.isArray(history) ? history.slice(-6) : []),
-        { role: 'user', content: message || '__GREET__' },
+        { role: 'user', content: message || 'hello' },
       ];
       const reply = await callLlm(msgs);
       if (!reply) throw new Error('Empty LLM response');

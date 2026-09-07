@@ -69,7 +69,7 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
     let text = '';
     let action: string | undefined;
     try {
-      const brain = await brainSpeak('__GREET__', language, buildCtx(), historyRef.current);
+      const brain = await brainSpeak('', language, buildCtx(), historyRef.current);
       if (brain) {
         text = brain.text;
         action = brain.action;
