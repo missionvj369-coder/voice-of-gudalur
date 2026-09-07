@@ -32,14 +32,18 @@ export function useVoice({ lang, onTranscript }: UseVoiceOptions) {
 
   // Speak text in the selected language
   const speak = useCallback(
-    (text: string) => {
-      if (!supported.tts) return;
+    async (text: string) => {
+      if (!supported.tts || !text.trim()) return;
       try {
         window.speechSynthesis.cancel(); // stop any ongoing speech
         const utter = new SpeechSynthesisUtterance(text);
         utter.lang = lang;
         utter.rate = 0.95;
         utter.pitch = 1.0;
+        // Explicitly pick a voice for the language — without this, browsers
+        // with no Tamil/Malayalam/Kannada voice silently use the English default.
+        const voice = await pickVoice(lang);
+        if (voice) utter.voice = voice;
         utter.onstart = () => setIsSpeaking(true);
         utter.onend = () => setIsSpeaking(false);
         utter.onerror = () => setIsSpeaking(false);
@@ -103,4 +107,35 @@ export function langToSpeechTag(lang: string): string {
     kn: 'kn-IN',
   };
   return map[lang] || 'en-IN';
+}
+
+/**
+ * Pick the best installed TTS voice for a BCP-47 tag (e.g. 'ta-IN').
+ * Setting utter.voice is what actually forces the correct language —
+ * utter.lang alone silently falls back to the default (English) voice
+ * on systems with no Tamil/MalKannada voice installed.
+ */
+let cachedVoices: SpeechSynthesisVoice[] | null = null;
+function loadVoices(): Promise<SpeechSynthesisVoice[]> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) { resolve([]); return; }
+    const existing = window.speechSynthesis.getVoices();
+    if (existing.length) { cachedVoices = existing; resolve(existing); return; }
+    const onVoices = () => {
+      cachedVoices = window.speechSynthesis.getVoices();
+      window.speechSynthesis.removeEventListener('voiceschanged', onVoices);
+      resolve(cachedVoices);
+    };
+    window.speechSynthesis.addEventListener('voiceschanged', onVoices);
+    // Fallback in case the event never fires
+    setTimeout(() => { if (!cachedVoices) { cachedVoices = window.speechSynthesis.getVoices(); resolve(cachedVoices); } }, 1000);
+  });
+}
+async function pickVoice(langTag: string): Promise<SpeechSynthesisVoice | null> {
+  const voices = cachedVoices ?? (await loadVoices());
+  if (!voices.length) return null;
+  const prefix = langTag.split('-')[0].toLowerCase();
+  return voices.find((v) => v.lang.toLowerCase() === langTag.toLowerCase())
+    ?? voices.find((v) => v.lang.toLowerCase().startsWith(prefix))
+    ?? null;
 }

@@ -7,8 +7,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AIAvatar } from './AIAvatar';
 import { useVoice, langToSpeechTag } from '../../hooks/useVoice';
-import { getGuidance, answerQuestion, type PresenterContext } from '../../services/aiPresenter';
+import { getGuidance, answerQuestion, brainSpeak, type PresenterContext } from '../../services/aiPresenter';
 import type { Language } from '../../context/LanguageContext';
+
+type ChatMsg = { role: 'user' | 'assistant'; content: string };
+const msg = (role: 'user' | 'assistant', content: string): ChatMsg => ({ role, content });
 
 const LIVE_LABEL: Record<Language, string> = {
   en: 'LIVE', ta: 'நேரலை', ml: 'ലൈവ്', kn: 'ಲೈವ್',
@@ -44,6 +47,7 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
   const [inputText, setInputText] = useState('');
   const [showInput, setShowInput] = useState(false);
   const greetedRef = useRef(false);
+  const historyRef = useRef<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
   const langTag = langToSpeechTag(language);
 
   const { speak, stopSpeaking, startListening, stopListening, isSpeaking, isListening, supported } = useVoice({
@@ -58,11 +62,23 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
 
   const speakGuidance = useCallback(async () => {
     setBusy(true);
+    let text = '';
+    let action: string | undefined;
     try {
-      const response = await getGuidance(buildCtx());
-      setMessage(response.text);
-      speak(response.text);
-      if (response.action && onAction) onAction(response.action);
+      const brain = await brainSpeak('__GREET__', language, buildCtx(), historyRef.current);
+      if (brain) {
+        text = brain.text;
+        action = brain.action;
+        historyRef.current = [...historyRef.current, msg('assistant', text)].slice(-8);
+      } else {
+        const response = await getGuidance(buildCtx());
+        text = response.text;
+        action = response.action;
+        historyRef.current = [...historyRef.current, msg('assistant', text)].slice(-8);
+      }
+      setMessage(text);
+      speak(text);
+      if (action && onAction) onAction(action);
     } catch { /* silent */ } finally { setBusy(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buildCtx, speak, onAction]);
@@ -80,11 +96,20 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
   const handleQuestion = useCallback(async (question: string) => {
     if (!question.trim()) return;
     stopListening();
+    const q = question.trim();
+    historyRef.current = [...historyRef.current, msg('user', q)].slice(-8);
     setBusy(true);
+    let text = '';
     try {
-      const answer = await answerQuestion(question, language, buildCtx());
-      setMessage(answer);
-      speak(answer);
+      const brain = await brainSpeak(q, language, buildCtx(), historyRef.current);
+      if (brain) {
+        text = brain.text;
+      } else {
+        text = await answerQuestion(q, language, buildCtx());
+      }
+      historyRef.current = [...historyRef.current, msg('assistant', text)].slice(-8);
+      setMessage(text);
+      speak(text);
     } catch { /* silent */ } finally { setBusy(false); }
   }, [language, buildCtx, speak, stopListening]);
 

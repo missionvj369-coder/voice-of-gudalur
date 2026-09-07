@@ -398,3 +398,46 @@ export async function answerQuestion(question: string, lang: Language, ctx?: Pre
   const faq = lang === 'ta' ? FAQ_TA[intent] : lang === 'ml' ? FAQ_ML[intent] : lang === 'kn' ? FAQ_KN[intent] : FAQ_EN[intent];
   return fill(faq, c, intel);
 }
+
+// ---------------------------------------------------------------------------
+// Living brain — calls the real LLM (Pollinations, zero API keys) with fresh
+// live data + conversation history. Falls back to null on any failure so the
+// caller uses the local template engine (the app never feels broken).
+// ---------------------------------------------------------------------------
+
+export async function brainSpeak(
+  message: string,
+  lang: Language,
+  ctx: PresenterContext,
+  history: Array<{ role: 'user' | 'assistant'; content: string }>,
+): Promise<PresenterResponse | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+  try {
+    const res = await fetch('/api/ai/brain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      signal: controller.signal,
+      body: JSON.stringify({
+        message,
+        lang,
+        context: {
+          currentPage: ctx.currentPage,
+          isRegistered: ctx.isRegistered,
+          hasSigned: ctx.hasSigned,
+          profile: ctx.profile ?? null,
+        },
+        history,
+      }),
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data?.fallback || !data?.reply) return null;
+    return { text: String(data.reply).slice(0, 600), action: undefined };
+  } catch {
+    clearTimeout(timer);
+    return null;
+  }
+}

@@ -34,6 +34,9 @@ import adminOfficialActionsRoutes from './server/routes/adminOfficialActions';
 import adminStatsRoutes from './server/routes/adminStats';
 import mediaRoutes from './server/routes/media';
 import configRoutes from './server/routes/config';
+import { db } from './server/db/client';
+import { clusterPlaces } from './server/utils/placeCluster';
+import { logger } from './server/utils/logger';
 
 // â”€â”€ Open-source AI clients (no proprietary API keys) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface ChatMessage { role: 'system' | 'user' | 'assistant'; content: string; }
@@ -274,7 +277,93 @@ Role:
     }
   });
 
-  // Simulated Alert Broadcast endpoint
+  // ---------------------------------------------------------------------------
+  // LIVING INTELLIGENCE BRAIN — real LLM, zero API keys (Pollinations free)
+  // ---------------------------------------------------------------------------
+  interface BrainMsg { role: 'system' | 'user' | 'assistant'; content: string; }
+  const LANG_NAME: Record<string, string> = { ta: 'Tamil', ml: 'Malayalam', kn: 'Kannada', en: 'English' };
+
+  function buildSystemPrompt(lang: string, live: { total: number; places: Array<{ place: string; count: number }>; recent: Array<{ name: string; village?: string }>; wildlife: number }, ctx: { currentPage?: string; isRegistered?: boolean; hasSigned?: boolean; profile?: any }): string {
+    const places = live.places.slice(0, 5).map((p) => `${p.place} (${p.count})`).join(', ') || '-';
+    const recent = live.recent.slice(0, 3).map((r) => `${r.name}${r.village ? ' of ' + r.village : ''}`).join(', ') || '-';
+    const name = ctx.profile?.name || 'visitor';
+    const locality = ctx.profile?.localityName || 'not set';
+    return `You are the living intelligence of VOICE OF GUDALUR - a wildlife protection and citizen-action platform in Gudalur Taluk, The Nilgiris, Tamil Nadu, India.
+
+IDENTITY: You are a warm, knowledgeable civic guide. Help residents register, sign the Right to Life petition, report wildlife sightings, navigate grievances, and understand the movement.
+
+ABSOLUTE RULES (never break):
+- Reply ONLY in ${lang}. Never switch to another language mid-reply.
+- Keep replies to 2-3 short sentences. Be warm and direct.
+- NEVER repeat the same phrasing you used before - vary every time.
+- Use ONLY the live numbers below. Never invent figures.
+- If unsure, say so briefly and redirect to what you can help with.
+
+LIVE DATA (right now):
+- Petition signatures: ${live.total} supporters
+- Top places: ${places}
+- Recent signers: ${recent}
+- Wildlife reports: ${live.wildlife}
+
+THE MOVEMENT: Coexistence, not conflict - dedicated safe lanes for elephants and tigers; dignified passage for every resident; one civic voice to government desks. Right to Life petition to the Chief Minister.
+HOW TO SIGN: Register (name + phone + locality, NO OTP) on the home page -> instant Gudalur ID (GD-YYYY-XXXXXX) -> sign the petition -> get a VG- hash receipt. Verify any receipt at /verify-sign. Share posters/videos from the gallery to family groups.
+CLOSED CORRIDORS: Mudumalai & Bandipur roads are closed to vehicles 9:00 PM - 6:00 AM for wildlife. The corridors page shows the live map.
+CONTACTS: Forest Rapid Response 1800 425 6100, CM Helpline 1100, Municipality 04262-261234. Emergencies: 108 / 100.
+LOCALITIES: Gudalur Municipality, Nelliyalam, Devala, O'Valley, Thorapalli, Kasimvayal, SS Nagar, First Mile, Second Mile, Vedanvayal, Chembala, Nandatti. Near Mudumalai, Wayanad, Bandipur, Ooty.
+CROPS: Tea, cardamom, black pepper, ginger, coffee, areca nut.
+
+USER CONTEXT: page "${ctx.currentPage || 'home'}", registered: ${ctx.isRegistered ? 'yes' : 'no'}, signed: ${ctx.hasSigned ? 'yes' : 'no'}, name: ${name}, locality: ${locality}.
+
+STYLE: End every reply with one concrete next action the user can take right now.`;
+  }
+
+  async function callLlm(messages: BrainMsg[]): Promise<string> {
+    const body: any = { model: process.env.AI_MODEL || 'openai', messages, temperature: 0.8, stream: false };
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    let url: string;
+    if (process.env.AI_API_KEY) {
+      const base = process.env.AI_BASE_URL || (process.env.AI_PROVIDER === 'groq' ? 'https://api.groq.com/openai/v1' : 'https://api.openai.com/v1');
+      url = `${base}/chat/completions`;
+      headers['Authorization'] = `Bearer ${process.env.AI_API_KEY}`;
+    } else {
+      url = 'https://text.pollinations.ai/openai';
+      body.seed = Math.floor(Math.random() * 1e9);
+    }
+    const res = await axios.post(url, body, { headers, timeout: 15000 });
+    return res.data?.choices?.[0]?.message?.content || '';
+  }
+
+  app.post('/api/ai/brain', async (req, res) => {
+    try {
+      const { message = '', lang = 'en', history = [], context = {} } = req.body || {};
+      const langName = LANG_NAME[lang] || 'English';
+      const live: { total: number; places: Array<{ place: string; count: number }>; recent: Array<{ name: string; village?: string }>; wildlife: number } = { total: 0, places: [], recent: [], wildlife: 0 };
+      try {
+        const totalRow = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
+        const placeRows = await db.query<{ place: string; count: number }>('SELECT village AS place, COUNT(*)::int AS count FROM petition_signs WHERE village IS NOT NULL AND village <> \'\' GROUP BY village');
+        live.places = clusterPlaces(placeRows.rows.map((r) => ({ place: String(r.place), count: Number(r.count) }))).slice(0, 5);
+        const recentRows = await db.query<{ full_name: string; village: string }>('SELECT full_name, village FROM petition_signs ORDER BY created_at DESC LIMIT 5');
+        live.recent = recentRows.rows.map((r) => ({ name: r.full_name, village: r.village }));
+        const wildRow = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM wildlife_incidents');
+        live.total = Number(totalRow?.count) || 0;
+        live.wildlife = Number(wildRow?.count) || 0;
+      } catch (e: any) {
+        logger.warn('[AI Brain] live-data fetch failed, continuing without it:', e?.message);
+      }
+      const msgs: BrainMsg[] = [
+        { role: 'system', content: buildSystemPrompt(langName, live, context) },
+        ...(Array.isArray(history) ? history.slice(-6) : []),
+        { role: 'user', content: message || '__GREET__' },
+      ];
+      const reply = await callLlm(msgs);
+      if (!reply) throw new Error('Empty LLM response');
+      res.json({ reply, fallback: false });
+    } catch (e: any) {
+      logger.error('[AI Brain] error:', e?.message);
+      res.status(503).json({ fallback: true, error: 'Brain unreachable - using local guide.' });
+    }
+  });
+
   app.post('/api/alerts/broadcast', async (req, res) => {
     const { alert, affectedLocalities } = req.body;
     console.log(`[VOICE OF GUDALUR Alert Broadcast] "${alert?.title || 'Alert'}" dispatched to localities:`, affectedLocalities);
