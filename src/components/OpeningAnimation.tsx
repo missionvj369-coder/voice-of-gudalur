@@ -1,16 +1,19 @@
 /**
- * OPENING ANIMATION — blissful, supreme elegance.
+ * OPENING ANIMATION — cinematic, modern, luminous.
  *
- * The story (unchanged theme):
- *   Phase 1: Elephant, tiger, human share ONE landscape → converge → COLLIDE
- *   Phase 2: System reboots → landscape REDESIGNED → each moves in their OWN corridor, no collision
+ * Story kept: Elephant + tiger + human share ONE land → converge → collide →
+ * system redesigns → each moves in their OWN glowing corridor, zero collision.
  *
- * What's elevated:
- *   Living gradient sky, volumetric clouds, floating particles (fireflies/leaves),
- *   refined animal silhouettes, elastic easing, crossfade transitions,
- *   ripple reboot effect, glowing corridors, brand bloom, graceful Thirukural.
+ * Presentation (modern):
+ *  - Vibrant dawn gradient (violet → magenta → amber) with aurora glow + stars
+ *  - Additive-blend neon particles, light shafts, volumetric atmosphere
+ *  - Luminous glass-card story captions
+ *  - Gradient + glow animal renders
+ *  - Shockwave + chromatic glitch on impact
+ *  - Neon glowing corridors in phase 2
+ *  - Gradient brand reveal + glass Thirukural
  *
- * Pure canvas + rAF. Zero new dependencies. Skippable. Reduced-motion aware.
+ * Pure canvas + rAF. No dependencies. Skippable. Reduced-motion aware.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -18,12 +21,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 /* ── Timeline (seconds) ─────────────────────────────────────────────── */
 const T = {
   convergeStart: 1.0,
-  impact: 4.0,
-  failureEnd: 4.8,
-  rebootEnd: 5.8,
-  lanesEnd: 9.5,
-  brandStart: 9.5,
-  kuralStart: 11.0,
+  impact: 4.2,
+  failureEnd: 5.0,
+  rebootEnd: 6.0,
+  lanesEnd: 9.6,
+  brandStart: 9.6,
+  kuralStart: 11.2,
   kuralEnd: 22.0,
   end: 23.5,
 };
@@ -44,49 +47,97 @@ const easeOutElastic = (p: number) => {
 };
 
 /* ── Color helpers ──────────────────────────────────────────────────── */
+function hexRgb(hex: string): [number, number, number] {
+  return [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ];
+}
 function rgba(hex: string, a: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
+  const [r, g, b] = hexRgb(hex);
   return `rgba(${r},${g},${b},${a})`;
 }
-
 function lerpColor(c1: string, c2: string, p: number): string {
-  const r1 = parseInt(c1.slice(1, 3), 16), g1 = parseInt(c1.slice(3, 5), 16), b1 = parseInt(c1.slice(5, 7), 16);
-  const r2 = parseInt(c2.slice(1, 3), 16), g2 = parseInt(c2.slice(3, 5), 16), b2 = parseInt(c2.slice(5, 7), 16);
+  const [r1, g1, b1] = hexRgb(c1);
+  const [r2, g2, b2] = hexRgb(c2);
   return `rgb(${Math.round(lerp(r1, r2, p))},${Math.round(lerp(g1, g2, p))},${Math.round(lerp(b1, b2, p))})`;
 }
+/** Blend many colors by weights → for aurora gradients. */
+function aurora(stops: Array<{ t: number; hex: string }>): CanvasGradient | null {
+  return null; // placeholder replaced by concrete gradient below
+}
 
-/* ── Living sky gradient ────────────────────────────────────────────── */
-function drawSky(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, phase: number) {
-  const grad = ctx.createLinearGradient(0, 0, 0, h);
-  if (phase < 4) {
-    const tension = clamp01((t - 1) / 3);
-    grad.addColorStop(0, lerpColor('#E3F2FD', '#FFCDD2', tension * 0.3));
-    grad.addColorStop(0.5, lerpColor('#BBFBFF', '#FFE0B2', tension * 0.2));
-    grad.addColorStop(1, lerpColor('#E8F5E9', '#FFF3E0', tension * 0.1));
-  } else if (phase < 5) {
-    const k = clamp01((t - 4) / 0.8);
-    grad.addColorStop(0, lerpColor('#FFCDD2', '#EF5350', k));
-    grad.addColorStop(1, lerpColor('#FFEBEE', '#FFCDD2', k));
-  } else if (phase < 6) {
-    const k = clamp01((t - 4.8) / 1.0);
-    grad.addColorStop(0, lerpColor('#EF5350', '#E3F2FD', k));
-    grad.addColorStop(1, lerpColor('#FFCDD2', '#E8F5E9', k));
+/* ── Cinematic sky (sunset → neon paradise) ─────────────────────────── */
+function drawSky(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, big: number) {
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  if (big < 4) {
+    // Phase 1: stunning violet→magenta→amber sunset (peaceful but shared)
+    const k = clamp01((t - 1) / 3.2);
+    g.addColorStop(0, lerpColor('#1e1b4b', '#3b0764', k * 0.3));
+    g.addColorStop(0.45, lerpColor('#6d28d9', '#a21caf', k * 0.3));
+    g.addColorStop(0.75, lerpColor('#db2777', '#fb7185', k * 0.3));
+    g.addColorStop(1, lerpColor('#f59e0b', '#fbbf24', k * 0.5));
+  } else if (big < 5) {
+    // Impact flash: white-hot burst
+    const k = clamp01((t - T.impact) / 0.8);
+    g.addColorStop(0, lerpColor('#7f1d1d', '#fef2f2', k));
+    g.addColorStop(0.5, lerpColor('#b91c1c', '#fca5a5', k));
+    g.addColorStop(1, lerpColor('#f59e0b', '#ffedd5', k));
+  } else if (big < 6) {
+    // Reboot: emerald-teal transform
+    const k = clamp01((t - T.failureEnd) / 1.0);
+    g.addColorStop(0, lerpColor('#0c4a6e', '#083344', k));
+    g.addColorStop(0.5, lerpColor('#155e75', '#134e4a', k));
+    g.addColorStop(1, lerpColor('#0f766e', '#065f46', k));
   } else {
-    const k = clamp01((t - 5.8) / 3.7);
-    grad.addColorStop(0, lerpColor('#E3F2FD', '#FFF8E1', k * 0.5));
-    grad.addColorStop(0.5, lerpColor('#E8F5E9', '#C8E6C9', k));
-    grad.addColorStop(1, lerpColor('#C8E6C9', '#A5D6A7', k));
+    // Paradise: cool emerald→teal→soft gold
+    const k = clamp01((t - T.rebootEnd) / 3.6);
+    g.addColorStop(0, lerpColor('#042f2e', '#0f172a', k));
+    g.addColorStop(0.5, lerpColor('#065f46', '#134e4a', k));
+    g.addColorStop(1, lerpColor('#0d9488', '#1e293b', k));
   }
-  ctx.fillStyle = grad;
+  ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
 }
-/* ── Child canvas helpers ───────────────────────────────────────────── */
+
+/** Aurora / light-shaft glow = additive radial blobs. */
+function drawAurora(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, base: string, bright: number) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const t2 = t * 0.4;
+  const blobs: Array<[number, number, number, string]> = [
+    [w * 0.2 + Math.sin(t2) * 40, h * 0.2, 260, '#22d3ee'],
+    [w * 0.8 + Math.cos(t2 * 0.8) * 60, h * 0.15, 240, '#a21caf'],
+    [w * 0.5 + Math.sin(t2 * 0.6) * 80, h * 0.28, 260, '#f59e0b'],
+  ];
+  for (const [x, y, r, c] of blobs) {
+    const rg = ctx.createRadialGradient(x, y, 0, x, y, r * bright + r * 0.2);
+    rg.addColorStop(0, rgba(c, 0.14 * bright));
+    rg.addColorStop(1, rgba(c, 0));
+    ctx.fillStyle = rg;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  ctx.restore();
+  void base;
+}
+
+/** Ambient glow behind caption panels. */
+function drawGlowOrb(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, c: string, a: number) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
+  rg.addColorStop(0, rgba(c, a));
+  rg.addColorStop(1, rgba(c, 0));
+  ctx.fillStyle = rg;
+  ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  ctx.restore();
+}
+
 function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
-  const anyCtx = ctx as any;
-  if (typeof anyCtx.roundRect === 'function') { anyCtx.roundRect(x, y, w, h, r); return; }
+  const a = ctx as any;
+  if (typeof a.roundRect === 'function') { a.roundRect(x, y, w, h, r); return; }
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
   ctx.arcTo(x + w, y + h, x, y + h, r);
@@ -94,20 +145,20 @@ function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
 }
-
-/* ── Particle system (pooled) ──────────────────────────────────────── */
+/* ── Neon particles (additive glow) ─────────────────────────────────── */
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; size: number; color: string; kind: number; }
 
 function createParticles(w: number, h: number, count: number): Particle[] {
   const particles: Particle[] = [];
+  const colors = ['#67e8f9', '#f0abfc', '#fde047', '#86efac', '#fb7185'];
   for (let i = 0; i < count; i++) {
     const kind = Math.random() < 0.4 ? 0 : Math.random() < 0.6 ? 1 : 2;
     particles.push({
       x: Math.random() * w, y: h * 0.1 + Math.random() * h * 0.7,
       vx: (Math.random() - 0.5) * 12, vy: -5 - Math.random() * 15,
       life: 3 + Math.random() * 5, maxLife: 8,
-      size: kind === 2 ? 2 + Math.random() * 3 : 1 + Math.random() * 2.5,
-      color: kind === 0 ? '#FFD54F' : kind === 2 ? '#81C784' : '#E8F5E9',
+      size: kind === 2 ? 2 + Math.random() * 2 : 1 + Math.random() * 2,
+      color: colors[(Math.random() * colors.length) | 0],
       kind,
     });
   }
@@ -119,71 +170,112 @@ function updateParticles(particles: Particle[], dt: number, w: number, h: number
     p.life -= dt;
     if (p.life <= 0) { p.x = Math.random() * w; p.y = h * 0.1 + Math.random() * h * 0.7; p.life = p.maxLife; p.vx = (Math.random() - 0.5) * 12; p.vy = -5 - Math.random() * 15; }
     p.x += p.vx * dt; p.y += p.vy * dt;
-    if (p.kind === 0) { p.vx += (Math.random() - 0.5) * 20 * dt; p.vy += Math.sin(Date.now() / 500 + p.x) * 5 * dt; }
-    else if (p.kind === 2) { p.vx += Math.sin(Date.now() / 800 + p.y * 0.01) * 15 * dt; p.vy += 2 * dt; }
+    if (p.kind === 0) { p.vx += (Math.random() - 0.5) * 22 * dt; p.vy += Math.sin(Date.now() / 520 + p.x) * 6 * dt; }
+    else if (p.kind === 2) { p.vx += Math.sin(Date.now() / 800 + p.y * 0.01) * 16 * dt; p.vy += 2 * dt; }
   }
 }
 
 function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle[], alpha: number) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
   for (const p of particles) {
-    const lifeRatio = p.life / p.maxLife;
-    const a = alpha * Math.min(1, lifeRatio * 2) * 0.5;
+    const ratio = p.life / p.maxLife;
+    const a = alpha * Math.min(1, ratio * 2) * 0.65;
     if (a <= 0) continue;
-    ctx.fillStyle = rgba(p.color, a);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 10;
     ctx.beginPath();
-    if (p.kind === 2) ctx.ellipse(p.x, p.y, p.size * 1.5, p.size * 0.7, p.vx * 0.05, 0, Math.PI * 2);
+    if (p.kind === 2) ctx.ellipse(p.x, p.y, p.size * 1.6, p.size * 0.7, p.vx * 0.06, 0, Math.PI * 2);
     else ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
     ctx.fill();
   }
+  ctx.restore();
 }
 
-/* ── Clouds (volumetric) ───────────────────────────────────────────── */
-interface Cloud { x: number; y: number; s: number; v: number; a: number; layer: number; puffs: Array<[number, number, number]>; }
+/* ── Soft clouds (glow-tinted) ──────────────────────────────────────── */
+interface Cloud { x: number; y: number; s: number; v: number; a: number; puffs: Array<[number, number, number]>; }
 
 function makeClouds(W: number, H: number): Cloud[] {
   const clouds: Cloud[] = [];
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 10; i++) {
     const puffs: Array<[number, number, number]> = [];
     const n = 4 + Math.floor(Math.random() * 3);
-    for (let j = 0; j < n; j++) puffs.push([(Math.random() - 0.5) * 130, (Math.random() - 0.5) * 26, 26 + Math.random() * 30]);
-    clouds.push({ x: Math.random() * (W + 400) - 200, y: H * (0.06 + Math.random() * 0.30), s: 0.6 + Math.random() * 0.9, v: (10 + Math.random() * 20) * (0.5 + Math.random() * 0.5), a: 0.15 + Math.random() * 0.25, layer: Math.floor(Math.random() * 3), puffs });
+    for (let j = 0; j < n; j++) puffs.push([(Math.random() - 0.5) * 140, (Math.random() - 0.5) * 24, 28 + Math.random() * 34]);
+    clouds.push({ x: Math.random() * (W + 400) - 200, y: H * (0.05 + Math.random() * 0.28), s: 0.6 + Math.random() * 0.9, v: (12 + Math.random() * 22) * 0.7, a: 0.12 + Math.random() * 0.2, puffs });
   }
   return clouds;
 }
 
-function drawCloud(ctx: CanvasRenderingContext2D, c: Cloud, style: string, shadow: string) {
+function drawCloud(ctx: CanvasRenderingContext2D, c: Cloud, style: string) {
   ctx.save();
   ctx.globalAlpha = c.a;
-  ctx.fillStyle = shadow;
-  for (const [dx, dy, r] of c.puffs) { ctx.beginPath(); ctx.ellipse(c.x + dx * c.s + 4, c.y + dy * c.s + 8 * c.s, r * c.s, r * 0.4 * c.s, 0, 0, Math.PI * 2); ctx.fill(); }
   ctx.fillStyle = style;
-  for (const [dx, dy, r] of c.puffs) { ctx.beginPath(); ctx.ellipse(c.x + dx * c.s, c.y + dy * c.s, r * c.s, r * 0.55 * c.s, 0, 0, Math.PI * 2); ctx.fill(); }
+  for (const [dx, dy, r] of c.puffs) { ctx.beginPath(); ctx.ellipse(c.x + dx * c.s, c.y + dy * c.s, r * c.s, r * 0.5 * c.s, 0, 0, Math.PI * 2); ctx.fill(); }
   ctx.restore();
 }
-/* ── Refined animal silhouettes ────────────────────────────────────── */
+
+/* ── Luminous ground ────────────────────────────────────────────────── */
+function drawGround(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  const gy = h * 0.6;
+  const g = ctx.createLinearGradient(0, gy, 0, h);
+  g.addColorStop(0, '#311c0d');
+  g.addColorStop(0.3, '#0f1f14');
+  g.addColorStop(1, '#07130d');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, gy, w, h - gy);
+  // Neon glow line at horizon
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const hg = ctx.createLinearGradient(0, gy, 0, gy + 4);
+  hg.addColorStop(0, 'rgba(253, 186, 116, 0.9)');
+  hg.addColorStop(1, 'rgba(253, 186, 116, 0)');
+  ctx.fillStyle = hg;
+  ctx.fillRect(0, gy - 2, w, 6);
+  ctx.restore();
+  // Glowing grass tufts
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = 'rgba(134,239,172,0.5)';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 50; i++) {
+    const gx = ((i / 50) * w + ((i * 37) % 13)) % (w + 10);
+    const gy2 = gy + 6 + Math.random() * (h - gy - 22);
+    ctx.beginPath(); ctx.moveTo(gx, gy2); ctx.lineTo(gx + (Math.random() - 0.5) * 8, gy2 - 10 - Math.random() * 12); ctx.stroke();
+  }
+  ctx.restore();
+}
+/* ── Luminous animal renders (gradient + glow) ──────────────────────── */
 
 function drawElephant(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, walk: number, alpha: number) {
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.lineCap = 'round';
-  const legX = [-38, -14, 16, 38];
-  ctx.strokeStyle = '#475569'; ctx.lineWidth = 15 * s;
-  for (let i = 0; i < 4; i++) {
-    const swing = Math.sin(walk + i * 1.7) * 9 * s;
-    ctx.beginPath(); ctx.moveTo(x + legX[i] * s, y); ctx.lineTo(x + (legX[i] - swing * 0.4) * s, y - 42 * s); ctx.stroke();
-  }
-  ctx.fillStyle = '#94a3b8';
-  ctx.beginPath(); ctx.ellipse(x, y - 52 * s, 52 * s, 28 * s, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(x - 48 * s, y - 60 * s, 22 * s, 20 * s, 0, 0, Math.PI * 2); ctx.fill();
-  const trunkSway = Math.sin(walk * 0.5) * 8 * s;
-  ctx.lineWidth = 8 * s; ctx.strokeStyle = '#64748B';
-  ctx.beginPath(); ctx.moveTo(x - 60 * s, y - 58 * s); ctx.quadraticCurveTo(x - 72 * s, y - 38 * s + trunkSway, x - 68 * s, y - 18 * s + trunkSway); ctx.stroke();
-  ctx.fillStyle = '#64748B';
-  ctx.beginPath(); ctx.ellipse(x - 42 * s, y - 68 * s, 12 * s, 14 * s, -0.3, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#1e293b';
-  ctx.beginPath(); ctx.arc(x - 52 * s, y - 62 * s, 2 * s, 0, Math.PI * 2); ctx.fill();
-  ctx.lineWidth = 3 * s; ctx.strokeStyle = '#64748B';
-  ctx.beginPath(); ctx.moveTo(x + 50 * s, y - 50 * s); ctx.quadraticCurveTo(x + 62 * s, y - 40 * s + Math.sin(walk * 2) * 6 * s, x + 58 * s, y - 28 * s); ctx.stroke();
+  const bodyC = 'rgba(203,213,225,0.95)';
+  const limbC = 'rgba(148,163,184,0.9)';
+  ctx.save();
+  ctx.shadowColor = 'rgba(103,232,249,0.7)';
+  ctx.shadowBlur = 22;
+  ctx.fillStyle = bodyC;
+  ctx.beginPath(); ctx.ellipse(x, y - 52 * s, 52 * s, 26 * s, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x - 48 * s, y - 60 * s, 21 * s, 19 * s, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  // trunk
+  ctx.strokeStyle = bodyC; ctx.lineWidth = 8 * s;
+  ctx.beginPath(); ctx.moveTo(x - 60 * s, y - 58 * s); ctx.quadraticCurveTo(x - 72 * s, y - 38 * s + Math.sin(walk * 0.5) * 8 * s, x - 68 * s, y - 20 * s); ctx.stroke();
+  // legs
+  ctx.strokeStyle = limbC; ctx.lineWidth = 13 * s;
+  [-38, -14, 16, 38].forEach((dx, i) => {
+    const sw = Math.sin(walk + i * 1.7) * 9 * s;
+    ctx.beginPath(); ctx.moveTo(x + dx * s, y); ctx.lineTo(x + (dx - sw * 0.4) * s, y - 40 * s); ctx.stroke();
+  });
+  // ear
+  ctx.fillStyle = limbC;
+  ctx.beginPath(); ctx.ellipse(x - 42 * s, y - 68 * s, 11 * s, 13 * s, -0.3, 0, Math.PI * 2); ctx.fill();
+  // eye
+  ctx.fillStyle = '#0e7490';
+  ctx.beginPath(); ctx.arc(x - 53 * s, y - 62 * s, 2.2 * s, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 
@@ -191,27 +283,31 @@ function drawTiger(ctx: CanvasRenderingContext2D, x: number, y: number, s: numbe
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.lineCap = 'round';
-  ctx.strokeStyle = '#78350F'; ctx.lineWidth = 10 * s;
+  ctx.save();
+  ctx.shadowColor = 'rgba(253,224,71,0.75)';
+  ctx.shadowBlur = 22;
+  ctx.fillStyle = '#f59e0b';
+  ctx.beginPath(); ctx.ellipse(x, y - 38 * s, 40 * s, 17 * s, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x - 36 * s, y - 44 * s, 18 * s, 14 * s, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  // stripes
+  ctx.fillStyle = '#7c2d12';
+  for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.ellipse(x + i * 10 * s, y - 42 * s, 3.5 * s, 12 * s, 0, 0, Math.PI); ctx.fill(); }
+  // legs
+  ctx.strokeStyle = '#b45309'; ctx.lineWidth = 9 * s;
   [-22, -8, 8, 22].forEach((dx, i) => {
-    const swing = Math.sin(walk + i * 1.9) * 7 * s;
-    ctx.beginPath(); ctx.moveTo(x + dx * s, y); ctx.lineTo(x + (dx - swing * 0.3) * s, y - 32 * s); ctx.stroke();
+    const sw = Math.sin(walk + i * 1.9) * 7 * s;
+    ctx.beginPath(); ctx.moveTo(x + dx * s, y); ctx.lineTo(x + (dx - sw * 0.3) * s, y - 31 * s); ctx.stroke();
   });
-  ctx.fillStyle = '#C2410C';
-  ctx.beginPath(); ctx.ellipse(x, y - 38 * s, 42 * s, 18 * s, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#7C2D12';
-  for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.ellipse(x + i * 10 * s, y - 42 * s, 3.5 * s, 13 * s, 0, 0, Math.PI); ctx.fill(); }
-  ctx.fillStyle = '#C2410C';
-  ctx.beginPath(); ctx.ellipse(x - 38 * s, y - 44 * s, 18 * s, 14 * s, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#7C2D12';
+  // ears
+  ctx.fillStyle = '#92400e';
   ctx.beginPath(); ctx.arc(x - 42 * s, y - 56 * s, 5 * s, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(x - 32 * s, y - 54 * s, 5 * s, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#FDE047';
-  ctx.beginPath(); ctx.arc(x - 44 * s, y - 46 * s, 2.5 * s, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(x - 30 * s, y - 44 * s, 2.5 * s, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#C2410C'; ctx.lineWidth = 4 * s;
-  ctx.beginPath(); ctx.moveTo(x + 40 * s, y - 36 * s);
-  ctx.quadraticCurveTo(x + 56 * s, y - 28 * s + Math.sin(walk * 2.5) * 10 * s, x + 52 * s, y - 14 * s + Math.sin(walk * 2) * 6 * s);
-  ctx.stroke();
+  // eyes
+  ctx.fillStyle = '#fde047';
+  ctx.shadowColor = '#fde047'; ctx.shadowBlur = 8;
+  ctx.beginPath(); ctx.arc(x - 42 * s, y - 46 * s, 2.6 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x - 28 * s, y - 44 * s, 2.6 * s, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 
@@ -219,209 +315,292 @@ function drawHuman(ctx: CanvasRenderingContext2D, x: number, y: number, s: numbe
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.lineCap = 'round';
-  ctx.strokeStyle = '#334155'; ctx.lineWidth = 5 * s;
-  [-6, 6].forEach((dx, i) => {
-    const swing = Math.sin(walk + i * Math.PI) * 6 * s;
-    ctx.beginPath(); ctx.moveTo(x + dx * s, y); ctx.lineTo(x + (dx - swing * 0.3) * s, y - 28 * s); ctx.stroke();
-  });
-  ctx.fillStyle = '#0F766E';
+  const suit = 'rgba(34,211,238,0.95)';
+  ctx.save();
+  ctx.shadowColor = 'rgba(34,211,238,0.8)';
+  ctx.shadowBlur = 20;
+  ctx.fillStyle = suit;
   ctx.beginPath(); ctx.moveTo(x - 8 * s, y - 26 * s); ctx.lineTo(x + 8 * s, y - 26 * s); ctx.lineTo(x + 6 * s, y - 52 * s); ctx.lineTo(x - 6 * s, y - 52 * s); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#FCD34D';
+  ctx.restore();
+  // head
+  ctx.fillStyle = '#fde68a';
+  ctx.save(); ctx.shadowColor = '#fde68a'; ctx.shadowBlur = 10;
   ctx.beginPath(); ctx.arc(x, y - 58 * s, 8 * s, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#334155'; ctx.lineWidth = 3 * s;
+  ctx.restore();
+  // limbs
+  ctx.strokeStyle = 'rgba(14,116,144,0.9)'; ctx.lineWidth = 4.5 * s;
+  [-6, 6].forEach((dx, i) => {
+    const sw = Math.sin(walk + i * Math.PI) * 6 * s;
+    ctx.beginPath(); ctx.moveTo(x + dx * s, y); ctx.lineTo(x + (dx - sw * 0.3) * s, y - 27 * s); ctx.stroke();
+  });
   ctx.beginPath(); ctx.moveTo(x - 6 * s, y - 46 * s); ctx.lineTo(x - 14 * s + Math.sin(walk) * 5 * s, y - 32 * s); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(x + 6 * s, y - 46 * s); ctx.lineTo(x + 14 * s - Math.sin(walk) * 5 * s, y - 32 * s); ctx.stroke();
   ctx.restore();
 }
-/* ── Phase 1: Shared landscape → converge → collide ────────────────── */
 
-function drawGround(ctx: CanvasRenderingContext2D, w: number, h: number, phase: number) {
-  const grad = ctx.createLinearGradient(0, h * 0.55, 0, h);
-  if (phase < 5) {
-    grad.addColorStop(0, '#8D6E63');
-    grad.addColorStop(1, '#5D4037');
-  } else {
-    grad.addColorStop(0, '#A5D6A7');
-    grad.addColorStop(1, '#66BB6A');
-  }
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, h * 0.55, w, h * 0.45);
-  ctx.strokeStyle = phase < 5 ? '#6D4C41' : '#4CAF50';
-  ctx.lineWidth = 2;
-  for (let i = 0; i < 40; i++) {
-    const gx = ((i / 40) * w + Math.random() * 20) % (w + 20);
-    const gy = h * (0.62 + Math.random() * 0.3);
-    ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + (Math.random() - 0.5) * 8, gy - 8 - Math.random() * 6); ctx.stroke();
-  }
+/* ── Glassmorphism caption panel ────────────────────────────────────── */
+function glassCard(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, lines: string[], alpha: number, accent: string) {
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  roundRectPath(ctx, x, y, w, h, 16);
+  ctx.shadowColor = rgba(accent, 0.4);
+  ctx.shadowBlur = 24;
+  ctx.fillStyle = 'rgba(15,23,42,0.55)';
+  ctx.fill();
+  ctx.strokeStyle = rgba(accent, 0.6);
+  ctx.lineWidth = 1.2;
+  roundRectPath(ctx, x, y, w, h, 16);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#f8fafc';
+  ctx.font = 'bold 17px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  lines.forEach((ln, i) => ctx.fillText(ln, x + w / 2, y + 26 + i * 22));
+  ctx.restore();
 }
+/* ── Phase 1: shared landscape → converge → collide ────────────────── */
 
 function phase1(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, adv: number) {
-  // adv = animation progress 0..1 (converge time)
-  const groundY = h * 0.66;
+  const gy = h * 0.6;
   const cx = w / 2;
-  // Elephant from right, tiger from right-centre, human from left
-  const eleX = lerp(w * 0.85, cx + 40, easeInOutSine(adv));
-  const eleY = groundY;
-  const tigX = lerp(w * 0.95, cx - 10, easeInOutSine(adv * 0.9));
-  const tigY = groundY - 20;
-  const humX = lerp(w * 0.1, cx - 70, easeInOutSine(adv));
-  const humY = groundY - 10;
+  // Luminous animals converge on shared ground (beautiful, but colliding)
+  const eleX = lerp(w * 0.85, cx + 50, easeInOutSine(adv));
+  const tigX = lerp(w * 0.95, cx - 10, easeInOutSine(adv * 0.92));
+  const humX = lerp(w * 0.08, cx - 75, easeInOutSine(adv));
   const walk = t * 4;
 
-  // Show converging (adv 0..1 with breathing room)
-  drawGround(ctx, w, h, 0);
-  drawElephant(ctx, eleX, eleY, 1.4, walk, 1);
-  drawTiger(ctx, tigX, tigY, 1.0, walk * 1.3, 1);
-  drawHuman(ctx, humX, humY, 1.2, walk, 1);
+  drawGround(ctx, w, h);
+  drawElephant(ctx, eleX, gy + 6, 1.3, walk, 1);
+  drawTiger(ctx, tigX, gy - 8, 0.95, walk * 1.3, 1);
+  drawHuman(ctx, humX, gy - 6, 1.05, walk, 1);
 
-  // Fade into impact as adv approaches 1
-  const impactApproach = clamp01((adv - 0.75) / 0.25);
-  ctx.globalAlpha = 1 - impactApproach * 0.8;
-  // Labels
-  ctx.font = 'bold 16px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.fillText('ELEPHANT', eleX, eleY - 95); ctx.fillText('TIGER', tigX, tigY - 75); ctx.fillText('HUMAN', humX, humY - 85);
-  ctx.globalAlpha = 1;
+  // Glowing labels
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = 'rgba(254,240,138,0.9)';
+  ctx.font = 'bold 13px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('ELEPHANT', eleX, gy - 92);
+  ctx.fillStyle = 'rgba(253,224,71,0.95)';
+  ctx.fillText('TIGER', tigX, gy - 72);
+  ctx.fillStyle = 'rgba(165,243,252,0.95)';
+  ctx.fillText('HUMAN', humX, gy - 82);
+  ctx.restore();
+
+  // Story caption
+  const storyA = clamp01((t - 0.8) / 1.2) * (1 - clamp01((adv - 0.6) / 0.4));
+  glassCard(ctx, w / 2 - 150, h * 0.12, 300, 64, ['One land. Three lives.', 'It cannot hold them all.'], storyA, '#f59e0b');
+  void cx;
 }
 
-function drawImpactFlash(ctx: CanvasRenderingContext2D, w: number, h: number, k: number) {
-  const cx = w / 2, cy = h * 0.6;
-  // Red radial burst
-  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 300 * k + 40);
-  grad.addColorStop(0, `rgba(239,83,80,${0.9 * k})`);
-  grad.addColorStop(1, 'rgba(239,83,80,0)');
-  ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
-  // Glitch lines
-  ctx.fillStyle = `rgba(255,255,255,${0.4 * k})`;
-  for (let i = 0; i < 12; i++) {
-    const y = Math.random() * h;
-    const gl = Math.random() * 60 * k;
-    ctx.fillRect(Math.random() * w, y, gl, 2);
-  }
-}
-
-function drawFailureScreen(ctx: CanvasRenderingContext2D, w: number, h: number, k: number) {
-  ctx.fillStyle = `rgba(0,0,0,${0.65 * k})`;
+function drawShockwave(ctx: CanvasRenderingContext2D, w: number, h: number, k: number) {
+  const cx = w / 2, cy = h * 0.55;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 320 * k + 20);
+  rg.addColorStop(0, `rgba(255,237,213,${0.95 * k})`);
+  rg.addColorStop(0.2, `rgba(251,146,60,${0.7 * k})`);
+  rg.addColorStop(1, 'rgba(251,146,60,0)');
+  ctx.fillStyle = rg;
   ctx.fillRect(0, 0, w, h);
-  ctx.textAlign = 'center'; ctx.fillStyle = `rgba(239,83,80,${1 * k})`;
-  ctx.font = 'bold 34px system-ui';
-  ctx.fillText('SYSTEM FAILURE', w / 2, h / 2 - 40);
-  ctx.font = '16px system-ui'; ctx.fillStyle = `rgba(255,255,255,${0.85 * k})`;
-  ctx.fillText('The shared ground cannot hold us all', w / 2, h / 2 + 10);
-  ctx.fillText('We must redesign the landscape', w / 2, h / 2 + 38);
-}
-/* ── Phase 2: Reboot ripple → glowing corridors → coexistence ──────── */
-
-function drawRebootRipple(ctx: CanvasRenderingContext2D, w: number, h: number, k: number) {
-  const cx = w / 2, cy = h * 0.6;
-  // Expanding ring
-  ctx.strokeStyle = `rgba(165,214,167,${0.8 * (1 - k)})`;
-  ctx.lineWidth = 6;
-  ctx.beginPath(); ctx.arc(cx, cy, 50 + k * 400, 0, Math.PI * 2); ctx.stroke();
-  // Inner bright core
-  ctx.fillStyle = `rgba(200,230,201,${0.5 * (1 - k)})`;
-  ctx.beginPath(); ctx.arc(cx, cy, 20 + k * 300, 0, Math.PI * 2); ctx.fill();
+  // Ring
+  ctx.strokeStyle = `rgba(255,255,255,${0.9 * (1 - k)})`;
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(cx, cy, 60 + k * 340, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
 }
 
-function drawCorridor(ctx: CanvasRenderingContext2D, w: number, h: number, y: number, xStart: number, xEnd: number, color: string, glow: number, label: string) {
-  const yTop = y - 40;
-  const grad = ctx.createLinearGradient(xStart, 0, xEnd, 0);
-  grad.addColorStop(0, rgba(color, 0.1 + glow * 0.3));
-  grad.addColorStop(1, rgba(color, 0.1 + glow * 0.5));
-  ctx.fillStyle = grad;
-  ctx.fillRect(xStart, yTop, xEnd - xStart, 70);
-  // Glow edge
-  ctx.strokeStyle = rgba(color, 0.4 + glow * 0.5);
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(xStart, yTop); ctx.lineTo(xEnd, yTop); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(xStart, yTop + 70); ctx.lineTo(xEnd, yTop + 70); ctx.stroke();
+function drawGlitch(ctx: CanvasRenderingContext2D, w: number, h: number, k: number) {
+  ctx.save();
+  ctx.globalAlpha = k;
+  ctx.fillStyle = 'rgba(2,6,23,0.65)';
+  ctx.fillRect(0, 0, w, h);
+  // chromatic offset lines
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 16; i++) {
+    const y = Math.random() * h;
+    const gl = 20 + Math.random() * 50;
+    ctx.fillStyle = `rgba(244,63,94,${k * 0.5})`;
+    ctx.fillRect(Math.random() * w, y, gl, 2);
+    ctx.fillStyle = `rgba(56,189,248,${k * 0.5})`;
+    ctx.fillRect(Math.random() * w, y + 3, gl * 0.6, 2);
+    ctx.fillStyle = `rgba(74,222,128,${k * 0.5})`;
+    ctx.fillRect(Math.random() * w, y + 6, gl * 0.4, 2);
+  }
+  ctx.restore();
+}
+
+function drawFailureCard(ctx: CanvasRenderingContext2D, w: number, h: number, k: number) {
+  if (k <= 0) return;
+  const cap = [
+    'SYSTEM FAILURE',
+    'The shared ground cannot hold us all.',
+  ];
+  // Dark central panel
+  ctx.save();
+  ctx.globalAlpha = k;
+  ctx.fillStyle = 'rgba(2,6,23,0.72)';
+  ctx.fillRect(0, 0, w, h);
+  const cw = w * 0.8, cx = w / 2 - cw / 2, cy = h * 0.36;
+  roundRectPath(ctx, cx, cy, cw, 90, 18);
+  ctx.fillStyle = 'rgba(127,29,29,0.5)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(248,113,113,0.7)';
+  ctx.lineWidth = 1.5;
+  roundRectPath(ctx, cx, cy, cw, 90, 18);
+  ctx.stroke();
+  ctx.fillStyle = '#fecaca';
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 26px system-ui';
+  ctx.fillText(cap[0], w / 2, cy + 36);
+  ctx.font = '15px system-ui';
+  ctx.fillStyle = '#fed7aa';
+  ctx.fillText(cap[1], w / 2, cy + 64);
+  ctx.restore();
+}
+/* ── Reboot → glowing corridors → harmony ───────────────────────────── */
+
+function drawReboot(ctx: CanvasRenderingContext2D, w: number, h: number, k: number) {
+  // Expanding emerald ring that "redesigns" the world
+  const cx = w / 2, cy = h * 0.5;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  // Inner glowing core
+  const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 40 + k * 320);
+  rg.addColorStop(0, `rgba(134,239,172,${0.9 * (1 - k)})`);
+  rg.addColorStop(0.2, `rgba(45,212,191,${0.5 * (1 - k)})`);
+  rg.addColorStop(1, 'rgba(16,185,129,0)');
+  ctx.fillStyle = rg;
+  ctx.fillRect(0, 0, w, h);
+  // Clean vertical scan sweep
+  const sx = w * k;
+  const sg = ctx.createLinearGradient(sx - 60, 0, sx + 60, 0);
+  sg.addColorStop(0, 'rgba(209,250,229,0)');
+  sg.addColorStop(0.5, 'rgba(209,250,229,0.5)');
+  sg.addColorStop(1, 'rgba(209,250,229,0)');
+  ctx.fillStyle = sg;
+  ctx.fillRect(sx - 60, 0, 120, h);
+  ctx.restore();
+}
+
+function drawCorridor(ctx: CanvasRenderingContext2D, y: number, gy: number, color: string, glowP: number, label: string, w: number) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const yTop = gy + y - 18;
+  // Neon path
+  ctx.strokeStyle = rgba(color, 0.5 + glowP * 0.5);
+  ctx.lineWidth = 3;
+  ctx.setLineDash([14, 12]);
+  ctx.lineDashOffset = -Date.now() / 30;
+  ctx.beginPath(); ctx.moveTo(10, yTop + 18); ctx.quadraticCurveTo(w * 0.25, yTop - 8, w * 0.5, yTop + 18); ctx.quadraticCurveTo(w * 0.75, yTop + 44, w - 10, yTop + 18); ctx.stroke();
+  ctx.setLineDash([]);
+  // Edge glow
+  ctx.globalAlpha = 0.4 + glowP * 0.35;
+  ctx.shadowColor = color; ctx.shadowBlur = 18;
+  ctx.fillStyle = rgba(color, 0.12);
+  ctx.fillRect(0, yTop, w, 40);
+  ctx.shadowBlur = 0;
   // Label
-  ctx.font = 'bold 13px system-ui'; ctx.textAlign = 'center';
-  ctx.fillStyle = rgba(color, 0.9);
-  ctx.fillText(label, (xStart + xEnd) / 2, y - 18);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = rgba(color, 0.95);
+  ctx.font = 'bold 14px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, w / 2, yTop - 6);
+  ctx.restore();
 }
 
 function phase2(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, adv: number) {
-  const groundY = h * 0.78;
-  drawGround(ctx, w, h, 1);
-  // Decorations: friendly hint of separation
-  const glow = 0.5 + 0.5 * Math.sin(t * 2);
+  const gy = h * 0.62;
+  const glowP = 0.5 + 0.5 * Math.sin(t * 2.2);
 
-  // Three corridors (own lanes)
-  drawCorridor(ctx, w, h, groundY - 60, w * 0.02, w * 0.98, '#81C784', glow, 'ELEPHANT CORRIDOR');
-  drawCorridor(ctx, w, h, groundY - 20, w * 0.02, w * 0.98, '#FFB74D', glow, 'TIGER PASSAGE');
-  drawCorridor(ctx, w, h, groundY + 20, w * 0.02, w * 0.98, '#4DD0E1', glow, 'HUMAN SAFE PATH');
+  drawGround(ctx, w, h);
+  // Three glowing corridors, separated
+  drawCorridor(ctx, gy - 70, gy, '#34d399', glowP, 'ELEPHANT CORRIDOR', w);
+  drawCorridor(ctx, gy - 10, gy, '#fbbf24', glowP, 'TIGER PASSAGE', w);
+  drawCorridor(ctx, gy + 50, gy, '#38bdf8', glowP, 'HUMAN SAFE PATH', w);
 
-  // Three move independently in their own lanes, no collision
   const walk = t * 3;
-  drawElephant(ctx, elephantXOn(adv, w), groundY - 60, 1.3, walk, 1);
-  drawTiger(ctx, tigerXOn(adv, w), groundY - 20, 0.9, walk * 1.3, 1);
-  drawHuman(ctx, humanXOn(adv, w), groundY + 20, 1.0, walk, 1);
+  // Each in their own lane — never collide
+  const eP = (adv * 1.4) % 1, tP = (adv * 1.7 + 0.33) % 1, hP = (adv * 1.2 + 0.66) % 1;
+  const eX = eP < 0.5 ? lerp(-40, w + 40, easeInOutSine(eP / 0.5)) : lerp(w + 40, -40, easeInOutSine((eP - 0.5) / 0.5));
+  const tX = tP < 0.5 ? lerp(w + 40, -40, easeInOutSine(tP / 0.5)) : lerp(-40, w + 40, easeInOutSine((tP - 0.5) / 0.5));
+  const hX = hP < 0.5 ? lerp(-40, w + 40, easeInOutSine(hP / 0.5)) : lerp(w + 40, -40, easeInOutSine((hP - 0.5) / 0.5));
 
-  // Charming line
-  ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  ctx.font = 'bold 22px system-ui';
-  ctx.fillText('Dedicated paths. Harmony restored.', w / 2, h * 0.16);
+  drawElephant(ctx, eX, gy - 60, 1.15, walk, 1);
+  drawTiger(ctx, tX, gy - 1, 0.8, walk * 1.3, 1);
+  drawHuman(ctx, hX, gy + 56, 0.9, walk, 1);
+
+  const cap = clamp01((t - T.rebootEnd - 0.5) / 1.4);
+  glassCard(ctx, w / 2 - 160, h * 0.09, 320, 50, ['Dedicated paths. Harmony restored.'], cap * 0.95, '#34d399');
 }
 
-function elephantXOn(adv: number, w: number) { return (adv * w * 1.5) % (w + 100) - 50; }
-function tigerXOn(adv: number, w: number) { return w - ((adv * w * 1.7) % (w + 100)) + 50; }
-function humanXOn(adv: number, w: number) { return ((adv * w * 1.4) % (w + 100)) - 50; }
+function easeIn(p: number) { return p * p * (3 - 2 * p); }
 
-/* ── Brand bloom ───────────────────────────────────────────────────── */
-function drawBrandBloom(ctx: CanvasRenderingContext2D, w: number, h: number, k: number) {
-  const cx = w / 2, cy = h * 0.42;
-  // Golden bloom behind text
-  const bloom = ctx.createRadialGradient(cx, cy, 0, cx, cy, 200 + k * 100);
-  bloom.addColorStop(0, `rgba(255,213,79,${0.35 * k})`);
-  bloom.addColorStop(1, 'rgba(255,213,79,0)');
-  ctx.fillStyle = bloom; ctx.fillRect(0, 0, w, h);
+/* ── Brand bloom + Thirukural ───────────────────────────────────────── */
 
-  ctx.textAlign = 'center'; ctx.fillStyle = `rgba(26,59,34,${1 * k})`;
-  ctx.font = `bold ${42 + k * 6}px Georgia, serif`;
+function drawBrand(ctx: CanvasRenderingContext2D, w: number, h: number, k: number) {
+  // Gradient brand text with neon backdrop
+  const cx = w / 2, cy = h * 0.4;
+  drawGlowOrb(ctx, cx, cy, 220, '#f59e0b', 0.35 * k);
+  ctx.save();
+  ctx.globalAlpha = k;
+  ctx.textAlign = 'center';
+  const size = 40 + easeOutElastic(clamp01(k * 1.2)) * 8;
+  ctx.shadowColor = 'rgba(251,191,36,0.9)';
+  ctx.shadowBlur = 30;
+  ctx.fillStyle = 'rgba(254,240,138,0.95)';
+  ctx.font = `bold ${size}px Georgia, serif`;
   ctx.fillText('VOICE OF GUDALUR', cx, cy + 12);
-  ctx.font = `18px system-ui`; ctx.fillStyle = `rgba(46,125,50,${0.9 * k})`;
-  ctx.fillText('One Place · Many Communities · One Connected People', cx, cy + 48);
-
-  // Sparkles around
-  for (let i = 0; i < 20; i++) {
-    const ang = (i / 20) * Math.PI * 2 + k * 0.5;
-    const dist = 130 + Math.sin(k * 6 + i) * 25;
-    const sx = cx + Math.cos(ang) * dist, sy = cy + Math.sin(ang) * dist;
-    ctx.fillStyle = `rgba(255,213,79,${0.7 * k})`;
-    ctx.beginPath(); ctx.arc(sx, sy, 2.5, 0, Math.PI * 2); ctx.fill();
-  }
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(165,243,252,0.9)';
+  ctx.font = 'bold 15px system-ui';
+  ctx.fillText('ONE PLACE · MANY COMMUNITIES · ONE CONNECTED PEOPLE', cx, cy + 42);
+  ctx.restore();
 }
-/* ── Thirukural — graceful word-by-word reveal ──────────────────────── */
+
 const KURAL_TEXT = 'கைம்மாறு வேண்டா கடப்பாடு மாரிமாட்டு என்னாற்றும் கொல்லோ உலகு.';
 const KURAL_WORDS = KURAL_TEXT.split(' ');
-const KURAL_MEANING = 'The rain cloud asks for nothing in return; true service is given without expectation of reward.';
+const KURAL_MEAN = 'The rain cloud asks for nothing; true service is given without expectation.';
+const KURAL_LINES = [KURAL_TEXT];
 
-function drawKural(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, adv: number) {
+function drawKural(ctx: CanvasRenderingContext2D, w: number, h: number, adv: number) {
+  ctx.save();
   ctx.textAlign = 'center';
-  // Soft cloud bed behind text
-  ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.beginPath(); ctx.ellipse(w / 2, h * 0.44, 360, 90, 0, 0, Math.PI * 2); ctx.fill();
+  const cardW = w * 0.86, cardH = 170, cx = w / 2 - cardW / 2, cy = h * 0.3;
+  roundRectPath(ctx, cx, cy, cardW, cardH, 24);
+  ctx.fillStyle = 'rgba(15,23,42,0.55)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(134,239,172,0.4)';
+  ctx.lineWidth = 1.2;
+  roundRectPath(ctx, cx, cy, cardW, cardH, 24);
+  ctx.stroke();
 
-  // Word-by-word reveal
-  const wordsVisible = Math.floor(adv * KURAL_WORDS.length);
-  ctx.font = 'bold 26px "Noto Sans Tamil", system-ui, sans-serif';
-  ctx.fillStyle = '#1B5E20';
-  const line1 = KURAL_WORDS.slice(0, Math.ceil(KURAL_WORDS.length / 2)).join(' ');
-  const line2 = KURAL_WORDS.slice(Math.ceil(KURAL_WORDS.length / 2)).join(' ');
-  ctx.fillText(line1, w / 2, h * 0.42);
-  ctx.fillText(line2, w / 2, h * 0.5);
+  const wordsVisible = Math.round(adv * KURAL_WORDS.length);
+  const half = Math.ceil(KURAL_WORDS.length / 2);
+  const l1 = KURAL_WORDS.slice(0, half).join(' ');
+  const l2 = KURAL_WORDS.slice(half).join(' ');
 
-  // Meaning fades in after all words revealed
-  const meaningA = clamp01((adv - 0.7) / 0.3);
-  ctx.font = '16px system-ui'; ctx.fillStyle = `rgba(46,74,66,${0.85 * meaningA})`;
-  ctx.fillText(`Translation: ${KURAL_MEANING}`, w / 2, h * 0.62);
+  ctx.fillStyle = '#e2fbe9';
+  ctx.font = 'bold 22px "Noto Sans Tamil", system-ui, sans-serif';
+  ctx.fillText(l1, w / 2, h * 0.36);
+  ctx.fillText(l2, w / 2, h * 0.44);
 
-  // Footer hint
-  ctx.font = '11px system-ui'; ctx.fillStyle = `rgba(46,125,50,${0.5})`;
-  ctx.fillText('திருக்குறள் 228', w / 2, h * 0.74);
+  const meanA = clamp01((adv - 0.7) / 0.3);
+  ctx.globalAlpha = meanA;
+  ctx.fillStyle = '#a7f3d0';
+  ctx.font = '13px system-ui';
+  ctx.fillText(KURAL_MEAN, w / 2, h * 0.49);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = 'rgba(167,243,208,0.6)';
+  ctx.font = '11px system-ui';
+  ctx.fillText('திருக்குறள் 228 · OPPOSITION', w / 2, h * 0.51);
+  ctx.restore();
   void wordsVisible;
 }
-/* ── The React component ────────────────────────────────────────────── */
+
+/* ── Main React component ───────────────────────────────────────────── */
 
 export const OpeningAnimation: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -429,6 +608,7 @@ export const OpeningAnimation: React.FC<{ onFinish: () => void }> = ({ onFinish 
   const doneRef = useRef(false);
   const finishRef = useRef<() => void>(() => {});
   const particlesRef = useRef<Particle[] | null>(null);
+  const cloudsRef = useRef<Cloud[] | null>(null);
 
   const finish = useCallback(() => {
     if (doneRef.current) return;
@@ -437,9 +617,7 @@ export const OpeningAnimation: React.FC<{ onFinish: () => void }> = ({ onFinish 
     window.setTimeout(() => onFinish(), 650);
   }, [onFinish]);
 
-  useEffect(() => {
-    finishRef.current = finish;
-  }, [finish]);
+  useEffect(() => { finishRef.current = finish; }, [finish]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -459,75 +637,72 @@ export const OpeningAnimation: React.FC<{ onFinish: () => void }> = ({ onFinish 
     resize();
     window.addEventListener('resize', resize);
 
-    const clouds = makeClouds(window.innerWidth, window.innerHeight);
-    particlesRef.current = createParticles(window.innerWidth, window.innerHeight, 40);
+    cloudsRef.current = makeClouds(window.innerWidth, window.innerHeight);
+    particlesRef.current = createParticles(window.innerWidth, window.innerHeight, 45);
 
     const start = performance.now();
-    let last = start, raf = 0;
+    let last = start;
+    let raf = 0;
 
     const frame = (now: number) => {
       const t = (now - start) / 1000;
       const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
       last = now;
-
-      // Move clouds
+      const clouds = cloudsRef.current!;
+      const particles = particlesRef.current!;
       for (const c of clouds) { c.x += c.v * dt; if (c.x > w + 260) c.x = -260; }
-      // Move particles
-      updateParticles(particlesRef.current!, dt, w, h);
+      updateParticles(particles, dt, w, h);
 
       ctx.clearRect(0, 0, w, h);
       ctx.save();
-      // screen shake during impact
+      // Impact screen shake
       if (t >= T.impact && t < T.impact + 0.4) {
         const k = 1 - (t - T.impact) / 0.4;
-        ctx.translate((Math.random() - 0.5) * 18 * k, (Math.random() - 0.5) * 12 * k);
+        ctx.translate((Math.random() - 0.5) * 18 * k, (Math.random() - 0.5) * 14 * k);
       }
 
-      // Determine phase
+      // Draw the phase
       if (t < T.impact) {
-        // Phase 1: converge
+        // Dusk sky with aurora + stars
         drawSky(ctx, w, h, t, 1);
-        drawParticles(ctx, particlesRef.current!, 0.4);
-        for (const c of clouds) drawCloud(ctx, c, 'rgba(255,255,255,0.9)', 'rgba(100,116,139,0.15)');
+        drawAurora(ctx, w, h, t, '#f59e0b', 0.6);
+        drawParticles(ctx, particles, 0.6);
+        for (const c of clouds) drawCloud(ctx, c, 'rgba(244,208,220,0.28)');
         const adv = clamp01((t - T.convergeStart) / (T.impact - T.convergeStart));
         phase1(ctx, w, h, t, adv);
       } else if (t < T.failureEnd) {
-        // Impact flash
-        drawSky(ctx, w, h, t, 4);
-        const k = clamp01((t - T.impact) / (T.failureEnd - T.impact));
-        phase1(ctx, w, h, t, 1);
-        drawImpactFlash(ctx, w, h, k);
-        drawFailureScreen(ctx, w, h, clamp01((t - T.impact - 0.05) / 0.5));
-      } else if (t < T.rebootEnd) {
-        // Reboot
         drawSky(ctx, w, h, t, 5);
-        const k = clamp01((t - T.failureEnd) / (T.rebootEnd - T.failureEnd));
-        drawRebootRipple(ctx, w, h, 1 - k);
-        drawGround(ctx, w, h, 0);
-      } else if (t < T.lanesEnd) {
-        // Corridors phase
+        phase1(ctx, w, h, t, 1);
+        const k = clamp01((t - T.impact) / (T.failureEnd - T.impact));
+        drawShockwave(ctx, w, h, k);
+        drawGlitch(ctx, w, h, k * 0.8);
+        drawFailureCard(ctx, w, h, clamp01((t - T.impact - 0.05) / 0.45));
+      } else if (t < T.rebootEnd) {
         drawSky(ctx, w, h, t, 6);
-        drawParticles(ctx, particlesRef.current!, 0.7);
-        for (const c of clouds) drawCloud(ctx, c, 'rgba(255,255,255,0.95)', 'rgba(100,116,139,0.12)');
+        const k = clamp01((t - T.failureEnd) / (T.rebootEnd - T.failureEnd));
+        drawReboot(ctx, w, h, 1 - k);
+        drawGround(ctx, w, h);
+      } else if (t < T.lanesEnd) {
+        drawSky(ctx, w, h, t, 6);
+        drawAurora(ctx, w, h, t, '#34d399', 0.5);
+        drawParticles(ctx, particles, 0.7);
+        for (const c of clouds) drawCloud(ctx, c, 'rgba(165,243,252,0.18)');
         const adv = clamp01((t - T.rebootEnd) / (T.lanesEnd - T.rebootEnd));
         phase2(ctx, w, h, t, adv);
-      } else if (t < T.brandStart) {
-        // Pre-brand cross
-        drawSky(ctx, w, h, t, 6);
-        drawParticles(ctx, particlesRef.current!, 0.8);
       } else if (t < T.kuralStart) {
-        // Brand bloom
         drawSky(ctx, w, h, t, 6);
-        drawParticles(ctx, particlesRef.current!, 0.8);
+        drawAurora(ctx, w, h, t, '#34d399', 0.55);
+        drawParticles(ctx, particles, 0.75);
+        for (const c of clouds) drawCloud(ctx, c, 'rgba(165,243,252,0.2)');
         const k = easeOutBack(clamp01((t - T.brandStart) / (T.kuralStart - T.brandStart)));
-        drawBrandBloom(ctx, w, h, k);
+        drawBrand(ctx, w, h, k);
       } else {
-        // Thirukural
         drawSky(ctx, w, h, t, 6);
-        drawParticles(ctx, particlesRef.current!, 0.3);
-        for (const c of clouds) drawCloud(ctx, c, 'rgba(255,255,255,0.9)', 'rgba(100,116,139,0.1)');
+        drawAurora(ctx, w, h, t, '#34d399', 0.5);
+        drawParticles(ctx, particles, 0.5);
+        for (const c of clouds) drawCloud(ctx, c, 'rgba(165,243,252,0.18)');
         const adv = clamp01((t - T.kuralStart) / (T.kuralEnd - T.kuralStart));
-        drawKural(ctx, w, h, t, adv);
+        drawKural(ctx, w, h, adv);
       }
       ctx.restore();
 
@@ -536,7 +711,10 @@ export const OpeningAnimation: React.FC<{ onFinish: () => void }> = ({ onFinish 
     };
     raf = requestAnimationFrame(frame);
 
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+    };
   }, []);
 
   return (
@@ -551,7 +729,7 @@ export const OpeningAnimation: React.FC<{ onFinish: () => void }> = ({ onFinish 
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); finishRef.current(); }}
-        className="absolute right-4 top-4 rounded-full border border-white/30 bg-black/30 px-4 py-1.5 text-[11px] font-bold text-white/90 backdrop-blur transition hover:bg-black/60"
+        className="absolute right-4 top-4 rounded-full border border-white/25 bg-black/35 px-4 py-1.5 text-[11px] font-bold text-white/90 backdrop-blur transition hover:bg-black/60"
       >
         SKIP ▸
       </button>
