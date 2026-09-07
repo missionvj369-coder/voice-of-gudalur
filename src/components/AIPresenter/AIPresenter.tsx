@@ -7,7 +7,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AIAvatar } from './AIAvatar';
 import { useVoice, langToSpeechTag } from '../../hooks/useVoice';
-import { getGuidance, answerQuestion, brainSpeak, type PresenterContext } from '../../services/aiPresenter';
+import { getGuidance, answerQuestion, brainSpeak, brainIsLive, type PresenterContext } from '../../services/aiPresenter';
 import type { Language } from '../../context/LanguageContext';
 
 type ChatMsg = { role: 'user' | 'assistant'; content: string };
@@ -48,7 +48,11 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
   const [showInput, setShowInput] = useState(false);
   const greetedRef = useRef(false);
   const historyRef = useRef<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
+  const [brainLive, setBrainLive] = useState<boolean | null>(null);
   const langTag = langToSpeechTag(language);
+
+  // Probe the real LLM brain on mount so the user knows if it's live.
+  useEffect(() => { brainIsLive().then(setBrainLive); }, []);
 
   const { speak, stopSpeaking, startListening, stopListening, isSpeaking, isListening, supported } = useVoice({
     lang: langTag,
@@ -142,9 +146,12 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
             </span>
-            <span className="text-[9px] font-black tracking-widest text-emerald-600">
+                        <span className="text-[9px] font-black tracking-widest text-emerald-600">
               {LIVE_LABEL[language] || LIVE_LABEL.en}
             </span>
+            {brainLive !== null && (
+              <span className={`h-1.5 w-1.5 rounded-full ${brainLive ? 'bg-green-500' : 'bg-amber-400'}`} title={brainLive ? 'Live AI brain' : 'Local guide'} />
+            )}
           </div>
           {busy ? (
             <p className="pr-4 text-xs text-slate-400">

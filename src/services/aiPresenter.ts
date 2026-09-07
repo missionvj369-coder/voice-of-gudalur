@@ -412,7 +412,7 @@ export async function brainSpeak(
   history: Array<{ role: 'user' | 'assistant'; content: string }>,
 ): Promise<PresenterResponse | null> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 6000);
+  const timer = setTimeout(() => controller.abort(), 10000);
   try {
     const res = await fetch('/api/ai/brain', {
       method: 'POST',
@@ -435,9 +435,21 @@ export async function brainSpeak(
     if (!res.ok) return null;
     const data = await res.json();
     if (data?.fallback || !data?.reply) return null;
-    return { text: String(data.reply).slice(0, 600), action: undefined };
+    return { text: String(data.reply).slice(0, 800), action: undefined };
   } catch {
     clearTimeout(timer);
     return null;
+  }
+}
+
+// Returns true if the real LLM brain is reachable, false if we're on local templates.
+export async function brainIsLive(): Promise<boolean> {
+  try {
+    const res = await fetch('/api/ai/health', { credentials: 'same-origin' });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data?.brain === 'live';
+  } catch {
+    return false;
   }
 }
