@@ -130,7 +130,7 @@ function buildMediaNotice(lang: Language, posters: number, videos: number): stri
   }[lang] || 'New video just landed — share it to your groups!';
 }
 
-const MEDIA_CLOSE_SECONDS = 9;
+const AUTO_CLOSE_SECONDS = 9;
 
 export const AIPresenter: React.FC<AIPresenterProps> = ({ language }) => {
   const { profile } = useAuth();
@@ -173,7 +173,7 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({ language }) => {
           : buildGreeting(language, live, last),
       );
 
-      // Fresh media since last visit → urgent "share it now" bubble (10s auto-close).
+      // Fresh media since last visit → urgent "share it now" bubble (9s auto-close).
       if (newPosters > 0 || newVideos > 0) {
         setMediaNotice(buildMediaNotice(language, newPosters, newVideos));
       }
@@ -190,10 +190,17 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({ language }) => {
     if (!greetedRef.current) void runGreeting();
   }, [runGreeting]);
 
-  // Media notice auto-closes after 10 seconds.
+  // Every VOG notification auto-closes after 9 seconds.
+  useEffect(() => {
+    if (!message) return;
+    const id = window.setTimeout(() => setMessage(''), AUTO_CLOSE_SECONDS * 1000);
+    return () => window.clearTimeout(id);
+  }, [message]);
+
+  // Media notice auto-closes after 9 seconds.
   useEffect(() => {
     if (!mediaNotice) return;
-    const id = window.setTimeout(() => setMediaNotice(''), MEDIA_CLOSE_SECONDS * 1000);
+    const id = window.setTimeout(() => setMediaNotice(''), AUTO_CLOSE_SECONDS * 1000);
     return () => window.clearTimeout(id);
   }, [mediaNotice]);
 
