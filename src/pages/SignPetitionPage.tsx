@@ -263,34 +263,34 @@ export const SignPetitionPage: React.FC = () => {
           <div className="text-center mb-3"><div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center mb-2">
               <Shield size={24} className="text-white" />
             </div>
-            <h3 className="font-bold text-slate-900">Your Digital Supporter ID</h3>
+            <h3 className="font-bold text-slate-900">{t("home.your_id")}</h3>
           </div>
           <div className="bg-slate-50 rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-3">
               <User size={16} className="text-emerald-600" />
               <div>
-                <p className="text-[10px] text-slate-500 uppercase">Name</p>
+                <p className="text-[10px] text-slate-500 uppercase">{t("home.name_label")}</p>
                 <p className="font-bold text-slate-900">{profile.name}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Shield size={16} className="text-emerald-600" />
               <div>
-                <p className="text-[10px] text-slate-500 uppercase">GDR ID</p>
+                <p className="text-[10px] text-slate-500 uppercase">{t("home.gdr_id")}</p>
                 <p className="font-mono font-bold text-slate-900">{profile.gudalurId}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <MapPin size={16} className="text-emerald-600" />
               <div>
-                <p className="text-[10px] text-slate-500 uppercase">Location</p>
+                <p className="text-[10px] text-slate-500 uppercase">{t("home.location_label")}</p>
                 <p className="font-bold text-slate-900">{profile.customPlaceName || profile.localityName}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Clock size={16} className="text-emerald-600" />
               <div>
-                <p className="text-[10px] text-slate-500 uppercase">Registered</p>
+                <p className="text-[10px] text-slate-500 uppercase">{t("home.registered_label")}</p>
                 <p className="font-bold text-slate-900">{new Date().toLocaleDateString()}</p>
               </div>
             </div>
@@ -319,27 +319,27 @@ export const SignPetitionPage: React.FC = () => {
         <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 p-6 space-y-4">
           <div className="text-center">
             <CheckCircle2 size={48} className="mx-auto text-emerald-600 mb-2" />
-            <h3 className="font-bold text-emerald-900">Petition Signed!</h3>
+            <h3 className="font-bold text-emerald-900">{t("home.petition_signed")}</h3>
           </div>
           <div className="bg-white rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-3">
               <User size={16} className="text-emerald-600" />
               <div>
-                <p className="text-[10px] text-slate-500 uppercase">Signing as</p>
+                <p className="text-[10px] text-slate-500 uppercase">{t("home.signing_as")}</p>
                 <p className="font-bold text-slate-900">{result.name}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Shield size={16} className="text-emerald-600" />
               <div>
-                <p className="text-[10px] text-slate-500 uppercase">GDR ID</p>
+                <p className="text-[10px] text-slate-500 uppercase">{t("home.gdr_id")}</p>
                 <p className="font-mono font-bold text-slate-900">{result.gudalurId}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <MapPin size={16} className="text-emerald-600" />
               <div>
-                <p className="text-[10px] text-slate-500 uppercase">Location</p>
+                <p className="text-[10px] text-slate-500 uppercase">{t("home.location_label")}</p>
                 <p className="font-bold text-slate-900">{result.locality}</p>
               </div>
             </div>
@@ -677,6 +677,7 @@ export const SignPetitionPage: React.FC = () => {
     </div>
   );
 };
+
 
 
 
