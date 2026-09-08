@@ -82,6 +82,7 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
   const chosenLangRef = useRef<Language | null>(null);
   const [liveCount, setLiveCount] = useState<number | null>(null);
   const resolvedRef = useRef(false);
+  const transitionedRef = useRef(false);
   const openedRef = useRef(false);
 
   useEffect(() => {
@@ -162,7 +163,7 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
         ctx.fillText('V O I C E   O F   G U D A L U R', cx(), cy() + 116 * sc());
         ctx.globalAlpha = 1;
       }
-      if (el > dur + 0.45 && phaseRef.current === 'emerge') setPhase('languages');
+      if (el > dur + 0.45 && phaseRef.current === 'emerge' && !transitionedRef.current) { transitionedRef.current = true; setPhase('languages'); }
       rafRef.current = requestAnimationFrame(draw);
     };
     let doneAt = 0;
@@ -192,6 +193,7 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
   const finishIntro = useCallback(() => {
     const code = chosenLangRef.current;
     if (!code || openedRef.current) return;
+    transitionedRef.current = true;
     openedRef.current = true;
     setPhase('done');
     setTimeout(() => onChoose(code), 450);
@@ -199,6 +201,8 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
 
   const handleChoose = useCallback((code: Language) => {
     chosenLangRef.current = code;
+    transitionedRef.current = true;
+    phaseRef.current = 'intro';
     setChosenLang(code);
     setPhase('intro');
   }, []);
@@ -271,3 +275,4 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
 };
 
 export default OpeningAnimation;
+

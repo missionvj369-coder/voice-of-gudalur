@@ -49,12 +49,37 @@ const securityHeaders: Record<string, string> = {
 
 
 
+/**
+ * Writes dist/version.json after every build: `{ buildId, builtAt }`.
+ * main.tsx polls this tiny file (cache-busted) and auto-reloads the moment a
+ * fresh deploy is live — so users NEVER need to manually refresh to get the
+ * current version.
+ */
+import { mkdirSync, writeFileSync } from 'fs';
+const versionMarkerPlugin = (): Plugin => ({
+  name: 'vog-version-marker',
+  closeBundle() {
+    try {
+      const outDir = path.resolve(__dirname, 'dist');
+      mkdirSync(outDir, { recursive: true });
+      writeFileSync(
+        path.join(outDir, 'version.json'),
+        JSON.stringify({ buildId: Date.now().toString(36), builtAt: new Date().toISOString() }),
+        'utf8',
+      );
+    } catch (e: any) {
+      console.warn('[vog-version] failed to write version.json:', e?.message);
+    }
+  },
+});
+
 export default defineConfig(() => {
   return {
     plugins: [
       react(),
       tailwindcss(),
       securityHeadersPlugin(),
+      versionMarkerPlugin(),
       VitePWA({
         registerType: 'autoUpdate',
         // We register the service worker ourselves from main.tsx (virtual:pwa-register)

@@ -1,196 +1,167 @@
-﻿/**
- * AIPresenter - Floating living-intelligence guide, present on every page.
- * Text-first (no voice): greets with live petition numbers, knows the user's
- * state and route, answers real questions in the chosen language.
- * Lazy-mounted, zero performance impact.
- */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AIAvatar } from './AIAvatar';
-import { getGuidance, answerQuestion, brainSpeak, brainIsLive, type PresenterContext } from '../../services/aiPresenter';
+import { petitionApi, mediaApi } from '../../services/api';
 import type { Language } from '../../context/LanguageContext';
 
-type ChatMsg = { role: 'user' | 'assistant'; content: string };
-const msg = (role: 'user' | 'assistant', content: string): ChatMsg => ({ role, content });
-
-const LIVE_LABEL: Record<Language, string> = {
-  en: 'LIVE', ta: 'நேரலை', ml: 'ലൈവ്', kn: 'ಲೈವ್',
-};
-
-const CHIP_LABELS: Record<Language, Record<string, string>> = {
-  en: { register: 'Register', sign: 'Sign petition', share: 'Share poster', sightings: 'Report sighting', about: 'Why movement?' },
-  ta: { register: 'பதிவு', sign: 'மனுவில் சேர', share: 'போஸ்டர் பகிர்', sightings: 'நடமாட்டம் பதிவு', about: 'நமது நோக்கம்?' },
-  ml: { register: 'രജിസ്റ്റർ', sign: 'ഒപ്പുവെക്കൂ', share: 'പോസ്റ്റർ ഷെയർ', sightings: 'സാന്നിധ്യം', about: 'ലക്ഷ്യം?' },
-  kn: { register: 'ನೋಂದಣಿ', sign: 'ಸಹಿ ಹಾಕಿ', share: 'ಪೋಸ್ಟರ್ ಹಂಚಿ', sightings: 'ಸಂಚಾರ ವರದಿ', about: 'ಗುರಿ?' },
-};
-
-const ASK_PLACEHOLDER: Record<Language, string> = {
-  en: 'Ask me...', ta: 'கேளுங்கள்...', ml: 'ചോദിക്കൂ...', kn: 'ಕೇಳಿ...',
-};
-
-interface AIPresenterProps {
-  language: Language;
-  currentPage: string;
-  isRegistered: boolean;
-  hasSigned: boolean;
-  hasShared: boolean;
-  profile?: { name?: string; gudalurId?: string; localityName?: string; pincode?: string } | null;
-  onAction?: (action: string) => void;
-}
-
 /**
- * VOG's first greeting — a confident, living being message.
- * VOG is an intelligent being that is here to solve all problems of Gudalur.
+ * AIPresenter — VOG, the living greeter of Voice of Gudalur.
+ * VOG wakes on every page load, greets in the user's language and speaks the
+ * CURRENT live truth: total signatures, NEW signatures since last visit, NEW
+ * posters/videos since last visit. NO chat/ask/reply UI — greet + report only.
  */
-function getFirstGreeting(lang: Language): string {
-  const greetings: Record<Language, string> = {
-    en: "Namaste! I am VOG — your living intelligent guide. I know every street, every problem, every hope of Gudalur. Together we will solve all problems — elephant corridors, night safety, water, roads, and your voice to the Chief Minister. Register, sign, share — I will guide you every step. Let's do this together!",
-    ta: "வணக்கம்! நான் VOG — உங்கள் உயிர்பெற்ற நுண்ணறிவு வழிகாட்டி. கூடலூரின் ஒவ்வொரு தெருவையும், பிரச்சனையையும், நம்பிக்கையையும் நான் அறிவேன். ஒன்றாக அனைத்து பிரச்சனைகளையும் தீர்ப்போம் — யானை வழித்தடங்கள், இரவுப் பாதுகாப்பு, நீர், சாலைகள், முதலமைச்சருக்கான உங்கள் குரல். பதிவு, கையெழுத்து, பகிர் — ஒவ்வொரு படியும் உங்களுடன் இருப்பேன். வாழ்க நமது கூடலூர்!",
-    ml: "നമസ്കാരം! ഞാൻ VOG — നിങ്ങളുടെ ജീവനുള്ള ബുദ്ധിമാൻ ഗൈഡ്. ഗൂഡല്ലൂറിന്റെ എല്ലാ തെരുവും, പ്രശ്നവും, പ്രതീക്ഷയും എനിക്കറിയാം. ഒന്നിച്ച് എല്ലാ പ്രശ്നങ്ങളും പരിഹരിക്കാം — ആന ഇടനാഴികൾ, രാത്രി സുരക്ഷ, വെള്ളം, റോഡുകൾ, മുഖ്യമന്ത്രിക്കുള്ള നിങ്ങളുടെ ശബ്ദം. രജിസ്റ്റർ, ഒപ്പിടുക, പങ്കിടുക — എല്ലാ ഘട്ടവും നിങ്ങളോടൊപ്പം ഉണ്ടാകും. നമുടെ ഗൂഡല്ലൂർ ജീവിക്കട്ടെ!",
-    kn: "ನಮಸ್ಕಾರ! ನಾನು VOG — ನಿಮ್ಮ ಜೀವಂತ ಬುದ್ಧಿವಂತ ಮಾರ್ಗದರ್ಶಕ. ಗೂಡಲೂರಿನ ಪ್ರತಿ ಬೀದಿ, ಸಮಸ್ಯೆ, ಭರವಸೆಯನ್ನು ನಾನು ತಿಳಿದಿದ್ದೇನೆ. ಒಟ್ಟಿಗೆ ಎಲ್ಲಾ ಸಮಸ್ಯೆಗಳನ್ನು ಪರಿಹರಿಸೋಣ — ಆನೆ ಕಾರಿಡಾರ್‌ಗಳು, ರಾತ್ರಿ ಸುರಕ್ಷತೆ, ನೀರು, ರಸ್ತೆಗಳು, ಮುಖ್ಯಮಂತ್ರಿಗೆ ನಿಮ್ಮ ಧ್ವನಿ. ನೋಂದಣಿ, ಸಹಿ, ಹಂಚಿಕೆ — ಪ್ರತಿ ಹೆಜ್ಜೆಯಲ್ಲೂ ನಿಮ್ಮೊಂದಿಗೆ ಇರುತ್ತೇನೆ. ನಮ್ಮ ಗೂಡಲೂರು ಬದುಕಲಿ!",
-  };
-  return greetings[lang] || greetings.en;
+interface AIPresenterProps { language: Language; }
+
+const LS_KEY = 'vog_last_seen';
+interface LastSeen { signs: number; posters: number; videos: number; at: number; }
+
+function readLastSeen(): LastSeen | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const o = JSON.parse(raw) as Partial<LastSeen>;
+    return typeof o?.signs === 'number'
+      ? { signs: o.signs, posters: Number(o.posters) || 0, videos: Number(o.videos) || 0, at: Number(o.at) || 0 }
+      : null;
+  } catch { return null; }
 }
 
-export const AIPresenter: React.FC<AIPresenterProps> = ({
-  language, currentPage, isRegistered, hasSigned, hasShared, profile, onAction,
-}) => {
+interface LiveStats { total: number; posters: number; videos: number; }
+
+async function fetchLiveStats(): Promise<LiveStats | null> {
+  try {
+    const s = await petitionApi.signStats();
+    const media = await mediaApi.list();
+    return {
+      total: Number(s?.total) || 0,
+      posters: media.filter((m) => m.kind === 'poster').length,
+      videos: media.filter((m) => m.kind === 'video').length,
+    };
+  } catch { return null; }
+}
+
+function buildGreeting(lang: Language, live: LiveStats, last: LastSeen | null): string {
+  const n = (v: number) => Number(v).toLocaleString('en-IN');
+  const isFirst = last === null;
+  const newSigns = last ? Math.max(0, live.total - last.signs) : 0;
+  const newPosters = last ? Math.max(0, live.posters - last.posters) : 0;
+  const newVideos = last ? Math.max(0, live.videos - last.videos) : 0;
+
+  const headline: Record<Language, string> = {
+    en: `Namaste! I am VOG — your living voice of Gudalur. Right now ${n(live.total)} people have signed the Right to Life petition.`,
+    ta: `வணக்கம்! நான் VOG — கூடலூரின் உயிருள்ள குரல். இப்போது ${n(live.total)} பேர் உயிர் வாழ்வுரிமை மனுவில் கையெழுத்திட்டுள்ளனர்.`,
+    ml: `നമസ്കാരം! ഞാൻ VOG — ഗൂഡല്ലൂറിന്റെ ജീവനുള്ള ശബ്ദം. ഇപ്പോൾ ${n(live.total)} പേർ ജീവനവകാശ ഹർജിയിൽ ഒപ്പിട്ടിരിക്കുന്നു.`,
+    kn: `ನಮಸ್ಕಾರ! ನಾನು VOG — ಗೂಡಲೂರಿನ ಜೀವಂತ ಧ್ವನಿ. ಈಗ ${n(live.total)} ಜನರು ಜೀವನದ ಹಕ್ಕಿನ ಮನವಿಯಲ್ಲಿ ಸಹಿ ಹಾಕಿದ್ದಾರೆ.`,
+  };
+
+  const deltaLines: string[] = [];
+  if (!isFirst) {
+    if (newSigns > 0) deltaLines.push({
+      en: `${n(newSigns)} new supporters signed since your last visit.`,
+      ta: `கடந்த முறை வந்ததிலிருந்து ${n(newSigns)} புதிய ஆதரவாளர்கள் கையெழுத்திட்டனர்.`,
+      ml: `കഴിഞ്ഞ സന്ദർശനത്തിക് ശേഷം ${n(newSigns)} പുതിയ പിന്തുണകാർ ഒപ്പിട്ടു.`,
+      kn: `ಕೊನೆಯ ಭೇಟಿಯ ನಂತರ ${n(newSigns)} ಹೊಸ ಬೆಂಬಲಿಗರು ಸಹಿ ಹಾಕಿದ್ದಾರೆ.`,
+    }[lang] || `${newSigns} new supporters signed since your last visit.`);
+    if (newPosters > 0) deltaLines.push({
+      en: `${newPosters} new poster${newPosters === 1 ? '' : 's'} uploaded.`,
+      ta: `${newPosters} புதிய போஸ்டர்கள் பதிவேற்றப்பட்டுள்ளன.`,
+      ml: `${newPosters} പുതിയ പോസ്റ്റർ.`,
+      kn: `${newPosters} ಹೊಸ ಪೋಸ್ಟರ್ಗಳು ಅಪ్‌ಲోಡ್ ಆಗಿವೆ.`,
+    }[lang] || `${newPosters} new posters uploaded.`);
+    if (newVideos > 0) deltaLines.push({
+      en: `${newVideos} new video${newVideos === 1 ? '' : 's'} uploaded.`,
+      ta: `${newVideos} புதிய வீடியோக்கள் பதிவேற்றப்பட்டுள்ளன.`,
+      ml: `${newVideos} പുതിയ വീഡിയോ.`,
+      kn: `${newVideos} ಹೊಸ ವೀಡಿಯೊಗಳು ಅಪ్‌ಲೋಡ್ ಆಗಿವೆ.`,
+    }[lang] || `${newVideos} new videos uploaded.`);
+  }
+
+  const closer: Record<Language, string> = {
+    en: 'Be the next voice — sign, share, and stand as one.',
+    ta: 'அடுத்த குரலாக இருங்கள் — கையெழுத்திடுங்கள், பகிருங்கள், ஒன்றாக நிற்போம்.',
+    ml: 'അടുത്ത ശബ്ദമായി മാറുക — ഒപ്പിടുക, പങ്കിടുക, ഒന്നായി നിൽക്കുക.',
+    kn: 'ಮುಂದಿನ ಧ್ವನಿಯಾಗಿ — ಸಹಿ ಮಾಡಿ, ಹಂಚಿ, ಒಗ್ಗಟ್ಟಾಗಿರಿ.',
+  };
+
+  return `${headline[lang] || headline.en} ${deltaLines.join(' ')} ${closer[lang] || closer.en}`.trim();
+}
+
+const LIVE_LABEL: Record<Language, string> = { en: 'LIVE', ta: 'நேரலை', ml: 'ലൈവ്', kn: 'ಲೈವ್' };
+export const AIPresenter: React.FC<AIPresenterProps> = ({ language }) => {
   const [minimized, setMinimized] = useState(false);
   const [message, setMessage] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [inputText, setInputText] = useState('');
-  const [showInput, setShowInput] = useState(false);
+  const [liveBadge, setLiveBadge] = useState(false);
   const greetedRef = useRef(false);
-  const historyRef = useRef<ChatMsg[]>([]);
-  const [brainLive, setBrainLive] = useState<boolean | null>(null);
 
-  // Probe the real LLM brain on mount so the user knows if it's live.
-  useEffect(() => { brainIsLive().then(setBrainLive); }, []);
-
-  const buildCtx = useCallback((): PresenterContext => ({
-    currentPage, language, isRegistered, hasSigned, hasShared,
-    totalSignatures: 0, mediaCount: 0, profile,
-  }), [currentPage, language, isRegistered, hasSigned, hasShared, profile]);
-
-  const speakGuidance = useCallback(async (isFirstGreeting = false) => {
-    setBusy(true);
-    let text = '';
-    let action: string | undefined;
+  const runGreeting = useCallback(async () => {
+    if (greetedRef.current) return;
+    greetedRef.current = true;
     try {
-      if (isFirstGreeting) {
-        text = getFirstGreeting(language);
-      } else {
-        const brain = await brainSpeak('', language, buildCtx(), historyRef.current);
-        if (brain) { text = brain.text; action = brain.action; }
-        else { const response = await getGuidance(buildCtx()); text = response.text; action = response.action; }
+      const live = await fetchLiveStats();
+      if (!live) {
+        setMessage({
+          en: 'Namaste! I am VOG. The movement is alive — check back in a moment to see the latest numbers.',
+          ta: 'வணக்கம்! நான் VOG. இயக்கம் உயிரோடு உள்ளது — சற்று நேரத்தில் சமீபத்திய எண்களைப் பாருங்கள்.',
+          ml: 'നമസ്കാരം! ഞാൻ VOG. പ്രസ്ഥാനം ജീവനുള്ളതാണ് — കുറച്ചു കഴിഞ്ഞ് പുതിയ സംഖ്യകൾ കാണുക.',
+          kn: 'ನಮಸ್ಕಾರ! ನಾನು VOG. ಚಳುವಳಿ ಜೀವಂತವಾಗಿದೆ — ಸ್ವಲ್ಪ ಹೊತ್ತಿನಲ್ಲಿ ಇತ್ತೀಚಿನ ಸಂಖ್ಯೆಗಳನ್ನು ನೋಡಿ.',
+        }[language] || 'Namaste! I am VOG.');
+        return;
       }
-      historyRef.current = [...historyRef.current, msg('assistant', text)].slice(-8);
-      setMessage(text);
-      if (action && onAction) onAction(action);
-    } catch { /* silent */ } finally { setBusy(false); }
-  }, [buildCtx, onAction, language]);
-
-  // Auto-greet when the AIPresenter mounts (first time only).
-  useEffect(() => {
-    if (!greetedRef.current) {
-      greetedRef.current = true;
-      const timer = setTimeout(() => speakGuidance(true), 1500);
-      return () => clearTimeout(timer);
+      const last = readLastSeen();
+      setMessage(buildGreeting(language, live, last));
+      setLiveBadge(true);
+      // Persist the snapshot as "last seen" on unload (so refreshing mid-greeting
+      // doesn't move the bar prematurely), plus a 15s safety settle.
+      const save = () => {
+        try {
+          localStorage.setItem(LS_KEY, JSON.stringify({ signs: live.total, posters: live.posters, videos: live.videos, at: Date.now() }));
+        } catch { /* ignore */ }
+      };
+      window.addEventListener('beforeunload', save, { once: true });
+      setTimeout(save, 15000);
+    } catch {
+      /* never throw */
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [language]);
 
-  const handleQuestion = useCallback(async (question: string) => {
-    const q = question.trim();
-    if (!q) return;
-    historyRef.current = [...historyRef.current, msg('user', q)].slice(-8);
-    setBusy(true);
-    let text = '';
-    try {
-      const brain = await brainSpeak(q, language, buildCtx(), historyRef.current);
-      text = brain ? brain.text : await answerQuestion(q, language, buildCtx());
-      historyRef.current = [...historyRef.current, msg('assistant', text)].slice(-8);
-      setMessage(text);
-    } catch { /* silent */ } finally { setBusy(false); }
-  }, [language, buildCtx]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (inputText.trim()) handleQuestion(inputText);
-    setInputText('');
-    setShowInput(false);
-  };
-
-  const chips: Array<{ action: string; label: string }> = (() => {
-    const lbl = CHIP_LABELS[language] || CHIP_LABELS.en;
-    if (!isRegistered) return [{ action: 'register', label: lbl.register }, { action: 'about', label: lbl.about }];
-    if (!hasSigned) return [{ action: 'sign', label: lbl.sign }, { action: 'about', label: lbl.about }];
-    if (!hasShared) return [{ action: 'share', label: lbl.share }, { action: 'sightings', label: lbl.sightings }];
-    return [{ action: 'sightings', label: lbl.sightings }, { action: 'share', label: lbl.share }];
-  })();
+  useEffect(() => {
+    void runGreeting();
+  }, [runGreeting]);
 
   const toggleMinimized = () => setMinimized(!minimized);
 
   return (
     <div className="fixed bottom-4 right-4 z-[50] flex flex-col items-end gap-2">
-      {(message || busy) && !minimized && (
-        <div className="relative max-w-[280px] rounded-2xl bg-white p-3 shadow-xl border border-emerald-100">
+      {message && !minimized && (
+        <div className="relative max-w-[300px] rounded-2xl bg-white p-3.5 shadow-xl border border-emerald-100">
           <div className="mb-1 flex items-center gap-1.5">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            </span>
+            {liveBadge && (
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              </span>
+            )}
             <span className="text-[9px] font-black tracking-widest text-emerald-600">
               {LIVE_LABEL[language] || LIVE_LABEL.en}
             </span>
-            {brainLive !== null && (
-              <span className={`h-1.5 w-1.5 rounded-full ${brainLive ? 'bg-green-500' : 'bg-amber-400'}`} title={brainLive ? 'Live AI brain' : 'Local guide'} />
-            )}
           </div>
-          {busy ? (
-            <p className="pr-4 text-xs text-slate-400">
-              <span className="inline-flex gap-1">
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-400" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-400 [animation-delay:120ms]" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-400 [animation-delay:240ms]" />
-              </span>
-            </p>
-          ) : (
-            <p className="pr-4 text-xs text-slate-700 leading-relaxed">{message}</p>
-          )}
-          {!busy && (
-            <button onClick={() => setMessage('')} className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-slate-200 text-slate-500 text-[10px] flex items-center justify-center hover:bg-slate-300" aria-label="Dismiss">✕</button>
-          )}
-        </div>
-      )}
-      {!busy && !minimized && message && (
-        <div className="flex flex-wrap justify-end gap-1.5">
-          {chips.map((c) => (
-            <button
-              key={c.action}
-              onClick={() => onAction && onAction(c.action)}
-              className="rounded-full bg-[#1B5E20] px-2.5 py-1 text-[10px] font-bold text-[#F5F5F5] shadow-md transition hover:bg-[#2E7D32] active:scale-95"
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {showInput && !minimized && (
-        <form onSubmit={handleSubmit} className="flex items-center gap-2 rounded-full bg-white px-3 py-2 shadow-xl border border-emerald-200">
-          <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={ASK_PLACEHOLDER[language] || ASK_PLACEHOLDER.en} className="w-36 text-xs outline-none bg-transparent" autoFocus />
-          <button type="submit" className="text-emerald-600 text-xs font-bold" aria-label="Send">→</button>
-        </form>
-      )}
-      <div className="flex items-center gap-2">
-        {!minimized && (
-          <button onClick={() => setShowInput(!showInput)} className="h-9 w-9 rounded-full bg-white text-blue-600 border border-blue-200 flex items-center justify-center shadow-lg" title="Ask" aria-label="Ask">
-            ❓
+          <p className="pr-0 text-xs text-slate-700 leading-relaxed">{message}</p>
+          <button
+            onClick={() => setMessage('')}
+            className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-slate-200 text-slate-500 text-[10px] flex items-center justify-center hover:bg-slate-300"
+            aria-label="Dismiss"
+          >
+            ✕
           </button>
-        )}
-        <button onClick={toggleMinimized} className="transition-transform hover:scale-105 active:scale-95" title={minimized ? 'Open guide' : 'Minimize'} aria-label={minimized ? 'Open guide' : 'Minimize'}>
-          <AIAvatar isSpeaking={false} isListening={false} minimized={minimized} />
-        </button>
-      </div>
+        </div>
+      )}
+      <button
+        onClick={toggleMinimized}
+        className="transition-transform hover:scale-105 active:scale-95"
+        title={minimized ? 'Open VOG' : 'Minimize VOG'}
+        aria-label={minimized ? 'Open VOG' : 'Minimize VOG'}
+      >
+        <AIAvatar isSpeaking={false} isListening={false} minimized={minimized} />
+      </button>
     </div>
   );
 };

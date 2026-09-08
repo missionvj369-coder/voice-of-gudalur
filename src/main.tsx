@@ -25,6 +25,45 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// ─── FINAL-SAFETY auto-update: version.json poll ─────────────────────────────
+// vog-version-marker writes dist/version.json with a fresh buildId on every
+// deploy. We fetch it (cache-busted) on each visibility/focus return plus every
+// 5 minutes while visible, and hard-reload when it changes — so a user who has
+// the app open in the background (or sits on a tab all day) automatically gets
+// the current live version without ever pressing refresh.
+{
+  let currentBuild: string | null = null;
+  let reloading = false;
+
+  const readVersion = async () => {
+    try {
+      const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return typeof data?.buildId === 'string' ? data.buildId : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const checkVersion = async () => {
+    if (reloading || document.visibilityState === 'hidden') return;
+    const build = await readVersion();
+    if (!build) return;
+    if (currentBuild === null) { currentBuild = build; return; }   // first read — baseline
+    if (build !== currentBuild && !reloading) {
+      reloading = true;
+      window.location.reload();
+    }
+  };
+
+  void checkVersion();
+  const onVisible2 = () => { if (document.visibilityState === 'visible') void checkVersion(); };
+  document.addEventListener('visibilitychange', onVisible2);
+  window.addEventListener('focus', checkVersion);
+  const versionTimer = window.setInterval(checkVersion, 5 * 60 * 1000);
+}
+
 registerSW({
   immediate: true,
   onRegisteredSW: (_swUrl, registration) => {
