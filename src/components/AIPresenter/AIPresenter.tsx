@@ -8,7 +8,7 @@ import type { Language } from '../../context/LanguageContext';
  * VOG wakes on every page load, greets in the user's language and speaks the
  * CURRENT live truth: signatures from Gudalur and across India separately,
  * NEW signatures since last visit, NEW posters/videos since last visit.
- * NO chat/ask/reply UI — greet + report only, with an auto-close countdown.
+ * NO chat/ask/reply UI — greet + report only.
  */
 interface AIPresenterProps { language: Language; }
 
@@ -90,21 +90,11 @@ function buildGreeting(lang: Language, live: LiveStats, last: LastSeen | null): 
   return `${headline[lang] || headline.en} ${deltaLines.join(' ')} ${closer[lang] || closer.en}`.trim();
 }
 
-const LIVE_LABEL: Record<Language, string> = { en: 'LIVE', ta: 'நேரலை', ml: 'ലൈവ്', kn: 'ಲೈವ್' };
 
-const CLOSE_IN: Record<Language, string> = {
-  en: 'Closing in {n}s…',
-  ta: '{n} வினாடிகளில் மூடப்படும்…',
-  ml: '{n} സെക്കൻഡിൽ അടയും…',
-  kn: '{n} ಸೆಕೆಂಡುಗಳಲ್ಲಿ ಮುಚ್ಚುತ್ತದೆ…',
-};
 
-const AUTO_CLOSE_SECONDS = 12;
 export const AIPresenter: React.FC<AIPresenterProps> = ({ language }) => {
   const [minimized, setMinimized] = useState(false);
   const [message, setMessage] = useState('');
-  const [liveBadge, setLiveBadge] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(0);
   const greetedRef = useRef(false);
   const liveSnapshotRef = useRef<LiveStats | null>(null);
 
@@ -127,14 +117,11 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({ language }) => {
           ml: 'നമസ്കാരം! ഞാൻ VOG. പ്രസ്ഥാനം ജീവനുള്ളതാണ് — കുറച്ചു കഴിഞ്ഞ് പുതിയ സംഖ്യകൾ കാണുക.',
           kn: 'ನಮಸ್ಕಾರ! ನಾನು VOG. ಚಳುವಳಿ ಜೀವಂತವಾಗಿದೆ — ಸ್ವಲ್ಪ ಹೊತ್ತಿನಲ್ಲಿ ಇತ್ತೀಚಿನ ಸಂಖ್ಯೆಗಳನ್ನು ನೋಡಿ.',
         }[language] || 'Namaste! I am VOG.');
-        setSecondsLeft(AUTO_CLOSE_SECONDS);
         return;
       }
       liveSnapshotRef.current = live;
       const last = readLastSeen();
       setMessage(buildGreeting(language, live, last));
-      setLiveBadge(true);
-      setSecondsLeft(AUTO_CLOSE_SECONDS);
       // Save the snapshot after a settle beat so a refresh mid-greeting does
       // not falsely consume the "since last visit" delta.
       setTimeout(() => saveSnapshot(live), 15000);
@@ -146,24 +133,6 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({ language }) => {
   useEffect(() => {
     void runGreeting();
   }, [runGreeting]);
-
-  // Auto-close countdown — starts whenever a message is visible, pauses when
-  // minimized, closes the bubble at zero. Manual ✕ always wins.
-  useEffect(() => {
-    if (!message || minimized) return;
-    setSecondsLeft(AUTO_CLOSE_SECONDS);
-    const id = window.setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) {
-          window.clearInterval(id);
-          setMessage('');
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [message, minimized]);
 
   // Save the snapshot before unload so deltas stay honest across sessions.
   useEffect(() => {
@@ -180,30 +149,14 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({ language }) => {
     });
   };
 
-  const countdownText = message
-    ? (CLOSE_IN[language] || CLOSE_IN.en).replace('{n}', String(secondsLeft))
-    : '';
-
   return (
     <div className="fixed bottom-4 right-4 z-[50] flex flex-col items-end gap-2">
       {message && !minimized && (
-        <div className="relative max-w-[300px] rounded-2xl bg-white p-3.5 shadow-xl border border-emerald-100">
-          <div className="mb-1 flex items-center gap-1.5">
-            {liveBadge && (
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              </span>
-            )}
-            <span className="text-[9px] font-black tracking-widest text-emerald-600">
-              {LIVE_LABEL[language] || LIVE_LABEL.en}
-            </span>
-          </div>
-          <p className="text-xs text-slate-700 leading-relaxed">{message}</p>
-          <p className="mt-2 text-[10px] font-semibold text-slate-400 tabular-nums">{countdownText}</p>
+        <div className="relative max-w-[300px] rounded-2xl px-3.5 py-2.5 shadow-xl" style={{ background: '#9ACD32' }}>
+          <p className="text-xs leading-relaxed font-bold" style={{ color: '#FFFDF4' }}>{message}</p>
           <button
             onClick={() => setMessage('')}
-            className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-slate-200 text-slate-500 text-[10px] flex items-center justify-center hover:bg-slate-300"
+            className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-white/90 text-[#4a7a10] text-[10px] flex items-center justify-center hover:bg-white shadow"
             aria-label="Dismiss"
           >
             ✕
