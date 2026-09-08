@@ -173,18 +173,34 @@ export async function createApp() {
   app.get('/api/health', async (req, res) => {
     let dbUp = false;
     let dbError: string | undefined;
+    let poolClients = 0;
+    let poolIdle = 0;
     try {
-      const { ping } = await import('./server/db/client');
+      const { ping, getPool } = await import('./server/db/client');
       dbUp = await ping();
+      // Free-tier survival readout: how many connections are active vs idle.
+      // A growing pool.clients count under light load is an early signal that the
+      // free-tier connection ceiling is being approached.
+      try {
+        const p = getPool();
+        poolClients = (p as any).totalCount ?? 0;
+        poolIdle = (p as any).idleCount ?? 0;
+      } catch { /* pool introspection not available on all pg builds */ }
     } catch (e: any) {
       dbError = e?.message;
     }
     res.json({
-      status: dbUp ? 'ok' : 'degraded',
+      status: dbUp && inFlight < MAX_IN_FLIGHT ? 'ok' : (dbUp ? 'busy' : 'degraded'),
       system: 'VOICE OF GUDALUR Living Intelligence Platform',
       version: '2.0.0-production',
       db: dbUp ? 'connected' : 'unreachable',
       dbError,
+      pool: {
+        clients: poolClients,
+        idle: poolIdle,
+      },
+      inFlight,
+      maxInFlight: MAX_IN_FLIGHT,
       config: {
         databaseUrl: Boolean(process.env.DATABASE_URL),
         sessionSecret: Boolean(process.env.SESSION_SECRET),

@@ -9,6 +9,7 @@
  */
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { recordPetitionSign, verifyPetitionSign, listPetitionSigns } from '../db/repositories/petitionRepository';
 import { requireAuth, requireRole, logAudit } from '../middleware/auth';
 import { db } from '../db/client';
@@ -18,6 +19,20 @@ import { cacheWrap, cacheDel } from '../utils/ttlCache';
 
 const router = Router();
 
+// Per-IP write limiter for the sign endpoint — stricter than the public limiter
+// so a coordinated burst from one IP can't queue up many DB writes.
+const writeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { error: 'Too many sign attempts — please wait a moment.' },
+  keyGenerator: (req: any) => {
+    const ip: string = req.ip || req.socket?.remoteAddress || 'anonymous';
+    if (!ip || ip === 'anonymous') return 'anonymous';
+    try { return ipKeyGenerator(ip as any); } catch { return 'anonymous'; }
+  },
+  validate: { xForwardedForHeader: false, ip: false } as any,
+});
+
 // Public aggregate endpoints are polled by every open client. Cache them so a
 // crowd collapses to a handful of DB hits instead of one per user per poll.
 const STATS_TTL_MS = 6 * 1000;
@@ -25,8 +40,11 @@ const LEDGER_TTL_MS = 6 * 1000;
 const STATS_KEY = 'petition:sign-stats';
 const LEDGER_KEY = 'petition:ledger';
 
-/** POST /api/petitions/sign — resident signs the petition. */
-router.post('/sign', requireAuth, async (req: Request, res: Response) => {
+/** POST /api/petitions/sign — resident signs the petition.
+ * writeRateLimiter (60/15min per IP) is mounted here so a single IP can't hammer
+ * the DB with repeated sign attempts; the broader publicRateLimiter on the whole
+ * /api/petitions prefix (in server.ts) still applies as a second layer. */
+router.post('/sign', writeLimiter, requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user!;
     // Aadhaar minimization: fetch the resident's stored verification metadata
