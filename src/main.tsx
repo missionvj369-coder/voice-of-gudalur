@@ -8,6 +8,23 @@ import './index.css';
 // site is rebuilt and deployed, every open tab — Safari, iOS, Android — finds
 // the new service worker, lets it take control automatically (skipWaiting) and
 // refreshes itself once. No manual "refresh from settings" is ever needed.
+//
+// Single-refresh guarantee: when a NEW service worker takes control of this
+// tab (skipWaiting + clientsClaim), reload exactly once per session so the
+// tab swaps to the new build. The sessionStorage guard prevents reload loops.
+let swReloaded = false;
+try {
+  if (sessionStorage.getItem('vog_sw_reloaded') === '1') swReloaded = true;
+} catch { /* private mode */ }
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (swReloaded) return;
+    swReloaded = true;
+    try { sessionStorage.setItem('vog_sw_reloaded', '1'); } catch { /* ignore */ }
+    window.location.reload();
+  });
+}
+
 registerSW({
   immediate: true,
   onRegisteredSW: (_swUrl, registration) => {

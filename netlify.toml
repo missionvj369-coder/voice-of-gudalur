@@ -45,3 +45,27 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# ─── Cache control ────────────────────────────────────────────────────────────
+# The service worker script and the HTML entry must NEVER be cached long —
+# otherwise browsers keep serving a stale app shell after a deploy.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Hashed build assets are immutable — cache them hard.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

@@ -96,6 +96,20 @@ export default defineConfig(() => {
           globIgnores: ['**/ort-wasm*', '**/qrDecode/*.worker.*', '**/qrDecode/cameraFusion.*'],
           runtimeCaching: [
             {
+              // PAGE NAVIGATIONS: NetworkFirst — every online visit fetches the
+              // freshest index.html from the server, so a new deploy is visible
+              // on the very first visit (no stale precache pinning). Offline
+              // falls back to the last cached copy of the page.
+              urlPattern: /^(?!.*(?:\/assets\/|\/api\/|\/icons\/|\.js$|\.css$|\.png$|\.svg$|\.ico$|\.woff2?$|\.wasm$|\.webmanifest$|\.map$)).+$/i,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'vog-html-cache',
+                networkTimeoutSeconds: 3,
+                expiration: { maxEntries: 32, maxAgeSeconds: 60 * 60 * 24 * 14 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
               urlPattern: /^https:\/\/.*\.tile\.openstreetmap\.org\/.*/i,
               handler: 'CacheFirst',
               options: {
@@ -114,7 +128,13 @@ export default defineConfig(() => {
               },
             },
           ],
-          navigateFallback: '/index.html',
+          // NOTE: navigateFallback is explicitly DISABLED (undefined). The
+          // plugin defaults it to "index.html", which emits a NavigationRoute
+          // that serves the PRECACHED index.html for every visit — pinning
+          // visitors to the build live when their SW last updated (the "old
+          // site after deploy" bug). The NetworkFirst navigation rule above
+          // replaces it: fresh HTML from the network whenever online.
+          navigateFallback: undefined,
         },
         devOptions: { enabled: false },
       }),
