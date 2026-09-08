@@ -44,6 +44,9 @@ const AppContent: React.FC = () => {
   // straight into the app in their language.
   const [langChosen, setLangChosen] = useState<boolean>(() => {
     try {
+      // ?intro=1 force-shows the opening animation (demo/testing) even for
+      // returning visitors who already chose a language.
+      if (new URLSearchParams(window.location.search).has('intro')) return false;
       return !!localStorage.getItem('VoiceOfGudalur_lang_chosen');
     } catch {
       return true;

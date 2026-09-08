@@ -1,12 +1,11 @@
-/**
+﻿/**
  * AIPresenter - Floating living-intelligence guide, present on every page.
- * Speaks with live petition numbers, knows the user's state and route,
- * answers real questions in the chosen language (voice in + voice out).
- * Lazy-mounted, browser-native voice, zero performance impact.
+ * Text-first (no voice): greets with live petition numbers, knows the user's
+ * state and route, answers real questions in the chosen language.
+ * Lazy-mounted, zero performance impact.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AIAvatar } from './AIAvatar';
-import { useVoice, langToSpeechTag } from '../../hooks/useVoice';
 import { getGuidance, answerQuestion, brainSpeak, brainIsLive, type PresenterContext } from '../../services/aiPresenter';
 import type { Language } from '../../context/LanguageContext';
 
@@ -45,7 +44,7 @@ interface AIPresenterProps {
 function getFirstGreeting(lang: Language): string {
   const greetings: Record<Language, string> = {
     en: "Namaste! I am VOG — your living intelligent guide. I know every street, every problem, every hope of Gudalur. Together we will solve all problems — elephant corridors, night safety, water, roads, and your voice to the Chief Minister. Register, sign, share — I will guide you every step. Let's do this together!",
-    ta: "வணக்கம்! நான் VOG — உங்கள் உயிர்பெற்ற உள்ளடக்க வழிகாட்டி. கூடலூரின் ஒவ்வொரு தெருவையும், பிரச்சனையையும், நம்பிக்கையையும் நான் அறிவேன். ஒன்றாக அனைத்து பிரச்சனைகளையும் தீர்ப்போம் — யானை வழித்தடங்கள், இரவுப் பாதுகாப்பு, நீர், சாலைகள், முதலமைச்சருக்கான உங்கள் குரல். பதிவு, கையெழுத்து, பகிர் — ஒவ்வொரு படியும் உங்களுடன் இருப்பேன். வாழ்க நமது கூடலூர்!",
+    ta: "வணக்கம்! நான் VOG — உங்கள் உயிர்பெற்ற நுண்ணறிவு வழிகாட்டி. கூடலூரின் ஒவ்வொரு தெருவையும், பிரச்சனையையும், நம்பிக்கையையும் நான் அறிவேன். ஒன்றாக அனைத்து பிரச்சனைகளையும் தீர்ப்போம் — யானை வழித்தடங்கள், இரவுப் பாதுகாப்பு, நீர், சாலைகள், முதலமைச்சருக்கான உங்கள் குரல். பதிவு, கையெழுத்து, பகிர் — ஒவ்வொரு படியும் உங்களுடன் இருப்பேன். வாழ்க நமது கூடலூர்!",
     ml: "നമസ്കാരം! ഞാൻ VOG — നിങ്ങളുടെ ജീവനുള്ള ബുദ്ധിമാൻ ഗൈഡ്. ഗൂഡല്ലൂറിന്റെ എല്ലാ തെരുവും, പ്രശ്നവും, പ്രതീക്ഷയും എനിക്കറിയാം. ഒന്നിച്ച് എല്ലാ പ്രശ്നങ്ങളും പരിഹരിക്കാം — ആന ഇടനാഴികൾ, രാത്രി സുരക്ഷ, വെള്ളം, റോഡുകൾ, മുഖ്യമന്ത്രിക്കുള്ള നിങ്ങളുടെ ശബ്ദം. രജിസ്റ്റർ, ഒപ്പിടുക, പങ്കിടുക — എല്ലാ ഘട്ടവും നിങ്ങളോടൊപ്പം ഉണ്ടാകും. നമുടെ ഗൂഡല്ലൂർ ജീവിക്കട്ടെ!",
     kn: "ನಮಸ್ಕಾರ! ನಾನು VOG — ನಿಮ್ಮ ಜೀವಂತ ಬುದ್ಧಿವಂತ ಮಾರ್ಗದರ್ಶಕ. ಗೂಡಲೂರಿನ ಪ್ರತಿ ಬೀದಿ, ಸಮಸ್ಯೆ, ಭರವಸೆಯನ್ನು ನಾನು ತಿಳಿದಿದ್ದೇನೆ. ಒಟ್ಟಿಗೆ ಎಲ್ಲಾ ಸಮಸ್ಯೆಗಳನ್ನು ಪರಿಹರಿಸೋಣ — ಆನೆ ಕಾರಿಡಾರ್‌ಗಳು, ರಾತ್ರಿ ಸುರಕ್ಷತೆ, ನೀರು, ರಸ್ತೆಗಳು, ಮುಖ್ಯಮಂತ್ರಿಗೆ ನಿಮ್ಮ ಧ್ವನಿ. ನೋಂದಣಿ, ಸಹಿ, ಹಂಚಿಕೆ — ಪ್ರತಿ ಹೆಜ್ಜೆಯಲ್ಲೂ ನಿಮ್ಮೊಂದಿಗೆ ಇರುತ್ತೇನೆ. ನಮ್ಮ ಗೂಡಲೂರು ಬದುಕಲಿ!",
   };
@@ -61,86 +60,58 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
   const [inputText, setInputText] = useState('');
   const [showInput, setShowInput] = useState(false);
   const greetedRef = useRef(false);
-  const historyRef = useRef<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
+  const historyRef = useRef<ChatMsg[]>([]);
   const [brainLive, setBrainLive] = useState<boolean | null>(null);
-  const langTag = langToSpeechTag(language);
 
   // Probe the real LLM brain on mount so the user knows if it's live.
   useEffect(() => { brainIsLive().then(setBrainLive); }, []);
-
-    const { speak, stopSpeaking, startListening, stopListening, isSpeaking, isListening, supported } = useVoice({
-    lang: langTag,
-    onTranscript: (text) => handleQuestion(text),
-  });
 
   const buildCtx = useCallback((): PresenterContext => ({
     currentPage, language, isRegistered, hasSigned, hasShared,
     totalSignatures: 0, mediaCount: 0, profile,
   }), [currentPage, language, isRegistered, hasSigned, hasShared, profile]);
 
+  const speakGuidance = useCallback(async (isFirstGreeting = false) => {
+    setBusy(true);
+    let text = '';
+    let action: string | undefined;
+    try {
+      if (isFirstGreeting) {
+        text = getFirstGreeting(language);
+      } else {
+        const brain = await brainSpeak('', language, buildCtx(), historyRef.current);
+        if (brain) { text = brain.text; action = brain.action; }
+        else { const response = await getGuidance(buildCtx()); text = response.text; action = response.action; }
+      }
+      historyRef.current = [...historyRef.current, msg('assistant', text)].slice(-8);
+      setMessage(text);
+      if (action && onAction) onAction(action);
+    } catch { /* silent */ } finally { setBusy(false); }
+  }, [buildCtx, onAction, language]);
+
   // Auto-greet when the AIPresenter mounts (first time only).
   useEffect(() => {
     if (!greetedRef.current) {
       greetedRef.current = true;
-      // Delay to let speechSynthesis voices load (~800ms on most systems)
       const timer = setTimeout(() => speakGuidance(true), 1500);
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const speakGuidance = useCallback(async (isFirstGreeting = false) => {
-    setBusy(true);
-    let text = '';
-    let action: string | undefined;
-    try {
-      // Use special first greeting if this is VOG's first appearance
-      if (isFirstGreeting) {
-        text = getFirstGreeting(language);
-      } else {
-        const brain = await brainSpeak('', language, buildCtx(), historyRef.current);
-        if (brain) {
-          text = brain.text;
-          action = brain.action;
-          historyRef.current = [...historyRef.current, msg('assistant', text)].slice(-8);
-        } else {
-          const response = await getGuidance(buildCtx());
-          text = response.text;
-          action = response.action;
-        }
-      }
-      historyRef.current = [...historyRef.current, msg('assistant', text)].slice(-8);
-      setMessage(text);
-      speak(text);
-      if (action && onAction) onAction(action);
-    } catch { /* silent */ } finally { setBusy(false); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buildCtx, speak, onAction, language]);
-
-    useEffect(() => {
-    // On mount: greet the user immediately (voices loaded after 500ms delay above).
-    // On page change (already greeted): brief contextual nudge.
-  }, [currentPage]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const handleQuestion = useCallback(async (question: string) => {
-    if (!question.trim()) return;
-    stopListening();
     const q = question.trim();
+    if (!q) return;
     historyRef.current = [...historyRef.current, msg('user', q)].slice(-8);
     setBusy(true);
     let text = '';
     try {
       const brain = await brainSpeak(q, language, buildCtx(), historyRef.current);
-      if (brain) {
-        text = brain.text;
-      } else {
-        text = await answerQuestion(q, language, buildCtx());
-      }
+      text = brain ? brain.text : await answerQuestion(q, language, buildCtx());
       historyRef.current = [...historyRef.current, msg('assistant', text)].slice(-8);
       setMessage(text);
-      speak(text);
     } catch { /* silent */ } finally { setBusy(false); }
-  }, [language, buildCtx, speak, stopListening]);
+  }, [language, buildCtx]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,10 +128,7 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
     return [{ action: 'sightings', label: lbl.sightings }, { action: 'share', label: lbl.share }];
   })();
 
-  const toggleMinimized = () => {
-    if (!minimized) stopSpeaking();
-    setMinimized(!minimized);
-  };
+  const toggleMinimized = () => setMinimized(!minimized);
 
   return (
     <div className="fixed bottom-4 right-4 z-[50] flex flex-col items-end gap-2">
@@ -171,7 +139,7 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
             </span>
-                        <span className="text-[9px] font-black tracking-widest text-emerald-600">
+            <span className="text-[9px] font-black tracking-widest text-emerald-600">
               {LIVE_LABEL[language] || LIVE_LABEL.en}
             </span>
             {brainLive !== null && (
@@ -190,7 +158,7 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
             <p className="pr-4 text-xs text-slate-700 leading-relaxed">{message}</p>
           )}
           {!busy && (
-            <button onClick={() => { setMessage(''); stopSpeaking(); }} className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-slate-200 text-slate-500 text-[10px] flex items-center justify-center hover:bg-slate-300" aria-label="Dismiss">✕</button>
+            <button onClick={() => setMessage('')} className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-slate-200 text-slate-500 text-[10px] flex items-center justify-center hover:bg-slate-300" aria-label="Dismiss">✕</button>
           )}
         </div>
       )}
@@ -209,31 +177,20 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
       )}
       {showInput && !minimized && (
         <form onSubmit={handleSubmit} className="flex items-center gap-2 rounded-full bg-white px-3 py-2 shadow-xl border border-emerald-200">
-          <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={ASK_PLACEHOLDER[language] || ASK_PLACEHOLDER.en} className="w-32 text-xs outline-none bg-transparent" autoFocus />
+          <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={ASK_PLACEHOLDER[language] || ASK_PLACEHOLDER.en} className="w-36 text-xs outline-none bg-transparent" autoFocus />
           <button type="submit" className="text-emerald-600 text-xs font-bold" aria-label="Send">→</button>
         </form>
       )}
       <div className="flex items-center gap-2">
         {!minimized && (
-          <div className="flex flex-col gap-1.5">
-            {supported.stt && (
-              <button onClick={() => isListening ? stopListening() : startListening()} className={`h-9 w-9 rounded-full flex items-center justify-center shadow-lg ${isListening ? 'bg-orange-500 text-white animate-pulse' : 'bg-white text-orange-600 border border-orange-200'}`} title="Speak" aria-label="Speak">
-                🎤
-              </button>
-            )}
-            <button onClick={() => setShowInput(!showInput)} className="h-9 w-9 rounded-full bg-white text-blue-600 border border-blue-200 flex items-center justify-center shadow-lg" title="Ask" aria-label="Ask">
-              ❓
-            </button>
-            <button onClick={() => { if (message) speak(message); }} className="h-9 w-9 rounded-full bg-white text-emerald-600 border border-emerald-200 flex items-center justify-center shadow-lg" title="Repeat" aria-label="Repeat">
-              🔊
-            </button>
-          </div>
+          <button onClick={() => setShowInput(!showInput)} className="h-9 w-9 rounded-full bg-white text-blue-600 border border-blue-200 flex items-center justify-center shadow-lg" title="Ask" aria-label="Ask">
+            ❓
+          </button>
         )}
         <button onClick={toggleMinimized} className="transition-transform hover:scale-105 active:scale-95" title={minimized ? 'Open guide' : 'Minimize'} aria-label={minimized ? 'Open guide' : 'Minimize'}>
-          <AIAvatar isSpeaking={isSpeaking} isListening={isListening} minimized={minimized} />
+          <AIAvatar isSpeaking={false} isListening={false} minimized={minimized} />
         </button>
       </div>
-      {!minimized && <div className="text-[9px] text-slate-400 font-mono">{language.toUpperCase()} {isSpeaking ? '🔊' : isListening ? '🎤' : ''}</div>}
     </div>
   );
 };

@@ -1,5 +1,5 @@
-/**
- * MediaGallery — full media browser for "Support the Movement".
+﻿/**
+ * MediaGallery â€” full media browser for "Support the Movement".
  *
  * Shows ALL uploaded posters + videos (not just the first 9) with two filter
  * tabs: Posters / Videos. Posters keep their native 4:5 aspect ratio so the
@@ -7,7 +7,7 @@
  * media can be shared to social platforms.
  *
  * Post-migration note: media URLs now come straight from Storj (permanent
- * public links) — they pass straight through to <img>/<video> with no API hop.
+ * public links) â€” they pass straight through to <img>/<video> with no API hop.
  */
 
 import React, { useState, useCallback } from 'react';
@@ -30,10 +30,23 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({ isOpen, onClose, med
   const { t } = useLanguage();
   const [filter, setFilter] = useState<KindFilter>('all');
   const [viewing, setViewing] = useState<MediaItem | null>(null);
+  const [viewingIdx, setViewingIdx] = useState(0);
 
   const filtered = media.filter((m) => (filter === 'all' ? true : m.kind === filter));
   const posterCount = media.filter((m) => m.kind === 'poster').length;
   const videoCount = media.filter((m) => m.kind === 'video').length;
+
+  const openItem = (m: MediaItem) => {
+    const idx = filtered.findIndex((f) => f.id === m.id);
+    setViewingIdx(idx >= 0 ? idx : 0);
+    setViewing(m);
+  };
+  const step = (dir: 1 | -1) => {
+    if (filtered.length === 0) return;
+    const next = (viewingIdx + dir + filtered.length) % filtered.length;
+    setViewingIdx(next);
+    setViewing(filtered[next]);
+  };
 
   const handleShare = useCallback(
     (item: MediaItem, e?: React.MouseEvent) => {
@@ -89,7 +102,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({ isOpen, onClose, med
             <div className="flex-1 overflow-y-auto p-4">
               {filtered.length === 0 ? (
                 <p className="text-sm text-slate-400 text-center py-12">
-                  {filter === 'poster' ? t('ssm.no_posters') : filter === 'video' ? t('ssm.no_videos') : '—'}
+                  {filter === 'poster' ? t('ssm.no_posters') : filter === 'video' ? t('ssm.no_videos') : 'â€”'}
                 </p>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -98,7 +111,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({ isOpen, onClose, med
                       key={m.id}
                       className="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 text-left"
                     >
-                      <button type="button" className="w-full text-left" onClick={() => setViewing(m)}>
+                      <button type="button" className="w-full text-left" onClick={() => openItem(m)}>
                         {m.kind === 'poster' ? (
                           <div className="w-full aspect-[4/5] bg-slate-100 overflow-hidden">
                             <img src={m.url} alt={m.title} loading="lazy" className="w-full h-full object-contain" />
@@ -116,7 +129,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({ isOpen, onClose, med
                       <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition">
                         <button
                           type="button"
-                          onClick={() => setViewing(m)}
+                          onClick={() => openItem(m)}
                           className="p-1.5 rounded-lg bg-black/50 text-white backdrop-blur hover:bg-black/70 transition"
                           title={t('home.view_media')}
                           aria-label={t('home.view')}
@@ -152,8 +165,11 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({ isOpen, onClose, med
                 createdAt: viewing.createdAt,
                 sizeBytes: viewing.sizeBytes ?? null,
               }}
+              currentIndex={viewingIdx}
+              totalCount={filtered.length}
+              onPrev={() => step(-1)}
+              onNext={() => step(1)}
               onClose={() => setViewing(null)}
-              onShare={(item) => onShare(item)}
             />
           )}
         </div>

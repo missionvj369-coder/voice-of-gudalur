@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Cormorant+Garamond:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Cormorant+Garamond:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -17,19 +17,19 @@
 }
 
 /* OpeningAnimation keyframes */
-@keyframes fadeIn {
+@keyframes vogFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-@keyframes slideUp {
+@keyframes vogSlideUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 /* ============================================================
-   VOICE OF GUDALUR — BLISSFUL GREEN PRESENTATION
-   Deep Blissful Green (#1B5E20) → Forest Green (#2E7D32)
-   → Light Green (#388E3C). Blissful White (#F5F5F5) text,
+   VOICE OF GUDALUR â€” BLISSFUL GREEN PRESENTATION
+   Deep Blissful Green (#1B5E20) â†’ Forest Green (#2E7D32)
+   â†’ Light Green (#388E3C). Blissful White (#F5F5F5) text,
    Greenish Yellow (#AED581) accents for tabs and highlights.
    A calming, nature-inspired blissful appearance.
    ============================================================ */
@@ -40,8 +40,8 @@
   --color-ivory: #F5F5F5;
   --color-earth-gold: #AED581;
   --color-alert-amber: #81C784;
-  /* EYE-COMFORT MODE — every utility that asks for white (bg-white,
-     glass-card, bg-white/70, …) now resolves to warm "evening paper" ivory
+  /* EYE-COMFORT MODE â€” every utility that asks for white (bg-white,
+     glass-card, bg-white/70, â€¦) now resolves to warm "evening paper" ivory
      instead of glare-white. Same theme, dramatically softer on the eyes. */
   --color-white: #FAF5EA;
 }
@@ -59,7 +59,7 @@ body::before {
     linear-gradient(180deg, #1B5E20 0%, #2E7D32 45%, #388E3C 100%);
 }
 
-/* EYE-COMFORT VEIL — like phone "eye protection" mode: a faint warm amber
+/* EYE-COMFORT VEIL â€” like phone "eye protection" mode: a faint warm amber
    sheet softens glare over every reading surface without changing the theme.
    Sits above normal content (z-40) but below modals (z-50) and the menu (z-60);
    pointer-events none, so it never blocks a single tap. */
@@ -76,11 +76,11 @@ body::after {
   .glass-card {
     @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
   }
-  /* Warm Blissful White editorial headline — no harsh halation on long reads */
+  /* Warm Blissful White editorial headline â€” no harsh halation on long reads */
   .headline-ivory {
     color: #F5F5F5;
   }
-  /* Subtle narrative → facts → action section separation */
+  /* Subtle narrative â†’ facts â†’ action section separation */
   .section-divider {
     height: 1px;
     margin: 0 auto;
@@ -97,7 +97,7 @@ body::after {
 }
 
 /* ============================================================
-   PERFORMANCE — skip render work on long off-screen sections
+   PERFORMANCE â€” skip render work on long off-screen sections
    ============================================================ */
 .content-visibility-auto {
   content-visibility: auto;
@@ -114,7 +114,7 @@ body::after {
 
 /* ============================================================
    MOBILE CLARITY FIXES
-   1. iOS Safari auto-zooms when an input's font is < 16px —
+   1. iOS Safari auto-zooms when an input's font is < 16px â€”
       force 16px inputs on phones so typing never zooms the page.
    2. Kill double-tap zoom lag and the grey tap flash for a
       calm, app-like feel.
@@ -134,7 +134,7 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
-/* WCAG 2.4.7 — a clear, high-contrast focus ring for keyboard users.
+/* WCAG 2.4.7 â€” a clear, high-contrast focus ring for keyboard users.
    Tailwind's outline-none on many custom buttons would otherwise hide focus. */
 :where(button, a, input, select, textarea, [tabindex]):focus-visible {
   outline: 3px solid #AED581;
@@ -142,7 +142,7 @@ html {
   border-radius: 6px;
 }
 
-/* Remove the browser dropdown ARROW on the locality combobox (datalist input) —
+/* Remove the browser dropdown ARROW on the locality combobox (datalist input) â€”
    the field is type-to-filter with its own styled hint, no native chrome. */
 input[list]::-webkit-calendar-picker-indicator {
   display: none !important;
@@ -158,3 +158,4 @@ input[list] {
   -webkit-appearance: none;
   appearance: none;
 }
+

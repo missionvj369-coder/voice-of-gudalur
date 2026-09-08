@@ -658,20 +658,6 @@ export const SignPetitionPage: React.FC = () => {
           setViewingMediaIndex(newIdx);
           setViewingMedia(mediaItems[newIdx] || null);
         }}
-        onShare={(item) => {
-          setShowMediaViewer(false);
-          setViewingMedia(null);
-          setViewingMediaIndex(0);
-          setShareActive({
-            id: item.id,
-            title: item.title,
-            description: item.description || '',
-            imageUrl: item.kind === 'poster' ? item.url : undefined,
-            videoUrl: item.kind === 'video' ? item.url : undefined,
-            createdAt: item.createdAt,
-          });
-          setShowShareModal(true);
-        }}
       />
 
             <RegisterResidentModal
