@@ -5,7 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider, useLanguage, type Language } from './context/LanguageContext';
 import { Shell } from './components/Layout/Shell';
-import { LanguageGate } from './components/LanguageGate';
+import { OpeningAnimation } from './components/OpeningAnimation';
 
 // Route-level code splitting — every page downloads only when first visited.
 const SignPetitionPage = lazy(() => import('./pages/SignPetitionPage').then((m) => ({ default: m.SignPetitionPage })));
@@ -70,7 +70,7 @@ const AppContent: React.FC = () => {
   }, [pathname]);
 
   if (!langChosen) {
-    return <LanguageGate onChoose={handleLanguageChosen} />;
+    return <OpeningAnimation onChoose={handleLanguageChosen} />;
   }
 
   if (loading) {

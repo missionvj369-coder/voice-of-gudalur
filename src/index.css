@@ -16,6 +16,16 @@
   }
 }
 
+/* OpeningAnimation keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ============================================================
    VOICE OF GUDALUR — BLISSFUL GREEN PRESENTATION
    Deep Blissful Green (#1B5E20) → Forest Green (#2E7D32)
