@@ -1,11 +1,12 @@
 /**
- * useVoice — Browser-native TTS/STT hook (zero latency, no server calls).
+ * useVoice — Browser-native text-to-speech hook (zero latency, no server calls).
  *
- * TTS: window.speechSynthesis — built into every browser, supports
- *       Tamil, English, Malayalam, Kannada natively.
- * STT: window.SpeechRecognition / webkitSpeechRecognition — built into
- *       Chrome, Edge, Safari. Sends audio to Google's servers for
- *       transcription (free, no API key).
+ * TTS only: window.speechSynthesis — built into every browser, supports
+ * Tamil, English, Malayalam, Kannada natively. Used by the living greeter (VOG)
+ * to greet visitors in their language.
+ *
+ * STT (on-device speech recognition / Google transcription) was intentionally
+ * removed — this app records audio as evidence only; it does not transcribe.
  *
  * No external dependencies. No performance impact on app render.
  */
@@ -99,7 +100,7 @@ export function useVoice({ lang, onTranscript }: UseVoiceOptions) {
 
 export default useVoice;
 
-/** Map our Language code → BCP-47 tag for speech APIs. */
+/** Map our Language code → BCP-47 tag for the browser TTS voice. */
 export function langToSpeechTag(lang: string): string {
   const map: Record<string, string> = {
     en: 'en-IN',

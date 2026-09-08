@@ -39,7 +39,7 @@ const securityHeaders: Record<string, string> = {
     "img-src 'self' data: blob: https:",
     "media-src 'self' data: blob: https:",
     "frame-src 'self' blob: https://cmhelpline.tnega.org",
-    "connect-src 'self' https://huggingface.co https://*.huggingface.co https://gateway.storjshare.io https://api.bigdatacloud.net",
+    "connect-src 'self' https://gateway.storjshare.io https://api.bigdatacloud.net",
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
@@ -113,10 +113,9 @@ export default defineConfig(() => {
           clientsClaim: true,
           cleanupOutdatedCaches: true,
           disableDevLogs: true,
-          // Precache the app shell + the small ZBar wasm (~100 KB) so QR
-          // scanning works offline. The heavy HuggingFace ort-wasm AI model
-          // (23+ MB) is loaded on-demand at runtime — exclude it from
-          // precache (it also exceeds workbox's default 2 MiB limit).
+          // Precache the app shell (JS/CSS) and the small ZBar wasm (~100 KB) so QR
+          // scanning works offline. The heavy on-device AI model wasm is no longer
+          // part of this app — there is nothing else to exclude here.
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,wasm}'],
           globIgnores: ['**/ort-wasm*', '**/qrDecode/*.worker.*', '**/qrDecode/cameraFusion.*'],
           runtimeCaching: [
@@ -187,7 +186,6 @@ export default defineConfig(() => {
             'vendor-maps': ['leaflet', 'react-leaflet'],
             'vendor-icons': ['lucide-react'],
             'vendor-pdf': ['jspdf'],
-            'vendor-ai': ['@huggingface/transformers'],
           },
         },
       },

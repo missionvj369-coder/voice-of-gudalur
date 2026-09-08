@@ -12,15 +12,10 @@ const __filename = typeof (import.meta as any)?.url === 'string'
   : '';
 const __dirname = __filename ? path.dirname(__filename) : process.cwd();
 
-// â”€â”€ 100% open-source AI backend (no proprietary API keys) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Chat:   any OpenAI-compatible local LLM via Ollama (MIT) â€” llama3.2 default.
-// Speech: self-hosted Whisper (Speaches/faster-whisper, Apache-2.0) â€” optional;
-//         the browser already transcribes on-device via Transformers.js.
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://127.0.0.1:11434/v1';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
-const WHISPER_URL = process.env.WHISPER_URL || ''; // e.g. http://127.0.0.1:8000/v1/audio/transcriptions
+// Open-source civic backend: chat via any OpenAI-compatible endpoint (Ollama by default, MIT license).
 import webPush from 'web-push';
-import { spawn } from 'child_process';
 import multer from 'multer';
 import cookieParser from 'cookie-parser';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
@@ -39,7 +34,7 @@ import { db } from './server/db/client';
 import { clusterPlaces } from './server/utils/placeCluster';
 import { logger } from './server/utils/logger';
 
-// â”€â”€ Open-source AI clients (no proprietary API keys) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─ Open-source AI clients (no proprietary API keys) ─
 interface ChatMessage { role: 'system' | 'user' | 'assistant'; content: string; }
 
 /** Chat via any OpenAI-compatible endpoint (Ollama by default, MIT license). */
@@ -54,20 +49,6 @@ async function ollamaChat(messages: ChatMessage[], temperature = 0.7): Promise<s
   return text;
 }
 
-/** Transcription via self-hosted Whisper (Speaches / faster-whisper, Apache-2.0). */
-async function whisperTranscribe(audioBase64: string, language?: string): Promise<string> {
-  if (!WHISPER_URL) throw new Error('WHISPER_URL not configured');
-  const buffer = Buffer.from(audioBase64, 'base64');
-  const form = new FormData();
-  form.append('file', new Blob([new Uint8Array(buffer)], { type: 'audio/webm' }), 'audio.webm');
-  form.append('model', process.env.WHISPER_MODEL || 'whisper-small');
-  if (language) form.append('language', language);
-  const res = await axios.post(WHISPER_URL, form, {
-    timeout: 120000,
-    headers: (typeof (form as any).getHeaders === 'function' ? (form as any).getHeaders() : undefined) as any,
-  } as any);
-  return res.data?.text || '';
-}
 
 // In-memory cache for weather snapshot
 let weatherCache: { data: any; timestamp: number } | null = null;
@@ -102,6 +83,7 @@ export async function createApp() {
   // queueing DB work that would pile up and time out. This keeps the app
   // responsive for the users who ARE being served.
   const MAX_IN_FLIGHT = Number(process.env.MAX_IN_FLIGHT || 150);
+  const EDGE_CACHE_TTL_SECONDS = Number(process.env.EDGE_CACHE_TTL_SECONDS ?? 10) || 10;
   let inFlight = 0;
   app.use((req, res, next) => {
     if (inFlight >= MAX_IN_FLIGHT) {
@@ -114,7 +96,7 @@ export async function createApp() {
     next();
   });
 
-  // â”€â”€ Rate limiting (abuse protection) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─ Rate limiting (abuse protection) ─
   // In serverless (Netlify Function) runs the socket address can be absent;
   // key on req.ip with a safe fallback and skip the validations that throw
   // when IP info is missing. Behind Netlify, X-Forwarded-For + trust proxy
@@ -137,7 +119,7 @@ export async function createApp() {
   const authRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts });
   const publicRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts });
   const writeRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts });
-  // Stricter limiter for the AI chat endpoint — it calls an external LLM which
+  // Stricter limiter for the civic chat endpoint — it calls an external LLM which
   // is expensive and slow; a burst here is both a cost and a hang vector.
   const aiRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many AI requests', keyGenerator: clientKey, ...limiterOpts });
 
@@ -205,6 +187,12 @@ export async function createApp() {
         databaseUrl: Boolean(process.env.DATABASE_URL),
         sessionSecret: Boolean(process.env.SESSION_SECRET),
         nodeEnv: process.env.NODE_ENV || null,
+
+        databasePoolMax: Number(process.env.DATABASE_POOL_MAX || 0) || undefined,
+
+        edgeCacheTtlSec: Number(process.env.EDGE_CACHE_TTL_SECONDS ?? 10) || 10,
+
+        inProcessCacheTtlMs: 6000,
       },
       time: new Date().toISOString(),
     });
@@ -456,11 +444,11 @@ YOUR MANTRA (end every reply with a variation of):
     res.json({ success: true, dispatchedAt: Date.now() });
     });
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─
   // SELF-HOSTED VOICE NOTIFICATION SYSTEM
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─
 
-    // â”€â”€ Database client (CockroachDB via pg) â€” replaces Supabase admin client â”€â”€
+    // ─ Database client (CockroachDB via pg) â€” replaces Supabase admin client ─
   import('./server/db/client').then((m) => void m.ping().then((ok) => {
     console[ok ? 'log' : 'warn']('[VOICE] CockroachDB: ' + (ok ? 'connected' : 'UNREACHABLE â€” check DATABASE_URL'));
   }));
@@ -539,12 +527,6 @@ YOUR MANTRA (end every reply with a variation of):
       let transcript = typeof clientTranscript === 'string' && clientTranscript.trim()
         ? clientTranscript.trim()
         : (typeof description === 'string' ? description : '');
-      if (!transcript && req.file && WHISPER_URL) {
-        try {
-          transcript = (await whisperTranscribe(req.file.buffer.toString('base64'))).trim() || transcript;
-        } catch (err) {
-          console.warn('[VoiceIncident] Whisper transcription failed:', err?.message);
-        }
       }
 
       const incident = await upsertWildlifeIncident({
@@ -642,89 +624,6 @@ YOUR MANTRA (end every reply with a variation of):
   app.use('/api/config', publicRateLimiter, configRoutes);
   // Media storage: using CockroachDB only (Storj object storage removed).
   app.use('/api/media', publicRateLimiter, mediaRoutes);
-
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // AI TRANSCRIPTION â€” self-hosted Whisper (Apache-2.0) converts voice reports to civic text
-  // Accepts multipart/form-data `audio` OR JSON { audioUrl }
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
-    try {
-      let b64 = '';
-      let mimeType = 'audio/webm';
-      if (req.file) {
-        b64 = req.file.buffer.toString('base64');
-        mimeType = req.file.mimetype || 'audio/webm';
-      } else if (req.body?.audioUrl) {
-        const remote = await axios.get(String(req.body.audioUrl), { responseType: 'arraybuffer', timeout: 20000 });
-        b64 = Buffer.from(remote.data).toString('base64');
-        mimeType = String(remote.headers['content-type'] || 'audio/webm').split(';')[0];
-      }
-      if (!b64) return res.status(400).json({ error: 'An audio file or audioUrl is required.' });
-
-      if (!WHISPER_URL) {
-        // No server Whisper â€” the recording itself remains valid civic evidence.
-        // (Browsers transcribe on-device via Transformers.js before upload.)
-        return res.json({ transcript: null, note: 'Server transcription not configured.' });
-      }
-
-      const text = (await whisperTranscribe(b64)).trim();
-      res.json({ transcript: text || null });
-    } catch (err: any) {
-      console.error('[Transcribe] Error:', err?.message);
-      res.status(500).json({ error: 'Transcription failed. Your voice recording on the map remains valid â€” you may retry AI text later.' });
-    }
-  });
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // AADHAAR VERIFICATION â€” real pyaadhaar decode of Aadhaar QR codes.
-  // Accepts { qrData } (raw secure/old QR string captured by the browser)
-  // or { aadhaarNumber } (12-digit, Verhoeff-checked). The Python process
-  // decodes OFFLINE; only masked data (last-4 digits) is ever returned.
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const AADHAAR_SERVICE = path.join(__dirname, 'server', 'aadhaar_service.py');
-  app.post('/api/aadhaar/verify', express.json(), (req, res) => {
-    const { qrData, aadhaarNumber } = req.body || {};
-    const mode = qrData ? 'qr' : aadhaarNumber ? 'number' : null;
-    if (!mode) {
-      return res.status(400).json({ verified: false, error: 'Provide qrData (scanned Aadhaar QR) or aadhaarNumber.' });
-    }
-    if (qrData && String(qrData).length > 20000) {
-      return res.status(400).json({ verified: false, error: 'QR payload too large.' });
-    }
-    if (aadhaarNumber && !/^\d{12}$/.test(String(aadhaarNumber))) {
-      return res.status(400).json({ verified: false, error: 'Aadhaar number must be exactly 12 digits.' });
-    }
-
-    const py = spawn(process.env.PYTHON_BIN || 'python', [AADHAAR_SERVICE], { windowsHide: true });
-    let out = '';
-    let errText = '';
-    const timer = setTimeout(() => {
-      try { py.kill(); } catch { /* already dead */ }
-    }, 15000);
-
-    py.stdout.on('data', (d) => { out += String(d); });
-    py.stderr.on('data', (d) => { errText += String(d); });
-    py.on('error', (e) => {
-      clearTimeout(timer);
-      res.status(500).json({ verified: false, error: `Python runtime unavailable: ${e.message}` });
-    });
-    py.on('close', (code) => {
-      clearTimeout(timer);
-      if (res.headersSent) return;
-      const lines = out.trim().split('\n').filter(Boolean);
-      const last = lines[lines.length - 1] || '';
-      try {
-        const parsed = JSON.parse(last);
-        if (parsed && typeof parsed === 'object' && 'verified' in parsed) {
-          return res.json(parsed);
-        }
-        res.status(500).json({ verified: false, error: errText.trim() || `Aadhaar service exited (${code}).` });
-      } catch {
-        res.status(500).json({ verified: false, error: errText.trim() || `Aadhaar service exited (${code}).` });
-      }
-    });
-    py.stdin.write(JSON.stringify({ mode, payload: qrData || aadhaarNumber }));
-    py.stdin.end();
-  });
 
   return app;
 }
