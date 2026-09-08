@@ -87,6 +87,10 @@ const AppContent: React.FC = () => {
   return (
     <>
       <Shell>
+        {/* Maintenance Notice Tab */}
+        <div className="w-full bg-[#9ACD32] text-white text-center py-3 px-4 font-bold text-sm shadow-md">
+          ⚠️ Voice of Gudalur is currently undergoing maintenance. We'll be back shortly. Thank you for your patience!
+        </div>
         {/* Elegant low-latency page transitions — a light fade + lift that
             never blocks content (LCP-safe: the page paints on frame one). */}
         <motion.div
