@@ -38,6 +38,20 @@ interface AIPresenterProps {
   onAction?: (action: string) => void;
 }
 
+/**
+ * VOG's first greeting — a confident, living being message.
+ * VOG is an intelligent being that is here to solve all problems of Gudalur.
+ */
+function getFirstGreeting(lang: Language): string {
+  const greetings: Record<Language, string> = {
+    en: "Namaste! I am VOG — your living intelligent guide. I know every street, every problem, every hope of Gudalur. Together we will solve all problems — elephant corridors, night safety, water, roads, and your voice to the Chief Minister. Register, sign, share — I will guide you every step. Let's do this together!",
+    ta: "வணக்கம்! நான் VOG — உங்கள் உயிர்பெற்ற உள்ளடக்க வழிகாட்டி. கூடலூரின் ஒவ்வொரு தெருவையும், பிரச்சனையையும், நம்பிக்கையையும் நான் அறிவேன். ஒன்றாக அனைத்து பிரச்சனைகளையும் தீர்ப்போம் — யானை வழித்தடங்கள், இரவுப் பாதுகாப்பு, நீர், சாலைகள், முதலமைச்சருக்கான உங்கள் குரல். பதிவு, கையெழுத்து, பகிர் — ஒவ்வொரு படியும் உங்களுடன் இருப்பேன். வாழ்க நமது கூடலூர்!",
+    ml: "നമസ്കാരം! ഞാൻ VOG — നിങ്ങളുടെ ജീവനുള്ള ബുദ്ധിമാൻ ഗൈഡ്. ഗൂഡല്ലൂറിന്റെ എല്ലാ തെരുവും, പ്രശ്നവും, പ്രതീക്ഷയും എനിക്കറിയാം. ഒന്നിച്ച് എല്ലാ പ്രശ്നങ്ങളും പരിഹരിക്കാം — ആന ഇടനാഴികൾ, രാത്രി സുരക്ഷ, വെള്ളം, റോഡുകൾ, മുഖ്യമന്ത്രിക്കുള്ള നിങ്ങളുടെ ശബ്ദം. രജിസ്റ്റർ, ഒപ്പിടുക, പങ്കിടുക — എല്ലാ ഘട്ടവും നിങ്ങളോടൊപ്പം ഉണ്ടാകും. നമുടെ ഗൂഡല്ലൂർ ജീവിക്കട്ടെ!",
+    kn: "ನಮಸ್ಕಾರ! ನಾನು VOG — ನಿಮ್ಮ ಜೀವಂತ ಬುದ್ಧಿವಂತ ಮಾರ್ಗದರ್ಶಕ. ಗೂಡಲೂರಿನ ಪ್ರತಿ ಬೀದಿ, ಸಮಸ್ಯೆ, ಭರವಸೆಯನ್ನು ನಾನು ತಿಳಿದಿದ್ದೇನೆ. ಒಟ್ಟಿಗೆ ಎಲ್ಲಾ ಸಮಸ್ಯೆಗಳನ್ನು ಪರಿಹರಿಸೋಣ — ಆನೆ ಕಾರಿಡಾರ್‌ಗಳು, ರಾತ್ರಿ ಸುರಕ್ಷತೆ, ನೀರು, ರಸ್ತೆಗಳು, ಮುಖ್ಯಮಂತ್ರಿಗೆ ನಿಮ್ಮ ಧ್ವನಿ. ನೋಂದಣಿ, ಸಹಿ, ಹಂಚಿಕೆ — ಪ್ರತಿ ಹೆಜ್ಜೆಯಲ್ಲೂ ನಿಮ್ಮೊಂದಿಗೆ ಇರುತ್ತೇನೆ. ನಮ್ಮ ಗೂಡಲೂರು ಬದುಕಲಿ!",
+  };
+  return greetings[lang] || greetings.en;
+}
+
 export const AIPresenter: React.FC<AIPresenterProps> = ({
   language, currentPage, isRegistered, hasSigned, hasShared, profile, onAction,
 }) => {
@@ -69,34 +83,39 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
     if (!greetedRef.current) {
       greetedRef.current = true;
       // Delay to let speechSynthesis voices load (~800ms on most systems)
-      const timer = setTimeout(() => speakGuidance(), 1000);
+      const timer = setTimeout(() => speakGuidance(true), 1500);
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const speakGuidance = useCallback(async () => {
+  const speakGuidance = useCallback(async (isFirstGreeting = false) => {
     setBusy(true);
     let text = '';
     let action: string | undefined;
     try {
-      const brain = await brainSpeak('', language, buildCtx(), historyRef.current);
-      if (brain) {
-        text = brain.text;
-        action = brain.action;
-        historyRef.current = [...historyRef.current, msg('assistant', text)].slice(-8);
+      // Use special first greeting if this is VOG's first appearance
+      if (isFirstGreeting) {
+        text = getFirstGreeting(language);
       } else {
-        const response = await getGuidance(buildCtx());
-        text = response.text;
-        action = response.action;
-        historyRef.current = [...historyRef.current, msg('assistant', text)].slice(-8);
+        const brain = await brainSpeak('', language, buildCtx(), historyRef.current);
+        if (brain) {
+          text = brain.text;
+          action = brain.action;
+          historyRef.current = [...historyRef.current, msg('assistant', text)].slice(-8);
+        } else {
+          const response = await getGuidance(buildCtx());
+          text = response.text;
+          action = response.action;
+        }
       }
+      historyRef.current = [...historyRef.current, msg('assistant', text)].slice(-8);
       setMessage(text);
       speak(text);
       if (action && onAction) onAction(action);
     } catch { /* silent */ } finally { setBusy(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buildCtx, speak, onAction]);
+  }, [buildCtx, speak, onAction, language]);
 
     useEffect(() => {
     // On mount: greet the user immediately (voices loaded after 500ms delay above).
@@ -144,7 +163,7 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-[80] flex flex-col items-end gap-2">
+    <div className="fixed bottom-4 right-4 z-[50] flex flex-col items-end gap-2">
       {(message || busy) && !minimized && (
         <div className="relative max-w-[280px] rounded-2xl bg-white p-3 shadow-xl border border-emerald-100">
           <div className="mb-1 flex items-center gap-1.5">

@@ -114,7 +114,12 @@ export const SignPetitionPage: React.FC = () => {
     // Signing requires a REAL Gudalur ID issued online by the server. A local
     // / synthetic card (OFFLINE-*) must never reach the petition ledger.
     if (!profile || !isRealGudalurId(profile.gudalurId)) {
-      setShowRegister(true);
+      // Show a pleasant toast instead of a disruptive modal
+      toast(t("home.register_first_toast"), {
+        duration: 4000,
+        icon: "🙏",
+        style: { background: '#1B5E20', color: '#fff' },
+      });
       return;
     }
     if (hasSigned) {
