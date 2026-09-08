@@ -49,7 +49,7 @@ export const SignPetitionPage: React.FC = () => {
   const [shareActive, setShareActive] = useState<{ id: string; title: string; description: string; imageUrl?: string; videoUrl?: string; createdAt: string } | null>(null);
   const [ledger, setLedger] = useState<Array<{ hash: string; name: string; village: string; phoneLast4: string | null; batchNo: number; signedAt: string; verifyUrl: string }>>([]);
   const [ledgerTotal, setLedgerTotal] = useState<number | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollRef = useRef<number | null>(null);
 
   // Load admin-published movement media (posters + videos) for the Support the Movement section.
   useEffect(() => {
@@ -98,12 +98,35 @@ export const SignPetitionPage: React.FC = () => {
 
   useEffect(() => {
     void loadStats();
-    // Live tracking - update every 10 seconds
-    pollRef.current = setInterval(() => { void loadStats(); }, 10000);
+    // Live tracking — but cut the load dramatically under a crowd:
+    //  1. Pause polling when the tab is hidden (a background tab doesn't need
+    //     live numbers, and most requests under a heavy crowd come from idle
+    //     browser tabs).
+    //  2. Raise the visible-tab interval from 10s → 20s so each user hits the
+    //     API half as often.
+    // 3. After a sign, refresh immediately rather than waiting for the timer.
+    const INTERVAL_MS = 20000;
+    const tick = () => { void loadStats(); };
+    tick();
+    pollRef.current = window.setInterval(tick, INTERVAL_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        if (pollRef.current) clearInterval(pollRef.current);
+      } else {
+        pollRef.current = window.setInterval(tick, INTERVAL_MS);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [loadStats]);
+
+  // After a sign, refresh stats immediately instead of waiting for the next poll.
+  useEffect(() => {
+    if (result) void loadStats();
+  }, [result]);
 
   // After registration - show ID card, don't auto-sign
   const handleRegistered = useCallback(() => {

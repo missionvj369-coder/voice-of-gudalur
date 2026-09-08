@@ -12,6 +12,15 @@
 [build.environment]
   NPM_FLAGS = "--include=dev"
   NODE_ENV = "production"
+  # Free-tier survival knobs:
+  #   DATABASE_POOL_MAX   2 — each serverless instance keeps a tiny pool so the
+  #                        total connection count stays far below CockroachDB's
+  #                        free-tier ceiling when Netlify spins up many instances.
+  #   MAX_IN_FLIGHT       150 — shed excess concurrent requests with a fast 503
+  #                        so the function stays responsive for the users it IS
+  #                        serving instead of queueing DB work that times out.
+  DATABASE_POOL_MAX = "2"
+  MAX_IN_FLIGHT = "150"
 
 # ── API (Netlify Function — the Express backend itself) ─────────────────────
 # server.ts#createApp() is wrapped with serverless-http in
