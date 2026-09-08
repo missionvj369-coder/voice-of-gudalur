@@ -130,7 +130,7 @@ function buildMediaNotice(lang: Language, posters: number, videos: number): stri
   }[lang] || 'New video just landed — share it to your groups!';
 }
 
-const MEDIA_CLOSE_SECONDS = 10;
+const MEDIA_CLOSE_SECONDS = 9;
 
 export const AIPresenter: React.FC<AIPresenterProps> = ({ language }) => {
   const { profile } = useAuth();
