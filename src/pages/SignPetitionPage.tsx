@@ -10,7 +10,7 @@ import ShareSocialModal from "../components/ShareSocial/ShareSocialModal";
 import MediaGallery from "../components/ShareSocial/MediaGallery";
 import MediaViewer from "../components/ShareSocial/MediaViewer";
 import { PlatformIcon } from '../components/ShareSocial/PlatformIcon';
-import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2, ImageIcon, Video, Sparkles, Hash } from "lucide-react";
+import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2, ImageIcon, Video, Sparkles, Hash, CreditCard } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface PlaceCount {
@@ -356,6 +356,15 @@ export const SignPetitionPage: React.FC = () => {
                 <p className="font-mono text-xs text-slate-900">{result.signedAt} UTC</p>
               </div>
             </div>
+            {profile?.aadhaarLast4 && (
+              <div className="flex items-center gap-3">
+                <CreditCard size={16} className="text-emerald-600" />
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase">Aadhaar (Verified)</p>
+                  <p className="font-mono text-xs text-slate-900">XXXX-XXXX-{profile.aadhaarLast4}</p>
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <button

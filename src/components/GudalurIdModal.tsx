@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ShieldCheck, QrCode, MapPin, Phone, Mail, User, CheckCircle2, Share2, Copy, Check, LocateFixed, Loader2, BadgeCheck } from 'lucide-react';
+import { X, ShieldCheck, QrCode, MapPin, Phone, Mail, User, CheckCircle2, Share2, Copy, Check, LocateFixed, Loader2, BadgeCheck, CreditCard } from 'lucide-react';
 import { useAuth, DUPLICATE_PHONE_ERROR } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
@@ -21,6 +21,7 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
   const [localityText, setLocalityText] = useState(profile?.customPlaceName || profile?.localityName || '');
   const [pincode, setPincode] = useState(profile?.pincode || '');
   const [email, setEmail] = useState(profile?.email || '');
+  const [aadhaarNumber, setAadhaarNumber] = useState(profile?.aadhaarNumber || '');
   const [copied, setCopied] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -88,7 +89,8 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
         await updateResident({
           name: name.trim(), phone: phone.trim(), localityId: '',
           address: typedAddress, email: email.trim() || undefined,
-          pincode: pincode.trim(), lat: editCoords?.lat, lng: editCoords?.lng,
+          pincode: pincode.trim(), aadhaarNumber: aadhaarNumber.trim() || undefined,
+          lat: editCoords?.lat, lng: editCoords?.lng,
         });
         setIsRegistering(false);
         toast.success('Your supporter details are updated in the official ledger.');
@@ -307,6 +309,17 @@ export const GudalurIdModal: React.FC<GudalurIdModalProps> = ({ isOpen, onClose 
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">Pincode (Optional)</label>
                     <input type="text" value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))} placeholder="641034" maxLength={6}
                       className="w-full px-3 py-2.5 rounded-2xl border border-slate-300 text-xs font-mono text-slate-900 bg-white outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Aadhaar Number (Optional)</label>
+                    <div className="relative">
+                      <CreditCard size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate:400" />
+                      <input type="text" value={aadhaarNumber} onChange={(e) => setAadhaarNumber(e.target.value.replace(/\D/g, ''))} placeholder="12-digit Aadhaar (optional)" maxLength={12}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition font-mono text-slate-900 bg-white placeholder:text-slate:400" />
+                    </div>
+                    <p className="text-[11px] text-amber-700 mt-1.5 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
+                      {profile?.aadhaarLast4 ? `✓ Aadhaar verified (ends with ${profile.aadhaarLast4})` : 'Only a signature with a valid Aadhaar on file counts as verified proof. Update your Aadhaar to make your signature verified.'}
+                    </p>
                   </div>
                   <button type="submit" className="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-700/20 transition flex items-center justify-center gap-2 mt-2">
                     <CheckCircle2 size={18} /><span>{isEditMode ? 'Update My Details' : 'Generate My Digital Supporter ID'}</span>

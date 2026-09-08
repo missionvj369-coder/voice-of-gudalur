@@ -83,6 +83,8 @@ function residentRowToProfile(row: any) {
     bio: row.bio ?? undefined,
     lat: row.lat ?? undefined,
     lng: row.lng ?? undefined,
+    aadhaarNumber: row.aadhaar_number ?? undefined,
+    aadhaarLast4: row.aadhaar_last4 ?? undefined,
     createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
     updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : Date.now(),
     issuesReported: row.issues_reported ?? 0,
@@ -235,6 +237,7 @@ router.patch('/me', requireAuth, async (req: Request, res: Response) => {
     const lat = typeof f.lat === 'number' ? f.lat : undefined;
     const lng = typeof f.lng === 'number' ? f.lng : undefined;
     const phone = typeof f.phone === 'string' ? normalizePhone(f.phone) : undefined;
+    const aadhaarNumber = typeof f.aadhaarNumber === 'string' && /^\d{12}$/.test(f.aadhaarNumber.trim()) ? f.aadhaarNumber.trim() : undefined;
 
     let localityName: string | undefined;
     if (typeof f.localityName === 'string' && f.localityName.trim()) {
@@ -257,16 +260,18 @@ router.patch('/me', requireAuth, async (req: Request, res: Response) => {
          pincode     = COALESCE($8, pincode),
          lat         = COALESCE($9, lat),
          lng         = COALESCE($10, lng),
+         aadhaar_number = COALESCE($11, aadhaar_number),
+         aadhaar_last4 = CASE WHEN $11 IS NOT NULL THEN right($11, 4) ELSE aadhaar_last4 END,
          updated_at  = now()
        WHERE uid = $1`,
       [req.user!.uid, name ?? null, email ?? null, phone ?? null, localityId ?? null,
        localityName ?? null, (address || customPlaceName) ?? null, pincode ?? null,
-       lat ?? null, lng ?? null],
+       lat ?? null, lng ?? null, aadhaarNumber ?? null],
     );
         const row = await db.queryOne<any>(
       `SELECT uid, phone, gudalur_id, name, email, locality_id, locality_name,
               custom_place_name, pincode, role, verification_level,
-              lat, lng,
+              lat, lng, aadhaar_number, aadhaar_last4,
               created_at, updated_at, issues_reported, issues_supported,
               representations_created, alerts_acknowledged,
               is_blood_donor, blood_group, avatar_url, bio

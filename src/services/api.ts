@@ -103,7 +103,7 @@ export const authApi = {
   /** POST /api/auth/register — create a supporter (issues a Digital Supporter ID + session). */
   register: (input: {
     name: string; phone: string; localityId?: string; customPlaceName?: string;
-    address?: string; localityName?: string; pincode?: string; email?: string; lat?: number; lng?: number;
+    address?: string; localityName?: string; pincode?: string; email?: string; aadhaarNumber?: string; lat?: number; lng?: number;
   }) =>
     request<{ resident: AuthUser }>('/api/auth/register', {
       method: 'POST',

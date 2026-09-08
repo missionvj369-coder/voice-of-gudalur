@@ -74,6 +74,10 @@ export interface UserProfile {
   bio?: string;
      lat?: number;
   lng?: number;
+  /** 12-digit Aadhaar number (optional) — only last-4 stored in petition_signs for verification. */
+  aadhaarNumber?: string;
+  /** Last 4 digits of Aadhaar — returned from server for display after update. */
+  aadhaarLast4?: string;
   createdAt: number;
   updatedAt: number;
   // Stats for My ID dashboard

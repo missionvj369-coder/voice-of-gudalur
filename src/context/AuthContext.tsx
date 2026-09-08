@@ -21,6 +21,7 @@ interface AuthContextType {
     localityName?: string;
     email?: string;
     pincode?: string;
+    aadhaarNumber?: string;
     lat?: number;
     lng?: number;
   }) => Promise<UserProfile>;
@@ -35,6 +36,7 @@ interface AuthContextType {
     /** Full free-text address — the supporter's own details, not a preset place. */
     address?: string;
     pincode?: string;
+    aadhaarNumber?: string;
     lat?: number; lng?: number;
   }) => Promise<UserProfile>;
 }
@@ -278,6 +280,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localityName?: string;
     email?: string;
     pincode?: string;
+    aadhaarNumber?: string;
     lat?: number;
     lng?: number;
     aadhaarVerified?: boolean;
@@ -306,6 +309,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localityName: typedAddress || undefined,
         pincode: data.pincode?.trim() || '',
         email: data.email,
+        aadhaarNumber: data.aadhaarNumber?.trim() || undefined,
         lat: data.lat ?? userCoords?.lat,
         lng: data.lng ?? userCoords?.lng,
       });
@@ -405,6 +409,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localityId?: string; customPlaceName?: string;
     address?: string;
     pincode?: string;
+    aadhaarNumber?: string;
     lat?: number; lng?: number;
   }): Promise<UserProfile> => {
     if (!profile?.gudalurId) throw new Error('No registered resident to update');
@@ -420,6 +425,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localityName: typedAddress || profile.localityName,
       customPlaceName: typedAddress ?? profile.customPlaceName,
       pincode: fields.pincode?.trim() || profile.pincode,
+      aadhaarNumber: fields.aadhaarNumber?.trim() || profile.aadhaarNumber,
       lat: fields.lat ?? profile.lat,
       lng: fields.lng ?? profile.lng,
       updatedAt: Date.now(),
@@ -436,6 +442,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         address: updated.customPlaceName || updated.localityName || null,
         localityName: updated.localityName || null,
         pincode: updated.pincode,
+        aadhaarNumber: updated.aadhaarNumber || null,
         lat: updated.lat ?? null,
         lng: updated.lng ?? null,
       });
