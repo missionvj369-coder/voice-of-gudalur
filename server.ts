@@ -527,7 +527,6 @@ YOUR MANTRA (end every reply with a variation of):
       let transcript = typeof clientTranscript === 'string' && clientTranscript.trim()
         ? clientTranscript.trim()
         : (typeof description === 'string' ? description : '');
-      }
 
       const incident = await upsertWildlifeIncident({
         type: type || 'human-wildlife',
