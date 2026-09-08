@@ -10,6 +10,9 @@ import type { Language } from '../context/LanguageContext';
 import { AIAvatar } from './AIPresenter/AIAvatar';
 import { petitionApi } from '../services/api';
 
+// Guard to prevent animation from running twice
+let animationStarted = false;
+
 interface Props { onChoose: (lang: Language) => void; }
 
 const DEEP = '#1B5E20', FERN = '#2E7D32', WHITE = '#F5F5F5', YELLOW = '#F59E0B', PALE = '#FDE047';
@@ -86,6 +89,8 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
   const openedRef = useRef(false);
 
   useEffect(() => {
+    if (animationStarted) return;
+    animationStarted = true;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
