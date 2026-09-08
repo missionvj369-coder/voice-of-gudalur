@@ -257,7 +257,7 @@ export const SignPetitionPage: React.FC = () => {
         </div>
       )}
 
-      {profile && !hasSigned && (
+      {profile && (
         <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-6 space-y-4">
           <div className="text-center mb-3"><div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center mb-2">
               <Shield size={24} className="text-white" />
@@ -296,10 +296,20 @@ export const SignPetitionPage: React.FC = () => {
           </div>
           <button
             onClick={handleSign}
-            disabled={busy}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
+            disabled={busy || hasSigned}
+            className={`w-full py-3.5 rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition ${
+              hasSigned
+                ? 'bg-emerald-100 text-emerald-700 border border-emerald-300 cursor-default'
+                : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white disabled:opacity-60'
+            }`}
           >
-            {busy ? <><Loader2 size={16} className="animate-spin" /> {t("home.signing")}</> : <><PenLine size={16} /> {t("home.sign_btn")}</>}
+            {busy ? (
+              <><Loader2 size={16} className="animate-spin" /> {t("home.signing")}</>
+            ) : hasSigned ? (
+              <><CheckCircle2 size={16} /> {t("home.signed_btn")}</>
+            ) : (
+              <><PenLine size={16} /> {t("home.sign_btn")}</>
+            )}
           </button>
         </div>
       )}
