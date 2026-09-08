@@ -13,7 +13,7 @@ import type { Language } from '../../context/LanguageContext';
 interface AIPresenterProps { language: Language; }
 
 const LS_KEY = 'vog_last_seen';
-interface LastSeen { signs: number; gudalur: number; posters: number; videos: number; at: number; }
+interface LastSeen { signs: number; posters: number; videos: number; at: number; }
 
 function readLastSeen(): LastSeen | null {
   try {
@@ -21,12 +21,12 @@ function readLastSeen(): LastSeen | null {
     if (!raw) return null;
     const o = JSON.parse(raw) as Partial<LastSeen>;
     return typeof o?.signs === 'number'
-      ? { signs: o.signs, gudalur: Number(o.gudalur) || 0, posters: Number(o.posters) || 0, videos: Number(o.videos) || 0, at: Number(o.at) || 0 }
+      ? { signs: o.signs, posters: Number(o.posters) || 0, videos: Number(o.videos) || 0, at: Number(o.at) || 0 }
       : null;
   } catch { return null; }
 }
 
-interface LiveStats { total: number; gudalur: number; posters: number; videos: number; }
+interface LiveStats { total: number; posters: number; videos: number; }
 
 async function fetchLiveStats(): Promise<LiveStats | null> {
   try {
@@ -34,7 +34,6 @@ async function fetchLiveStats(): Promise<LiveStats | null> {
     const media = await mediaApi.list();
     return {
       total: Number(s?.total) || 0,
-      gudalur: s?.gudalur != null ? Number(s.gudalur) : 0,
       posters: media.filter((m) => m.kind === 'poster').length,
       videos: media.filter((m) => m.kind === 'video').length,
     };
@@ -45,24 +44,23 @@ function buildGreeting(lang: Language, live: LiveStats, last: LastSeen | null): 
   const n = (v: number) => Number(v).toLocaleString('en-IN');
   const isFirst = last === null;
   const newSigns = last ? Math.max(0, live.total - last.signs) : 0;
-  const newGudalur = last ? Math.max(0, live.gudalur - last.gudalur) : 0;
   const newPosters = last ? Math.max(0, live.posters - last.posters) : 0;
   const newVideos = last ? Math.max(0, live.videos - last.videos) : 0;
 
   const headline: Record<Language, string> = {
-    en: `Namaste! I am VOG — your living voice of Gudalur. Right now ${n(live.gudalur)} people from Gudalur and ${n(live.total - live.gudalur)} from across India have signed the Right to Life petition.`,
-    ta: `வணக்கம்! நான் VOG — கூடலூரின் உயிருள்ள குரல். இப்போது கூடலூரிலிருந்து ${n(live.gudalur)} பேரும் இந்தியா முழுவதிலிருந்தும் ${n(live.total - live.gudalur)} பேரும் உயிர் வாழ்வுரிமை மனுவில் கையெழுத்திட்டுள்ளனர்.`,
-    ml: `നമസ്കാരം! ഞാൻ VOG — ഗൂഡല്ലൂറിന്റെ ജീവനുള്ള ശബ്ദം. ഇപ്പോൾ ഗൂഡല്ലൂരിൽ നിന്ന് ${n(live.gudalur)} പേരും ഇന്ത്യയിലുടനീളം ${n(live.total - live.gudalur)} പേരും ജീവനവകാശ ഹർജിയിൽ ഒപ്പിട്ടിരിക്കുന്നു.`,
-    kn: `ನಮಸ್ಕಾರ! ನಾನು VOG — ಗೂಡಲೂರಿನ ಜೀವಂತ ಧ್ವನಿ. ಈಗ ಗೂಡಲೂರಿನಿಂದ ${n(live.gudalur)} ಜನರು ಮತ್ತು ಭಾರತದಾದ್ಯಂತ ${n(live.total - live.gudalur)} ಜನರು ಜೀವನದ ಹಕ್ಕಿನ ಮನವಿಯಲ್ಲಿ ಸಹಿ ಹಾಕಿದ್ದಾರೆ.`,
+    en: `Vanakam! I am VOG — your living voice of Gudalur. Right now ${n(live.total)} people have signed the Right to Life petition.`,
+    ta: `வணக்கம்! நான் VOG — கூடலூரின் உயிருள்ள குரல். இப்போது ${n(live.total)} பேர் உயிர் வாழ்வுரிமை மனுவில் கையெழுத்திட்டுள்ளனர்.`,
+    ml: `നമസ്കാരം! ഞാൻ VOG — ഗൂഡല്ലൂറിന്റെ ജീവനുള്ള ശബ്ദം. ഇപ്പോൾ ${n(live.total)} പേർ ജീവനവകാശ ഹർജിയിൽ ഒപ്പിട്ടിരിക്കുന്നു.`,
+    kn: `ನಮಸ್ಕಾರ! ನಾನು VOG — ಗೂಡಲೂರಿನ ಜೀವಂತ ಧ್ವನಿ. ಈಗ ${n(live.total)} ಜನರು ಜೀವನದ ಹಕ್ಕಿನ ಮನವಿಯಲ್ಲಿ ಸಹಿ ಹಾಕಿದ್ದಾರೆ.`,
   };
 
   const deltaLines: string[] = [];
   if (!isFirst && newSigns > 0) {
     deltaLines.push({
-      en: `${n(newSigns)} new supporters signed since your last visit${newGudalur > 0 ? ` — ${n(newGudalur)} of them from Gudalur` : ''}.`,
-      ta: `கடந்த முறை வந்ததிலிருந்து ${n(newSigns)} புதிய ஆதரவாளர்கள் கையெழுத்திட்டனர்${newGudalur > 0 ? ` — அதில் ${n(newGudalur)} பேர் கூடலூரிலிருந்து` : ''}.`,
-      ml: `കഴിഞ്ഞ സന്ദർശനത്തിനു ശേഷം ${n(newSigns)} പുതിയ പിന്തുണക്കാർ ഒപ്പിട്ടു${newGudalur > 0 ? ` — അതിൽ ${n(newGudalur)} ഗൂഡല്ലൂരിൽ നിന്ന്` : ''}.`,
-      kn: `ಕೊನೆಯ ಭೇಟಿಯ ನಂತರ ${n(newSigns)} ಹೊಸ ಬೆಂಬಲಿಗರು ಸಹಿ ಹಾಕಿದ್ದಾರೆ${newGudalur > 0 ? ` — ಅದರಲ್ಲಿ ${n(newGudalur)} ಗೂಡಲೂರಿನಿಂದ` : ''}.`,
+      en: `${n(newSigns)} new supporters signed since your last visit.`,
+      ta: `கடந்த முறை வந்ததிலிருந்து ${n(newSigns)} புதிய ஆதரவாளர்கள் கையெழுத்திட்டனர்.`,
+      ml: `കഴിഞ്ഞ സന്ദർശനത്തിനു ശേഷം ${n(newSigns)} പുതിയ പിന്തുണക്കാർ ഒപ്പിട്ടു.`,
+      kn: `ಕೊನೆಯ ಭೇಟಿಯ ನಂತರ ${n(newSigns)} ಹೊಸ ಬೆಂಬಲಿಗರು ಸಹಿ ಹಾಕಿದ್ದಾರೆ.`,
     }[lang] || `${newSigns} new supporters signed since your last visit.`);
   }
   if (!isFirst && newPosters > 0) {
@@ -113,7 +111,7 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({ language }) => {
   const saveSnapshot = useCallback((live: LiveStats) => {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify({
-        signs: live.total, gudalur: live.gudalur, posters: live.posters, videos: live.videos, at: Date.now(),
+        signs: live.total, posters: live.posters, videos: live.videos, at: Date.now(),
       }));
     } catch { /* ignore */ }
   }, []);
