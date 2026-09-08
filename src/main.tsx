@@ -35,9 +35,17 @@ if ('serviceWorker' in navigator) {
 // 5 minutes while visible, and hard-reload when it changes — so a user who has
 // the app open in the background (or sits on a tab all day) automatically gets
 // the current live version without ever pressing refresh.
+//
+// Anti-interrupt guards:
+//  1. NEVER reload within the first 2 minutes of page load — protects the VOG
+//     intro animation and a visitor's first impression from a mid-deploy reload.
+//  2. Only reload when the tab REGAINS focus/visibility — never while the user
+//     is actively reading/signing on the page.
 {
   let currentBuild: string | null = null;
   let reloading = false;
+  const bootedAt = Date.now();
+  const GRACE_MS = 2 * 60 * 1000; // 2-minute no-reload grace window after boot
 
   const readVersion = async () => {
     try {
@@ -52,6 +60,7 @@ if ('serviceWorker' in navigator) {
 
   const checkVersion = async () => {
     if (reloading || document.visibilityState === 'hidden') return;
+    if (Date.now() - bootedAt < GRACE_MS) return;   // grace window — never interrupt a fresh visit
     const build = await readVersion();
     if (!build) return;
     if (currentBuild === null) { currentBuild = build; return; }   // first read — baseline
@@ -61,7 +70,12 @@ if ('serviceWorker' in navigator) {
     }
   };
 
-  void checkVersion();
+  // Baseline is captured immediately (cheap, no reload risk).
+  void (async () => {
+    const build = await readVersion();
+    if (build) currentBuild = build;
+  })();
+
   const onVisible2 = () => { if (document.visibilityState === 'visible') void checkVersion(); };
   document.addEventListener('visibilitychange', onVisible2);
   window.addEventListener('focus', checkVersion);

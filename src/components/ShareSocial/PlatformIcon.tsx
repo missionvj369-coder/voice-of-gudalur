@@ -14,7 +14,7 @@ import {
 } from 'react-icons/si';
 
 // Custom ShareChat icon (not available in Simple Icons)
-const SiSharechat: React.FC<{ size?: number; className?: string }> = ({ size = 24, className }) => (
+const SiSharechat: React.FC<{ size?: number; className?: string; title?: string; 'aria-label'?: string }> = ({ size = 24, className, title, 'aria-label': ariaLabel }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
@@ -22,7 +22,10 @@ const SiSharechat: React.FC<{ size?: number; className?: string }> = ({ size = 2
     height={size}
     className={className}
     fill="#fc4f32"
+    role="img"
+    aria-label={ariaLabel}
   >
+    {title && <title>{title}</title>}
     <path d="M17.2 14.6a2.1 2.1 0 0 0-1.18.36l-3.34-1.94a2.62 2.62 0 0 0 0-1.06l3.3-1.92a2.15 2.15 0 1 0-.99-1.72 2.2 2.2 0 0 0 .04.4l-3.3 1.93a2.13 2.13 0 1 0 0 3.7l3.34 1.94a2.1 2.1 0 1 0 1.13-1.69Z" />
   </svg>
 );
@@ -53,7 +56,7 @@ export const PLATFORMS: Record<PlatformName, PlatformConfig> = {
   sharechat: { name: 'sharechat', label: 'ShareChat', color: 'fc4f32', appScheme: 'sharechat://' },
 };
 
-const ICON_MAP: Record<PlatformName, React.FC<{ size?: number; className?: string }>> = {
+const ICON_MAP: Record<PlatformName, React.FC<{ size?: number; className?: string; title?: string; 'aria-label'?: string }>> = {
   whatsapp: SiWhatsapp,
   instagram: SiInstagram,
   facebook: SiFacebook,
