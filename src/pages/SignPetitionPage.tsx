@@ -43,8 +43,6 @@ export const SignPetitionPage: React.FC = () => {
   const [viewingMedia, setViewingMedia] = useState<MediaItem | null>(null);
   const [viewingMediaIndex, setViewingMediaIndex] = useState(0);
   const [total, setTotal] = useState<number | null>(null);
-  const [gudalurCount, setGudalurCount] = useState<number | null>(null);
-  const [outsideCount, setOutsideCount] = useState<number | null>(null);
   const [places, setPlaces] = useState<PlaceCount[]>([]);
   const [hasSigned, setHasSigned] = useState(false);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
@@ -74,8 +72,6 @@ export const SignPetitionPage: React.FC = () => {
     try {
       const s = await petitionApi.signStats();
       setTotal(s?.total ?? 0);
-        setGudalurCount(Number(s?.gudalur ?? 0));
-        setOutsideCount(Number(s?.outside ?? 0));
       setPlaces(s?.places ?? []);
       // Cache stats locally
       try {
@@ -249,17 +245,6 @@ export const SignPetitionPage: React.FC = () => {
             {total === null ? t("home.loading") : t("home.live").replace("{n}", total.toLocaleString("en-IN"))}
           </span>
         </div>
-        {gudalurCount !== null && outsideCount !== null && (
-          <div className="inline-flex items-center gap-3 rounded-full bg-white/70 border border-emerald-600/15 px-4 py-1">
-            <span className="text-[11px] font-bold text-[#1B5E20]">
-              🐘 {t("home.live_gudalur").replace("{n}", gudalurCount.toLocaleString("en-IN"))}
-            </span>
-            <span className="h-3 w-px bg-emerald-600/20" />
-            <span className="text-[11px] font-bold text-slate-600">
-              🇮🇳 {t("home.live_outside").replace("{n}", outsideCount.toLocaleString("en-IN"))}
-            </span>
-          </div>
-        )}
       </div>
 
       {!profile && (

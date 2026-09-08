@@ -23,8 +23,10 @@ router.post('/sign', requireAuth, async (req: Request, res: Response) => {
     const user = req.user!;
     // Aadhaar minimization: fetch the resident's stored verification metadata
     // server-side. Never trust client-supplied Aadhaar data; never store raw phone.
-    const resident = await db.queryOne<{ aadhaar_last4: string | null; aadhaar_ref: string | null }>(
-      'SELECT aadhaar_last4, aadhaar_ref FROM users WHERE uid = $1',
+    // Also fetch the pincode — it drives the Gudalur/Outside split (reliable
+    // signal, unlike free-text village matching).
+    const resident = await db.queryOne<{ aadhaar_last4: string | null; aadhaar_ref: string | null; pincode: string | null }>(
+      'SELECT aadhaar_last4, aadhaar_ref, pincode FROM users WHERE uid = $1',
       [user.uid],
     );
     const input = {
@@ -39,6 +41,7 @@ router.post('/sign', requireAuth, async (req: Request, res: Response) => {
         typeof req.body?.address === 'string' && req.body.address.trim()
           ? req.body.address.trim()
           : (user.localityName ?? ''),
+      pincode: resident?.pincode ?? undefined,
       phone: user.phone ?? '',
       aadhaarLast4: resident?.aadhaar_last4 ?? undefined,
       aadhaarRef: resident?.aadhaar_ref ?? undefined,
@@ -135,53 +138,21 @@ router.get('/list', async (_req: Request, res: Response) => {
   res.json({ petitions: rows.rows });
 });
 
-/** GET /api/petitions/sign-stats — public live totals + national per-place leaderboard (highest first). */
+/** GET /api/petitions/sign-stats — public live totals + per-place leaderboard (highest first). */
 router.get('/sign-stats', async (_req: Request, res: Response) => {
   try {
-    const total = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
-    const totalNum = Number(total?.count ?? 0);
-    // Gudalur vs Outside split: the `village` column stores the free-text
-    // address each supporter typed. These are the known Gudalur Taluk
-    // localities (the taluk itself, its villages) — any signature whose
-    // address mentions one of them counts as "from Gudalur"; everything
-    // else counts as "outside Gudalur" (across India).
-    const gudalurTerms = [
-      'gudalur', 'nelliyalam', 'nelliyalum', 'devala', "o'valley", 'ovalley', 'o valley',
-      'thorapalli', 'thorappalli', 'kasimvayal', 'kasimvayal', 'ss nagar', 's.s. nagar', 's s nagar',
-      'first mile', 'second mile', 'vedanvayal', 'chembala', 'nandatti', 'nandatty',
-      'erumad', 'cherangode', 'masinagudi', 'bokkapuram', 'moyar', 'singara',
-      'pandalur', 'chalkusha', 'kottappuram', 'gudalur taluk', '643201', '643202',
-      '643203', '643204', '643205', '643206', '643207', '643211',
-    ];
-    const predicate = gudalurTerms.map((t) => `LOWER(village) LIKE '%${t}%'`).join(' OR ');
-    const gRow = await db.queryOne<{ count: number }>(
-      `SELECT COUNT(*)::int AS count FROM petition_signs WHERE ${predicate}`,
-    );
-    const gudalur = Math.min(Number(gRow?.count ?? 0), totalNum);
-    const outside = Math.max(0, totalNum - gudalur);
-    // Read every DISTINCT registered address (village column now stores the
-    // free-text address people typed across India). Places are NEVER pre-set:
-    // we cluster the actual typed addresses and rank the clusters by count.
+    const totalRow = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
+    const totalNum = Number(totalRow?.count ?? 0);
     const places = await db.query<{ place: string; count: number }>(
       `SELECT village AS place, COUNT(*)::int AS count
-       FROM petition_signs
-       WHERE village IS NOT NULL AND village <> ''
+       FROM petition_signs WHERE village IS NOT NULL AND village <> ''
        GROUP BY village`,
     );
-    // CockroachDB returns COUNT(*) (INT8) as strings through pg — coerce to
-    // numbers, then derive "most supported places" from the real data.
-    const clustered = clusterPlaces(
-      places.rows.map((r) => ({ place: String(r.place), count: Number(r.count) })),
-    );
-    res.json({
-      total: totalNum,
-      gudalur,
-      outside,
-      places: clustered.slice(0, 15),
-    });
+    const clustered = clusterPlaces(places.rows.map((r) => ({ place: String(r.place), count: Number(r.count) })));
+    res.json({ total: totalNum, places: clustered.slice(0, 15) });
   } catch (e: any) {
     logger.error('sign-stats:', e.message);
-    res.json({ total: 0, gudalur: 0, outside: 0, places: [] });
+    res.json({ total: 0, places: [] });
   }
 });
 

@@ -21,6 +21,7 @@ export interface PetitionSignInput {
   gdrId: string;
   fullName: string;
   village?: string;
+  pincode?: string;          // from user's profile (stored at sign time)
   phone: string;           // raw — only last4 retained server-side
   aadhaarLast4?: string;
   aadhaarRef?: string;
@@ -124,10 +125,10 @@ export async function recordPetitionSign(input: PetitionSignInput): Promise<Peti
     const phone4 = input.phone ? phoneLast4(input.phone) : undefined;
     await tx.query(
       `INSERT INTO petition_signs
-         (sign_hash, user_uid, gdr_id, full_name, village, phone_last4,
+         (sign_hash, user_uid, gdr_id, full_name, village, pincode, phone_last4,
           aadhaar_last4, aadhaar_ref, latitude, longitude, user_agent_hash, batch_no)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-      [signHash, input.userUid ?? null, input.gdrId, input.fullName, input.village ?? null,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [signHash, input.userUid ?? null, input.gdrId, input.fullName, input.village ?? null, input.pincode ?? null,
        phone4, input.aadhaarLast4 ?? null, input.aadhaarRef ?? null,
        input.lat ?? null, input.lng ?? null, uaHash, batchNo],
     );

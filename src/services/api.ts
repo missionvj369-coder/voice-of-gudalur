@@ -253,9 +253,9 @@ export const petitionApi = {
       `/api/petitions/verify/${encodeURIComponent(hash)}`,
     ),
 
-  /** GET /api/petitions/sign-stats — live totals (Gudalur split) + per-place leaderboard (highest first). */
+  /** GET /api/petitions/sign-stats — live total + per-place signature leaderboard (highest first). */
   signStats: () =>
-    request<{ total: number; gudalur: number; outside: number; places: Array<{ place: string; count: number }> }>('/api/petitions/sign-stats'),
+    request<{ total: number; places: Array<{ place: string; count: number }> }>('/api/petitions/sign-stats'),
 
   /** GET /api/petitions/ledger — PUBLIC live hash ledger (anyone can read; phone masked). */
   ledger: () =>
