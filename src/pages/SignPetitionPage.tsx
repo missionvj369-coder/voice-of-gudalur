@@ -409,33 +409,32 @@ export const SignPetitionPage: React.FC = () => {
         </div>
       )}
 
-      {/* Live Tracking Section */}
-      <div className="rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-6 space-y-4">
+      {/* Tracking Section */}
+      <div className="rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-3 space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-black text-emerald-900 flex items-center gap-2">
             <BarChart3 size={15} className="text-emerald-600" />
-            Live Tracking
+            Tracking
           </h2>
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
             </span>
-            <span className="text-[10px] font-bold text-emerald-700">LIVE</span>
           </div>
         </div>
         
         {/* Total Count */}
-        <div className="text-center py-4">
-          <p className="text-4xl font-black text-emerald-900">{ledgerTotal !== null ? ledgerTotal.toLocaleString('en-IN') : (total !== null ? total.toLocaleString('en-IN') : '...')}</p>
+        <div className="text-center py-2">
+          <p className="text-3xl font-black text-emerald-900">{ledgerTotal !== null ? ledgerTotal.toLocaleString('en-IN') : (total !== null ? total.toLocaleString('en-IN') : '...')}</p>
           <p className="text-xs text-emerald-700 mt-1">Petitions Signed</p>
         </div>
 
-        {/* Live Signature Ledger â€” public: every sign is a clickable, verifiable hash */}
+        {/* Signature Ledger */}
         <div className="rounded-2xl border border-emerald-200 bg-white/90 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600">
             <p className="text-xs font-black text-white flex items-center gap-1.5">
-              <Hash size={13} /> Live Signature Ledger
+              <Hash size={13} /> Signature Ledger
             </p>
             <span className="text-[10px] font-bold text-emerald-100">
               {ledgerTotal !== null ? `${ledgerTotal.toLocaleString('en-IN')} hashes` : 'â€¦'}

@@ -130,13 +130,15 @@ export default function App() {
           <Toaster
             position="top-center"
             toastOptions={{
+              duration: Infinity,
               style: {
-                borderRadius: '12px',
-                background: '#1B5E20',
-                color: '#fff',
-                fontSize: '12px',
-                fontWeight: '600',
-                padding: '10px 14px',
+                borderRadius: '24px',
+                background: '#9ACD32',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                fontWeight: '900',
+                padding: '6px 16px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
               },
             }}
           />
