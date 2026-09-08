@@ -403,8 +403,8 @@ const extraTranslations: Record<Language, Record<string, string>> = {
 
     'home.title': 'Right to Life Petition',
     'home.subtitle': 'A national movement born in Gudalur — anyone from any district of India can sign the petition submitted as a grievance to Mudhalvan Mugavari. Your Digital Supporter ID, your own address and the UTC timestamp are recorded as your digital signature — verifiable by officials at any time.',
-    'home.loading': 'Loading live count…',
-    'home.live': '{n} verified signs — live',
+    'home.loading': 'Loading count…',
+    'home.live': '{n} verified signs',
     'home.live_gudalur': 'Gudalur: {n}',
     'home.live_outside': 'Outside Gudalur: {n}',
     'home.need_register': 'You must register (get a Digital Supporter ID) before signing — it takes 20 seconds, no OTP needed. Open to supporters from across India.',
@@ -512,8 +512,8 @@ const extraTranslations: Record<Language, Record<string, string>> = {
 
     'home.title': 'வாழ்வுரிமை மனு',
     'home.subtitle': 'கூடலூரில் தொடங்கிய தேசிய இயக்கம் — இந்தியாவின் எந்த மாவட்டத்தைச் சேர்ந்தவரும் முதல்வர் முகவரியிடம் சமர்ப்பித்த மனுவில் கையெழுத்திடலாம். உங்கள் டிஜிட்டல் ஆதரவாளர் ஐடி, உங்கள் சொந்த முகவரி + UTC நேர முத்திரை உங்கள் டிஜிட்டல் கையெழுத்தாகப் பதிவாகும் — எப்போது வேண்டுமானாலும் அதிகாரிகளால் சரிபார்க்கலாம்.',
-    'home.loading': 'நேரடி எண்ணிக்கை ஏற்றப்படுகிறது…',
-    'home.live': '{n} சரிபார்க்கப்பட்ட கையெழுத்துகள் — நேரடி',
+    'home.loading': 'எண்ணிக்கை ஏற்றப்படுகிறது…',
+    'home.live': '{n} சரிபார்க்கப்பட்ட கையெழுத்துகள்',
     'home.live_gudalur': 'கூடலூர்: {n}',
     'home.live_outside': 'வெளியே: {n}',
     'home.need_register': 'கையெழுத்திடுவதற்கு முன் பதிவு செய்ய வேண்டும் (டிஜிட்டல் ஆதரவாளர் ஐடி) — 20 வினாடிகளில் முடியும், OTP தேவையில்லை. இந்தியா முழுவதிலிருந்தும் ஆதரவாளர்கள் வரவேற்கப்படுகிறார்கள்.',
@@ -621,8 +621,8 @@ const extraTranslations: Record<Language, Record<string, string>> = {
 
     'home.title': 'ജീവൻ അവകാശ പരാതി',
     'home.subtitle': 'മുഖ്യമന്ത്രിയുടെ മുഖവുരയിൽ സമർപ്പിച്ച പരാതിയിൽ ഒപ്പിടുക. നിങ്ങളുടെ ഗൂഡല്ലൂർ ഐഡി + UTC സമയമുദ്ര ഡിജിറ്റൽ ഒപ്പായി രേഖപ്പെടുത്തും — എപ്പോൾ വേണമെങ്കിലും ഉദ്യോഗസ്ഥർക്ക് പരിശോധിക്കാം.',
-    'home.loading': 'തത്സമയ എണ്ണം ലോഡ് ചെയ്യുന്നു…',
-    'home.live': '{n} പരിശോധിച്ച ഒപ്പുകൾ — തത്സമയം',
+    'home.loading': 'എണ്ണം ലോഡ് ചെയ്യുന്നു…',
+    'home.live': '{n} പരിശോധിച്ച ഒപ്പുകൾ',
     'home.live_gudalur': 'ഗൂഡല്ലൂർ: {n}',
     'home.live_outside': 'പുറത്ത്: {n}',
     'home.need_register': 'ഒപ്പിടുന്നതിന് മുമ്പ് രജിസ്റ്റർ ചെയ്യണം (ഗൂഡല്ലൂർ ഐഡി) — 20 സെക്കൻഡ് മതി, OTP വേണ്ട.',
@@ -720,8 +720,8 @@ const extraTranslations: Record<Language, Record<string, string>> = {
 
     'home.title': 'ಜೀವನ ಹಕ್ಕು ಅರ್ಜಿ',
     'home.subtitle': 'ಮುಖ್ಯಮಂತ್ರಿಗಳ ಮುಖವರಿಗೆ ಸಲ್ಲಿಸಿದ ಅರ್ಜಿಗೆ ಸಹಿ ಹಾಕಿ. ನಿಮ್ಮ ಗೂಡಲೂರು ಐಡಿ + UTC ಸಮಯಮುದ್ರೆ ನಿಮ್ಮ ಡಿಜಿಟಲ್ ಸಹಿಯಾಗಿ ದಾಖಲಾಗುತ್ತದೆ — ಯಾವಾಗ ಬೇಕಾದರೂ ಅಧಿಕಾರಿಗಳು ಪರಿಶೀಲಿಸಬಹುದು.',
-    'home.loading': 'ನೈಜ ಸಂಖ್ಯೆ ಲೋಡ್ ಆಗುತ್ತಿದೆ…',
-    'home.live': '{n} ಪರಿಶೀಲಿತ ಸಹಿಗಳು — ನೇರ',
+    'home.loading': 'ಸಂಖ್ಯೆ ಲೋಡ್ ಆಗುತ್ತಿದೆ…',
+    'home.live': '{n} ಪರಿಶೀಲಿತ ಸಹಿಗಳು',
     'home.live_gudalur': 'ಗೂಡಲೂರ್: {n}',
     'home.live_outside': 'ಹೊರಗಿನ: {n}',
     'home.need_register': 'ಸಹಿ ಹಾಕುವ ಮೊದಲು ನೋಂದಣಿ (ಗೂಡಲೂರು ಐಡಿ) — 20 ಸೆಕೆಂಡುಗಳಲ್ಲಿ ಆಗುತ್ತದೆ, OTP ಬೇಡ.',
