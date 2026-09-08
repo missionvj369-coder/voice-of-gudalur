@@ -52,6 +52,7 @@ export function useVoice({ lang, onTranscript }: UseVoiceOptions) {
         setIsSpeaking(false);
       }
     },
+    // Ensure `lang` is included in deps so the voice re-evaluates on language change
     [lang, supported.tts],
   );
 

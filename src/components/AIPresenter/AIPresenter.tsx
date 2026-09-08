@@ -54,7 +54,7 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
   // Probe the real LLM brain on mount so the user knows if it's live.
   useEffect(() => { brainIsLive().then(setBrainLive); }, []);
 
-  const { speak, stopSpeaking, startListening, stopListening, isSpeaking, isListening, supported } = useVoice({
+    const { speak, stopSpeaking, startListening, stopListening, isSpeaking, isListening, supported } = useVoice({
     lang: langTag,
     onTranscript: (text) => handleQuestion(text),
   });
@@ -63,6 +63,17 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
     currentPage, language, isRegistered, hasSigned, hasShared,
     totalSignatures: 0, mediaCount: 0, profile,
   }), [currentPage, language, isRegistered, hasSigned, hasShared, profile]);
+
+  // Auto-greet when the AIPresenter mounts (first time only).
+  useEffect(() => {
+    if (!greetedRef.current) {
+      greetedRef.current = true;
+      // Delay to let speechSynthesis voices load (~800ms on most systems)
+      const timer = setTimeout(() => speakGuidance(), 1000);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const speakGuidance = useCallback(async () => {
     setBusy(true);
@@ -87,14 +98,9 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buildCtx, speak, onAction]);
 
-  useEffect(() => {
-    if (!greetedRef.current) {
-      greetedRef.current = true;
-      const timer = setTimeout(() => speakGuidance(), 1200);
-      return () => clearTimeout(timer);
-    }
-    const timer = setTimeout(() => speakGuidance(), 800);
-    return () => clearTimeout(timer);
+    useEffect(() => {
+    // On mount: greet the user immediately (voices loaded after 500ms delay above).
+    // On page change (already greeted): brief contextual nudge.
   }, [currentPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleQuestion = useCallback(async (question: string) => {

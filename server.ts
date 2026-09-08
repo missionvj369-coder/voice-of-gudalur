@@ -347,6 +347,8 @@ YOUR MANTRA (end every reply with a variation of):
       const base = process.env.AI_BASE_URL || (process.env.AI_PROVIDER === 'groq' ? 'https://api.groq.com/openai/v1' : 'https://api.openai.com/v1');
       url = `${base}/chat/completions`;
       headers['Authorization'] = `Bearer ${process.env.AI_API_KEY}`;
+      // Unique seed per call ensures varied responses, not cached/identical ones.
+      body.seed = Math.floor(Math.random() * 1e9);
     } else {
       url = 'https://text.pollinations.ai/openai';
       body.seed = Math.floor(Math.random() * 1e9);
