@@ -224,7 +224,6 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
         <div className="absolute inset-0 flex flex-col items-center justify-center px-4" style={{ animation: 'vogFadeIn 0.5s ease-out' }}>
           <div className="text-center mb-8">
             <p className="text-[#FDE047] font-black tracking-[0.3em] text-[11px] mb-3">SELECT YOUR LANGUAGE</p>
-            <h2 className="text-white font-bold text-xl sm:text-2xl mb-2">வணக்கம் · സ്വാഗതം · స్వಾಗತ · Welcome</h2>
             <p className="text-[#AED581] text-sm">Choose your language to continue</p>
           </div>
           <div className="w-full max-w-md grid grid-cols-2 gap-3">

@@ -88,8 +88,11 @@ registerSW({
   },
 });
 
+// NOTE: React.StrictMode removed — it causes the opening animation to run twice
+// in development mode (mount → unmount → remount), which makes the VOG dots
+// animation restart and overlay the language selection screen. The animation
+// effect already has proper cleanup (cancelAnimationFrame), so StrictMode is
+// not needed here.
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+  <App />
 );
