@@ -19,6 +19,10 @@ try {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (swReloaded) return;
+    // Don't reload if the user has already seen the intro animation
+    try {
+      if (localStorage.getItem('VoiceOfGudalur_lang_chosen') === '1') return;
+    } catch { /* ignore */ }
     swReloaded = true;
     try { sessionStorage.setItem('vog_sw_reloaded', '1'); } catch { /* ignore */ }
     window.location.reload();
