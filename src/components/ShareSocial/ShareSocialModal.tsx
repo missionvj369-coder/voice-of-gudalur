@@ -185,6 +185,9 @@ const ShareSocialModal: React.FC<ShareSocialModalProps> = ({
           case 'sharechat':
             schemeUrl = `sharechat://search?query=${encodedText}`;
             break;
+          case 'twitter':
+            schemeUrl = `twitter://post?message=${encodedText}`;
+            break;
           case 'telegram':
             schemeUrl = `tg://resolve?url=${encodedUrl}&text=${encodedText}`;
             break;
@@ -203,6 +206,7 @@ const ShareSocialModal: React.FC<ShareSocialModalProps> = ({
             instagram: 'https://www.instagram.com/',
             facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`,
             whatsapp: `https://wa.me/?text=${encodeURIComponent(shareText)}`,
+            twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`,
             snapchat: 'https://www.snapchat.com/',
             sharechat: 'https://www.sharechat.com/',
             telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,

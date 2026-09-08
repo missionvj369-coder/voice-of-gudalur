@@ -12,54 +12,24 @@ export type PlatformName =
   | 'whatsapp'
   | 'snapchat'
   | 'sharechat'
-  | 'telegram';
+  | 'telegram'
+  | 'twitter';
 
 export interface PlatformConfig {
   name: PlatformName;
   label: string;
-  /** Official brand color (hex without #) — used for colored backgrounds/accents */
   color: string;
-  /** iOS/Android app URL scheme for deep linking to the app */
   appScheme?: string;
 }
 
 export const PLATFORMS: Record<PlatformName, PlatformConfig> = {
-  instagram: {
-    name: 'instagram',
-    label: 'Instagram',
-    color: '833AB4',
-    appScheme: 'instagram://library',
-  },
-  facebook: {
-    name: 'facebook',
-    label: 'Facebook',
-    color: '1877f2',
-    appScheme: 'fb://',
-  },
-  whatsapp: {
-    name: 'whatsapp',
-    label: 'WhatsApp',
-    color: '25d36e',
-    appScheme: 'whatsapp://send',
-  },
-  snapchat: {
-    name: 'snapchat',
-    label: 'Snapchat',
-    color: 'FFFC00',
-    appScheme: 'snapchat://',
-  },
-  sharechat: {
-    name: 'sharechat',
-    label: 'ShareChat',
-    color: '0bad32',
-    appScheme: 'sharechat://',
-  },
-  telegram: {
-    name: 'telegram',
-    label: 'Telegram',
-    color: '0088cc',
-    appScheme: 'tg://resolve',
-  },
+  instagram: { name: 'instagram', label: 'Instagram', color: '833AB4', appScheme: 'instagram://library' },
+  facebook: { name: 'facebook', label: 'Facebook', color: '1877f2', appScheme: 'fb://' },
+  whatsapp: { name: 'whatsapp', label: 'WhatsApp', color: '25d36e', appScheme: 'whatsapp://send' },
+  twitter: { name: 'twitter', label: 'Twitter', color: '1DA1F2', appScheme: 'twitter://post' },
+  snapchat: { name: 'snapchat', label: 'Snapchat', color: 'FFFC00', appScheme: 'snapchat://' },
+  sharechat: { name: 'sharechat', label: 'ShareChat', color: '0bad32', appScheme: 'sharechat://' },
+  telegram: { name: 'telegram', label: 'Telegram', color: '0088cc', appScheme: 'tg://resolve' },
 };
 
 /**

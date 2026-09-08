@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth, readLocalSignature, isRealGudalurId } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
@@ -18,7 +18,7 @@ interface PlaceCount {
 }
 
 /**
- * HOMEPAGE â€” clean, with only the Right to Life petition sign-in.
+ * HOMEPAGE — clean, with only the Right to Life petition sign-in.
  * Live total counter, per-place leaderboard (highest first), WhatsApp share
  * and a machine-verifiable PDF receipt for the signed document.
  */
@@ -40,6 +40,7 @@ export const SignPetitionPage: React.FC = () => {
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [viewingMedia, setViewingMedia] = useState<MediaItem | null>(null);
+  const [viewingMediaIndex, setViewingMediaIndex] = useState(0);
   const [total, setTotal] = useState<number | null>(null);
   const [places, setPlaces] = useState<PlaceCount[]>([]);
   const [hasSigned, setHasSigned] = useState(false);
@@ -56,7 +57,7 @@ export const SignPetitionPage: React.FC = () => {
     return () => { alive = false; };
   }, []);
 
-  // Check if user has already signed â€” only a server-issued (VG-*) sign hash
+  // Check if user has already signed — only a server-issued (VG-*) sign hash
   // counts as real; synthetic local placeholders are purged by the helper.
   useEffect(() => {
     const { signed, result } = readLocalSignature();
@@ -76,7 +77,7 @@ export const SignPetitionPage: React.FC = () => {
         localStorage.setItem("vog_stats_cache", JSON.stringify({ total: s?.total ?? 0, places: s?.places ?? [], timestamp: Date.now() }));
       } catch { /* ignore */ }
     } catch {
-      // Backend unreachable â€” load from cache
+      // Backend unreachable — load from cache
       try {
         const cached = localStorage.getItem("vog_stats_cache");
         if (cached) {
@@ -86,7 +87,7 @@ export const SignPetitionPage: React.FC = () => {
         }
       } catch { /* ignore */ }
     }
-    // Live hash ledger â€” public, updates with the same 10s heartbeat.
+    // Live hash ledger — public, updates with the same 10s heartbeat.
     try {
       const l = await petitionApi.ledger();
       setLedger(l?.signs ?? []);
@@ -135,7 +136,7 @@ export const SignPetitionPage: React.FC = () => {
                         try {
       const res = await petitionApi.sign({
         idempotencyKey: `petition-sign-${profile.uid}`,
-        // The supporter's own typed address + real GPS coords are recorded â€”
+        // The supporter's own typed address + real GPS coords are recorded —
         // the server never substitutes a preset Gudalur place.
         address: profile.customPlaceName || profile.localityName || "",
         lat: profile.lat,
@@ -168,13 +169,13 @@ export const SignPetitionPage: React.FC = () => {
       if (errorMsg.includes("502") || errorMsg.includes("DATABASE_URL") || errorMsg.includes("backend")) {
         toast.error(t("home.err_unavailable"), {
           duration: 6000,
-          icon: "⚠",
+          icon: "?",
         });
       } else {
         toast.error(errorMsg || t("home.err_sign"));
       }
     }
-    // Let other screens (e.g. About â†’ "Petition Signed") update instantly.
+    // Let other screens (e.g. About → "Petition Signed") update instantly.
     window.dispatchEvent(new Event("vog:petition-signed"));
     setBusy(false);
     void loadStats();
@@ -183,10 +184,10 @@ export const SignPetitionPage: React.FC = () => {
   const forwardViaWhatsApp = useCallback(() => {
     if (!result) return;
     const msg =
-      `ðŸ“œ *Voice of Gudalur â€” Verified Signature*\n\n` +
+      `📜 *Voice of Gudalur — Verified Signature*\n\n` +
       `I have digitally signed the Right to Life / Mudhalvan Mugavari Grievance Petition.\n\n` +
-      `ðŸ”Ž Verify my verified sign here:\n${result.verifyUrl}\n\n` +
-      `Batch #${result.batchNo} Â· Verified Resident`;
+      `🔎 Verify my verified sign here:\n${result.verifyUrl}\n\n` +
+      `Batch #${result.batchNo} · Verified Resident`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
   }, [result]);
 
@@ -200,7 +201,7 @@ export const SignPetitionPage: React.FC = () => {
     }
   }, [result, t]);
 
-  /** Official receipt â€” the Mudhalvarin Mugavari grievance page + this supporter's signed details. */
+  /** Official receipt — the Mudhalvarin Mugavari grievance page + this supporter's signed details. */
   const downloadReceipt = useCallback(async () => {
     if (!result || !profile) return;
     try {
@@ -223,7 +224,7 @@ export const SignPetitionPage: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto px-3 py-3 sm:px-4 sm:py-8 space-y-3 sm:space-y-6">
-      {/* Hero â€” petition + live counter */}
+      {/* Hero — petition + live counter */}
       <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4 sm:p-6 text-center space-y-3">
         <h1 className="text-xl sm:text-2xl font-black text-slate-900">{t("home.title")}</h1>
         <p className="text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
@@ -415,19 +416,19 @@ export const SignPetitionPage: React.FC = () => {
           <p className="text-xs text-emerald-700 mt-1">Petitions Signed</p>
         </div>
 
-        {/* Live Signature Ledger â€” public: every sign is a clickable, verifiable hash */}
+        {/* Live Signature Ledger — public: every sign is a clickable, verifiable hash */}
         <div className="rounded-2xl border border-emerald-200 bg-white/90 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600">
             <p className="text-xs font-black text-white flex items-center gap-1.5">
               <Hash size={13} /> Live Signature Ledger
             </p>
             <span className="text-[10px] font-bold text-emerald-100">
-              {ledgerTotal !== null ? `${ledgerTotal.toLocaleString('en-IN')} hashes` : 'â€¦'}
+              {ledgerTotal !== null ? `${ledgerTotal.toLocaleString('en-IN')} hashes` : '…'}
             </span>
           </div>
           {ledger.length === 0 ? (
             <p className="text-xs text-slate-500 text-center py-5">
-              No signatures yet â€” be the first. Every sign becomes a public, verifiable hash.
+              No signatures yet — be the first. Every sign becomes a public, verifiable hash.
             </p>
           ) : (
             <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
@@ -445,7 +446,7 @@ export const SignPetitionPage: React.FC = () => {
                       {s.hash}
                     </span>
                     <span className="block text-[10px] text-slate-500">
-                      {s.name} Â· {s.village || 'Not specified'} Â· Batch #{s.batchNo}
+                      {s.name} · {s.village || 'Not specified'} · Batch #{s.batchNo}
                     </span>
                   </span>
                   <span className="text-right shrink-0">
@@ -460,7 +461,7 @@ export const SignPetitionPage: React.FC = () => {
           )}
           <div className="px-4 py-2 bg-emerald-50 border-t border-emerald-100">
             <p className="text-[9px] text-emerald-700 text-center leading-relaxed">
-              ðŸ”’ Tap any hash to see the signer's details â€” phone numbers are blurred and never shown.
+              🔒 Tap any hash to see the signer's details — phone numbers are blurred and never shown.
             </p>
           </div>
         </div>
@@ -504,7 +505,7 @@ export const SignPetitionPage: React.FC = () => {
         )}
       </div>
 
-      {/* Action Button â€” the petition sign flow is already above; keep the grievance link only */}
+      {/* Action Button — the petition sign flow is already above; keep the grievance link only */}
       <div className="max-w-lg mx-auto">
         <Link
           to="/about"
@@ -515,7 +516,7 @@ export const SignPetitionPage: React.FC = () => {
         </Link>
       </div>
 
-      {/* Support the Movement â€” posters & videos published by admin, shareable */}
+      {/* Support the Movement — posters & videos published by admin, shareable */}
       {(mediaItems.length > 0) && (
         <div className="rounded-3xl border border-[#AED581]/40 bg-white/95 p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -546,7 +547,7 @@ export const SignPetitionPage: React.FC = () => {
                 className="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 {m.kind === 'poster' ? (
-                  /* 4:5 poster — object-contain keeps the full image + headline visible */
+                  /* 4:5 poster � object-contain keeps the full image + headline visible */
                   <div className="w-full aspect-[4/5] bg-slate-100 overflow-hidden">
                     <img src={m.url} alt={m.title} loading="lazy" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
                   </div>
@@ -563,6 +564,7 @@ export const SignPetitionPage: React.FC = () => {
                     onClick={(e) => {
                       e.stopPropagation();
                       setViewingMedia(m);
+                      setViewingMediaIndex(mediaItems.indexOf(m));
                       setShowMediaViewer(true);
                     }}
                     className="p-1.5 rounded-lg bg-black/50 text-white backdrop-blur hover:bg-black/70 transition"
@@ -621,6 +623,7 @@ export const SignPetitionPage: React.FC = () => {
             const mediaItem = mediaItems.find((m) => m.id === shareActive.id);
             if (mediaItem) {
               setViewingMedia(mediaItem);
+              setViewingMediaIndex(mediaItems.indexOf(mediaItem));
               setShowMediaViewer(true);
             }
           }
@@ -636,11 +639,24 @@ export const SignPetitionPage: React.FC = () => {
       {/* In-App Media Viewer */}
       <MediaViewer
         isOpen={showMediaViewer}
-        onClose={() => { setShowMediaViewer(false); setViewingMedia(null); }}
+        onClose={() => { setShowMediaViewer(false); setViewingMedia(null); setViewingMediaIndex(0); }}
         item={viewingMedia}
+        currentIndex={viewingMediaIndex}
+        totalCount={mediaItems.length}
+        onPrev={() => {
+          const newIdx = viewingMediaIndex <= 0 ? mediaItems.length - 1 : viewingMediaIndex - 1;
+          setViewingMediaIndex(newIdx);
+          setViewingMedia(mediaItems[newIdx] || null);
+        }}
+        onNext={() => {
+          const newIdx = viewingMediaIndex >= mediaItems.length - 1 ? 0 : viewingMediaIndex + 1;
+          setViewingMediaIndex(newIdx);
+          setViewingMedia(mediaItems[newIdx] || null);
+        }}
         onShare={(item) => {
           setShowMediaViewer(false);
           setViewingMedia(null);
+          setViewingMediaIndex(0);
           setShareActive({
             id: item.id,
             title: item.title,
@@ -661,5 +677,6 @@ export const SignPetitionPage: React.FC = () => {
     </div>
   );
 };
+
 
 
