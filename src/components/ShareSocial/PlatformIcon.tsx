@@ -23,13 +23,13 @@ export interface PlatformConfig {
 }
 
 export const PLATFORMS: Record<PlatformName, PlatformConfig> = {
-  instagram: { name: 'instagram', label: 'Instagram', color: '833AB4', appScheme: 'instagram://library' },
-  facebook: { name: 'facebook', label: 'Facebook', color: '1877f2', appScheme: 'fb://' },
-  whatsapp: { name: 'whatsapp', label: 'WhatsApp', color: '25d36e', appScheme: 'whatsapp://send' },
-  twitter: { name: 'twitter', label: 'Twitter', color: '1DA1F2', appScheme: 'twitter://post' },
+  whatsapp: { name: 'whatsapp', label: 'WhatsApp', color: '25D366', appScheme: 'whatsapp://send' },
+  instagram: { name: 'instagram', label: 'Instagram', color: 'E4405F', appScheme: 'instagram://library' },
+  facebook: { name: 'facebook', label: 'Facebook', color: '1877F2', appScheme: 'fb://' },
+  telegram: { name: 'telegram', label: 'Telegram', color: '26A5E4', appScheme: 'tg://resolve' },
+  twitter: { name: 'twitter', label: 'X (Twitter)', color: '111111', appScheme: 'twitter://post' },
   snapchat: { name: 'snapchat', label: 'Snapchat', color: 'FFFC00', appScheme: 'snapchat://' },
-  sharechat: { name: 'sharechat', label: 'ShareChat', color: '0bad32', appScheme: 'sharechat://' },
-  telegram: { name: 'telegram', label: 'Telegram', color: '0088cc', appScheme: 'tg://resolve' },
+  sharechat: { name: 'sharechat', label: 'ShareChat', color: 'fc4f32', appScheme: 'sharechat://' },
 };
 
 /**

@@ -6,13 +6,14 @@ import type { Language } from '../../context/LanguageContext';
 /**
  * AIPresenter — VOG, the living greeter of Voice of Gudalur.
  * VOG wakes on every page load, greets in the user's language and speaks the
- * CURRENT live truth: total signatures, NEW signatures since last visit, NEW
- * posters/videos since last visit. NO chat/ask/reply UI — greet + report only.
+ * CURRENT live truth: signatures from Gudalur and across India separately,
+ * NEW signatures since last visit, NEW posters/videos since last visit.
+ * NO chat/ask/reply UI — greet + report only, with an auto-close countdown.
  */
 interface AIPresenterProps { language: Language; }
 
 const LS_KEY = 'vog_last_seen';
-interface LastSeen { signs: number; posters: number; videos: number; at: number; }
+interface LastSeen { signs: number; gudalur: number; posters: number; videos: number; at: number; }
 
 function readLastSeen(): LastSeen | null {
   try {
@@ -20,12 +21,12 @@ function readLastSeen(): LastSeen | null {
     if (!raw) return null;
     const o = JSON.parse(raw) as Partial<LastSeen>;
     return typeof o?.signs === 'number'
-      ? { signs: o.signs, posters: Number(o.posters) || 0, videos: Number(o.videos) || 0, at: Number(o.at) || 0 }
+      ? { signs: o.signs, gudalur: Number(o.gudalur) || 0, posters: Number(o.posters) || 0, videos: Number(o.videos) || 0, at: Number(o.at) || 0 }
       : null;
   } catch { return null; }
 }
 
-interface LiveStats { total: number; posters: number; videos: number; }
+interface LiveStats { total: number; gudalur: number; posters: number; videos: number; }
 
 async function fetchLiveStats(): Promise<LiveStats | null> {
   try {
@@ -33,6 +34,7 @@ async function fetchLiveStats(): Promise<LiveStats | null> {
     const media = await mediaApi.list();
     return {
       total: Number(s?.total) || 0,
+      gudalur: s?.gudalur != null ? Number(s.gudalur) : 0,
       posters: media.filter((m) => m.kind === 'poster').length,
       videos: media.filter((m) => m.kind === 'video').length,
     };
@@ -43,35 +45,40 @@ function buildGreeting(lang: Language, live: LiveStats, last: LastSeen | null): 
   const n = (v: number) => Number(v).toLocaleString('en-IN');
   const isFirst = last === null;
   const newSigns = last ? Math.max(0, live.total - last.signs) : 0;
+  const newGudalur = last ? Math.max(0, live.gudalur - last.gudalur) : 0;
   const newPosters = last ? Math.max(0, live.posters - last.posters) : 0;
   const newVideos = last ? Math.max(0, live.videos - last.videos) : 0;
 
   const headline: Record<Language, string> = {
-    en: `Namaste! I am VOG — your living voice of Gudalur. Right now ${n(live.total)} people have signed the Right to Life petition.`,
-    ta: `வணக்கம்! நான் VOG — கூடலூரின் உயிருள்ள குரல். இப்போது ${n(live.total)} பேர் உயிர் வாழ்வுரிமை மனுவில் கையெழுத்திட்டுள்ளனர்.`,
-    ml: `നമസ്കാരം! ഞാൻ VOG — ഗൂഡല്ലൂറിന്റെ ജീവനുള്ള ശബ്ദം. ഇപ്പോൾ ${n(live.total)} പേർ ജീവനവകാശ ഹർജിയിൽ ഒപ്പിട്ടിരിക്കുന്നു.`,
-    kn: `ನಮಸ್ಕಾರ! ನಾನು VOG — ಗೂಡಲೂರಿನ ಜೀವಂತ ಧ್ವನಿ. ಈಗ ${n(live.total)} ಜನರು ಜೀವನದ ಹಕ್ಕಿನ ಮನವಿಯಲ್ಲಿ ಸಹಿ ಹಾಕಿದ್ದಾರೆ.`,
+    en: `Namaste! I am VOG — your living voice of Gudalur. Right now ${n(live.gudalur)} people from Gudalur and ${n(live.total - live.gudalur)} from across India have signed the Right to Life petition.`,
+    ta: `வணக்கம்! நான் VOG — கூடலூரின் உயிருள்ள குரல். இப்போது கூடலூரிலிருந்து ${n(live.gudalur)} பேரும் இந்தியா முழுவதிலிருந்தும் ${n(live.total - live.gudalur)} பேரும் உயிர் வாழ்வுரிமை மனுவில் கையெழுத்திட்டுள்ளனர்.`,
+    ml: `നമസ്കാരം! ഞാൻ VOG — ഗൂഡല്ലൂറിന്റെ ജീവനുള്ള ശബ്ദം. ഇപ്പോൾ ഗൂഡല്ലൂരിൽ നിന്ന് ${n(live.gudalur)} പേരും ഇന്ത്യയിലുടനീളം ${n(live.total - live.gudalur)} പേരും ജീവനവകാശ ഹർജിയിൽ ഒപ്പിട്ടിരിക്കുന്നു.`,
+    kn: `ನಮಸ್ಕಾರ! ನಾನು VOG — ಗೂಡಲೂರಿನ ಜೀವಂತ ಧ್ವನಿ. ಈಗ ಗೂಡಲೂರಿನಿಂದ ${n(live.gudalur)} ಜನರು ಮತ್ತು ಭಾರತದಾದ್ಯಂತ ${n(live.total - live.gudalur)} ಜನರು ಜೀವನದ ಹಕ್ಕಿನ ಮನವಿಯಲ್ಲಿ ಸಹಿ ಹಾಕಿದ್ದಾರೆ.`,
   };
 
   const deltaLines: string[] = [];
-  if (!isFirst) {
-    if (newSigns > 0) deltaLines.push({
-      en: `${n(newSigns)} new supporters signed since your last visit.`,
-      ta: `கடந்த முறை வந்ததிலிருந்து ${n(newSigns)} புதிய ஆதரவாளர்கள் கையெழுத்திட்டனர்.`,
-      ml: `കഴിഞ്ഞ സന്ദർശനത്തിക് ശേഷം ${n(newSigns)} പുതിയ പിന്തുണകാർ ഒപ്പിട്ടു.`,
-      kn: `ಕೊನೆಯ ಭೇಟಿಯ ನಂತರ ${n(newSigns)} ಹೊಸ ಬೆಂಬಲಿಗರು ಸಹಿ ಹಾಕಿದ್ದಾರೆ.`,
+  if (!isFirst && newSigns > 0) {
+    deltaLines.push({
+      en: `${n(newSigns)} new supporters signed since your last visit${newGudalur > 0 ? ` — ${n(newGudalur)} of them from Gudalur` : ''}.`,
+      ta: `கடந்த முறை வந்ததிலிருந்து ${n(newSigns)} புதிய ஆதரவாளர்கள் கையெழுத்திட்டனர்${newGudalur > 0 ? ` — அதில் ${n(newGudalur)} பேர் கூடலூரிலிருந்து` : ''}.`,
+      ml: `കഴിഞ്ഞ സന്ദർശനത്തിനു ശേഷം ${n(newSigns)} പുതിയ പിന്തുണക്കാർ ഒപ്പിട്ടു${newGudalur > 0 ? ` — അതിൽ ${n(newGudalur)} ഗൂഡല്ലൂരിൽ നിന്ന്` : ''}.`,
+      kn: `ಕೊನೆಯ ಭೇಟಿಯ ನಂತರ ${n(newSigns)} ಹೊಸ ಬೆಂಬಲಿಗರು ಸಹಿ ಹಾಕಿದ್ದಾರೆ${newGudalur > 0 ? ` — ಅದರಲ್ಲಿ ${n(newGudalur)} ಗೂಡಲೂರಿನಿಂದ` : ''}.`,
     }[lang] || `${newSigns} new supporters signed since your last visit.`);
-    if (newPosters > 0) deltaLines.push({
+  }
+  if (!isFirst && newPosters > 0) {
+    deltaLines.push({
       en: `${newPosters} new poster${newPosters === 1 ? '' : 's'} uploaded.`,
       ta: `${newPosters} புதிய போஸ்டர்கள் பதிவேற்றப்பட்டுள்ளன.`,
-      ml: `${newPosters} പുതിയ പോസ്റ്റർ.`,
-      kn: `${newPosters} ಹೊಸ ಪೋಸ್ಟರ್ಗಳು ಅಪ్‌ಲోಡ್ ಆಗಿವೆ.`,
+      ml: `${newPosters} പുതിയ പോസ്റ്ററുകൾ അപ്‌ലോഡ് ചെയ്തു.`,
+      kn: `${newPosters} ಹೊಸ ಪೋಸ್ಟರ್‌ಗಳು ಅಪ್‌ಲೋಡ್ ಆಗಿವೆ.`,
     }[lang] || `${newPosters} new posters uploaded.`);
-    if (newVideos > 0) deltaLines.push({
+  }
+  if (!isFirst && newVideos > 0) {
+    deltaLines.push({
       en: `${newVideos} new video${newVideos === 1 ? '' : 's'} uploaded.`,
       ta: `${newVideos} புதிய வீடியோக்கள் பதிவேற்றப்பட்டுள்ளன.`,
-      ml: `${newVideos} പുതിയ വീഡിയോ.`,
-      kn: `${newVideos} ಹೊಸ ವೀಡಿಯೊಗಳು ಅಪ్‌ಲೋಡ್ ಆಗಿವೆ.`,
+      ml: `${newVideos} പുതിയ വീഡിയോകൾ അപ്‌ലോഡ് ചെയ്തു.`,
+      kn: `${newVideos} ಹೊಸ ವೀಡಿಯೊಗಳು ಅಪ್‌ಲೋಡ್ ಆಗಿವೆ.`,
     }[lang] || `${newVideos} new videos uploaded.`);
   }
 
@@ -86,14 +93,32 @@ function buildGreeting(lang: Language, live: LiveStats, last: LastSeen | null): 
 }
 
 const LIVE_LABEL: Record<Language, string> = { en: 'LIVE', ta: 'நேரலை', ml: 'ലൈവ്', kn: 'ಲೈವ್' };
+
+const CLOSE_IN: Record<Language, string> = {
+  en: 'Closing in {n}s…',
+  ta: '{n} வினாடிகளில் மூடப்படும்…',
+  ml: '{n} സെക്കൻഡിൽ അടയും…',
+  kn: '{n} ಸೆಕೆಂಡುಗಳಲ್ಲಿ ಮುಚ್ಚುತ್ತದೆ…',
+};
+
+const AUTO_CLOSE_SECONDS = 12;
 export const AIPresenter: React.FC<AIPresenterProps> = ({ language }) => {
   const [minimized, setMinimized] = useState(false);
   const [message, setMessage] = useState('');
   const [liveBadge, setLiveBadge] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(0);
   const greetedRef = useRef(false);
+  const liveSnapshotRef = useRef<LiveStats | null>(null);
+
+  const saveSnapshot = useCallback((live: LiveStats) => {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({
+        signs: live.total, gudalur: live.gudalur, posters: live.posters, videos: live.videos, at: Date.now(),
+      }));
+    } catch { /* ignore */ }
+  }, []);
 
   const runGreeting = useCallback(async () => {
-    if (greetedRef.current) return;
     greetedRef.current = true;
     try {
       const live = await fetchLiveStats();
@@ -104,30 +129,62 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({ language }) => {
           ml: 'നമസ്കാരം! ഞാൻ VOG. പ്രസ്ഥാനം ജീവനുള്ളതാണ് — കുറച്ചു കഴിഞ്ഞ് പുതിയ സംഖ്യകൾ കാണുക.',
           kn: 'ನಮಸ್ಕಾರ! ನಾನು VOG. ಚಳುವಳಿ ಜೀವಂತವಾಗಿದೆ — ಸ್ವಲ್ಪ ಹೊತ್ತಿನಲ್ಲಿ ಇತ್ತೀಚಿನ ಸಂಖ್ಯೆಗಳನ್ನು ನೋಡಿ.',
         }[language] || 'Namaste! I am VOG.');
+        setSecondsLeft(AUTO_CLOSE_SECONDS);
         return;
       }
+      liveSnapshotRef.current = live;
       const last = readLastSeen();
       setMessage(buildGreeting(language, live, last));
       setLiveBadge(true);
-      // Persist the snapshot as "last seen" on unload (so refreshing mid-greeting
-      // doesn't move the bar prematurely), plus a 15s safety settle.
-      const save = () => {
-        try {
-          localStorage.setItem(LS_KEY, JSON.stringify({ signs: live.total, posters: live.posters, videos: live.videos, at: Date.now() }));
-        } catch { /* ignore */ }
-      };
-      window.addEventListener('beforeunload', save, { once: true });
-      setTimeout(save, 15000);
+      setSecondsLeft(AUTO_CLOSE_SECONDS);
+      // Save the snapshot after a settle beat so a refresh mid-greeting does
+      // not falsely consume the "since last visit" delta.
+      setTimeout(() => saveSnapshot(live), 15000);
     } catch {
       /* never throw */
     }
-  }, [language]);
+  }, [language, saveSnapshot]);
 
   useEffect(() => {
     void runGreeting();
   }, [runGreeting]);
 
-  const toggleMinimized = () => setMinimized(!minimized);
+  // Auto-close countdown — starts whenever a message is visible, pauses when
+  // minimized, closes the bubble at zero. Manual ✕ always wins.
+  useEffect(() => {
+    if (!message || minimized) return;
+    setSecondsLeft(AUTO_CLOSE_SECONDS);
+    const id = window.setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s <= 1) {
+          window.clearInterval(id);
+          setMessage('');
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [message, minimized]);
+
+  // Save the snapshot before unload so deltas stay honest across sessions.
+  useEffect(() => {
+    const save = () => { if (liveSnapshotRef.current) saveSnapshot(liveSnapshotRef.current); };
+    window.addEventListener('beforeunload', save);
+    return () => window.removeEventListener('beforeunload', save);
+  }, [saveSnapshot]);
+
+  const toggleMinimized = () => {
+    setMinimized((m) => {
+      // Reopening an empty VOG re-greets with FRESH live data.
+      if (m && !message) void runGreeting();
+      return !m;
+    });
+  };
+
+  const countdownText = message
+    ? (CLOSE_IN[language] || CLOSE_IN.en).replace('{n}', String(secondsLeft))
+    : '';
 
   return (
     <div className="fixed bottom-4 right-4 z-[50] flex flex-col items-end gap-2">
@@ -144,7 +201,8 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({ language }) => {
               {LIVE_LABEL[language] || LIVE_LABEL.en}
             </span>
           </div>
-          <p className="pr-0 text-xs text-slate-700 leading-relaxed">{message}</p>
+          <p className="text-xs text-slate-700 leading-relaxed">{message}</p>
+          <p className="mt-2 text-[10px] font-semibold text-slate-400 tabular-nums">{countdownText}</p>
           <button
             onClick={() => setMessage('')}
             className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-slate-200 text-slate-500 text-[10px] flex items-center justify-center hover:bg-slate-300"

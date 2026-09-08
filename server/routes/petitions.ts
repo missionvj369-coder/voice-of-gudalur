@@ -139,6 +139,26 @@ router.get('/list', async (_req: Request, res: Response) => {
 router.get('/sign-stats', async (_req: Request, res: Response) => {
   try {
     const total = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
+    const totalNum = Number(total?.count ?? 0);
+    // Gudalur vs Outside split: the `village` column stores the free-text
+    // address each supporter typed. These are the known Gudalur Taluk
+    // localities (the taluk itself, its villages) — any signature whose
+    // address mentions one of them counts as "from Gudalur"; everything
+    // else counts as "outside Gudalur" (across India).
+    const gudalurTerms = [
+      'gudalur', 'nelliyalam', 'nelliyalum', 'devala', "o'valley", 'ovalley', 'o valley',
+      'thorapalli', 'thorappalli', 'kasimvayal', 'kasimvayal', 'ss nagar', 's.s. nagar', 's s nagar',
+      'first mile', 'second mile', 'vedanvayal', 'chembala', 'nandatti', 'nandatty',
+      'erumad', 'cherangode', 'masinagudi', 'bokkapuram', 'moyar', 'singara',
+      'pandalur', 'chalkusha', 'kottappuram', 'gudalur taluk', '643201', '643202',
+      '643203', '643204', '643205', '643206', '643207', '643211',
+    ];
+    const predicate = gudalurTerms.map((t) => `LOWER(village) LIKE '%${t}%'`).join(' OR ');
+    const gRow = await db.queryOne<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM petition_signs WHERE ${predicate}`,
+    );
+    const gudalur = Math.min(Number(gRow?.count ?? 0), totalNum);
+    const outside = Math.max(0, totalNum - gudalur);
     // Read every DISTINCT registered address (village column now stores the
     // free-text address people typed across India). Places are NEVER pre-set:
     // we cluster the actual typed addresses and rank the clusters by count.
@@ -154,12 +174,14 @@ router.get('/sign-stats', async (_req: Request, res: Response) => {
       places.rows.map((r) => ({ place: String(r.place), count: Number(r.count) })),
     );
     res.json({
-      total: Number(total?.count ?? 0),
+      total: totalNum,
+      gudalur,
+      outside,
       places: clustered.slice(0, 15),
     });
   } catch (e: any) {
     logger.error('sign-stats:', e.message);
-    res.json({ total: 0, places: [] });
+    res.json({ total: 0, gudalur: 0, outside: 0, places: [] });
   }
 });
 
