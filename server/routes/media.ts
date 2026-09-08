@@ -27,6 +27,12 @@ import { db } from '../db/client';
 import { requireAuth, requireRole, logAudit } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import storj from '../services/storj';
+import { cacheWrap, cacheDel } from '../utils/ttlCache';
+
+// Public media list is fetched on every page load + by the AI greeter. Cache
+// it (metadata + presigned URLs) so a crowd hits the DB/Storj once per window.
+const MEDIA_LIST_TTL_MS = 10 * 1000;
+const MEDIA_LIST_KEY = 'media:list';
 
 const router = Router();
 
@@ -67,31 +73,34 @@ function parseDataUrl(dataUrl: string | null): { mime: string; buffer: Buffer } 
 /** GET /api/media — metadata ONLY (no payloads), newest first. */
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    const rows = await db.query<MediaRow>(
-      `SELECT id, kind, title, description, mime, size_bytes, file_url, created_at
-       FROM media_posts WHERE active = TRUE ORDER BY created_at DESC`,
-    );
-    // For Storj-hosted items, generate a fresh presigned URL (the public link
-    // grant is often misconfigured → 401, but presigned URLs always work).
-    const media: Array<Record<string, unknown>> = [];
-    for (const r of rows.rows) {
-      let url: string;
-      if (r.file_url && storj.isStorjConfigured()) {
-        try {
-          const key = storj.urlToKey(r.file_url);
-          url = await storj.presignGet(key);
-        } catch {
-          url = r.file_url; // fall back to stored URL
+    const payload = await cacheWrap(MEDIA_LIST_KEY, MEDIA_LIST_TTL_MS, async () => {
+      const rows = await db.query<MediaRow>(
+        `SELECT id, kind, title, description, mime, size_bytes, file_url, created_at
+         FROM media_posts WHERE active = TRUE ORDER BY created_at DESC`,
+      );
+      // For Storj-hosted items, generate a fresh presigned URL (the public link
+      // grant is often misconfigured → 401, but presigned URLs always work).
+      const media: Array<Record<string, unknown>> = [];
+      for (const r of rows.rows) {
+        let url: string;
+        if (r.file_url && storj.isStorjConfigured()) {
+          try {
+            const key = storj.urlToKey(r.file_url);
+            url = await storj.presignGet(key);
+          } catch {
+            url = r.file_url; // fall back to stored URL
+          }
+        } else {
+          url = r.file_url || `/api/media/${encodeURIComponent(r.id)}/file`;
         }
-      } else {
-        url = r.file_url || `/api/media/${encodeURIComponent(r.id)}/file`;
+        media.push({
+          id: r.id, kind: r.kind, title: r.title, description: r.description,
+          mime: r.mime, sizeBytes: r.size_bytes, url, createdAt: r.created_at,
+        });
       }
-      media.push({
-        id: r.id, kind: r.kind, title: r.title, description: r.description,
-        mime: r.mime, sizeBytes: r.size_bytes, url, createdAt: r.created_at,
-      });
-    }
-    res.json({ media });
+      return { media };
+    });
+    res.json(payload);
   } catch (e: any) {
     logger.error('media list:', e.message);
     res.status(500).json({ error: 'Failed to load media' });
@@ -187,6 +196,10 @@ router.post('/', requireAuth, requireRole('ADMIN', 'PLATFORM_ADMIN'), upload.sin
       target: `media_posts/${id}`, detail: { kind, title, storj: storj.isStorjConfigured() }, ip: req.ip,
     });
 
+    // New media is public — invalidate the cached list so the AI greeter and
+    // the "new poster/video" notice see it immediately.
+    cacheDel(MEDIA_LIST_KEY);
+
     res.status(201).json({ id, ok: true, message: `${kind === 'video' ? 'Video' : 'Poster'} published on the public frontend.` });
   } catch (e: any) {
     logger.error('media upload:', e.message);
@@ -216,6 +229,7 @@ router.delete('/:id', requireAuth, requireRole('ADMIN', 'PLATFORM_ADMIN'), async
       actorId: req.user!.uid, actorKind: 'user', action: 'DELETE_MEDIA',
       target: `media_posts/${req.params.id}`, ip: req.ip,
     });
+    cacheDel(MEDIA_LIST_KEY);
     res.json({ ok: (result.rowCount ?? 0) > 0 });
   } catch (e: any) {
     logger.error('media delete:', e.message);

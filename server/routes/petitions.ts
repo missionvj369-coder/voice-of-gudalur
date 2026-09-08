@@ -14,8 +14,16 @@ import { requireAuth, requireRole, logAudit } from '../middleware/auth';
 import { db } from '../db/client';
 import { logger } from '../utils/logger';
 import { clusterPlaces } from '../utils/placeCluster';
+import { cacheWrap, cacheDel } from '../utils/ttlCache';
 
 const router = Router();
+
+// Public aggregate endpoints are polled by every open client. Cache them so a
+// crowd collapses to a handful of DB hits instead of one per user per poll.
+const STATS_TTL_MS = 6 * 1000;
+const LEDGER_TTL_MS = 6 * 1000;
+const STATS_KEY = 'petition:sign-stats';
+const LEDGER_KEY = 'petition:ledger';
 
 /** POST /api/petitions/sign — resident signs the petition. */
 router.post('/sign', requireAuth, async (req: Request, res: Response) => {
@@ -54,6 +62,10 @@ router.post('/sign', requireAuth, async (req: Request, res: Response) => {
       idempotencyKey: req.body?.idempotencyKey,
     };
     const result = await recordPetitionSign(input);
+    // A fresh signature changes the public totals — drop the cache so the next
+    // poll recomputes within one TTL window instead of serving a stale count.
+    cacheDel(STATS_KEY);
+    cacheDel(LEDGER_KEY);
     await logAudit({
       actorId: user.uid, actorKind: 'user',
       action: result.isDuplicate ? 'SIGN_PETITION_DUP' : 'SIGN_PETITION',
@@ -141,15 +153,18 @@ router.get('/list', async (_req: Request, res: Response) => {
 /** GET /api/petitions/sign-stats — public live totals + per-place leaderboard (highest first). */
 router.get('/sign-stats', async (_req: Request, res: Response) => {
   try {
-    const totalRow = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
-    const totalNum = Number(totalRow?.count ?? 0);
-    const places = await db.query<{ place: string; count: number }>(
-      `SELECT village AS place, COUNT(*)::int AS count
-       FROM petition_signs WHERE village IS NOT NULL AND village <> ''
-       GROUP BY village`,
-    );
-    const clustered = clusterPlaces(places.rows.map((r) => ({ place: String(r.place), count: Number(r.count) })));
-    res.json({ total: totalNum, places: clustered.slice(0, 15) });
+    const data = await cacheWrap(STATS_KEY, STATS_TTL_MS, async () => {
+      const totalRow = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
+      const totalNum = Number(totalRow?.count ?? 0);
+      const places = await db.query<{ place: string; count: number }>(
+        `SELECT village AS place, COUNT(*)::int AS count
+         FROM petition_signs WHERE village IS NOT NULL AND village <> ''
+         GROUP BY village`,
+      );
+      const clustered = clusterPlaces(places.rows.map((r) => ({ place: String(r.place), count: Number(r.count) })));
+      return { total: totalNum, places: clustered.slice(0, 15) };
+    });
+    res.json(data);
   } catch (e: any) {
     logger.error('sign-stats:', e.message);
     res.json({ total: 0, places: [] });
@@ -161,26 +176,29 @@ router.get('/sign-stats', async (_req: Request, res: Response) => {
  *  rendered blurred on the client. Same privacy posture as /verify/:hash. */
 router.get('/ledger', async (_req: Request, res: Response) => {
   try {
-    const total = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
-    const rows = await db.query<{
-      sign_hash: string; full_name: string; village: string; phone_last4: string | null;
-      batch_no: number; created_at: string;
-    }>(
-      `SELECT sign_hash, full_name, village, phone_last4, batch_no, created_at
-       FROM petition_signs ORDER BY created_at DESC LIMIT 500`,
-    );
-    res.json({
-      total: Number(total?.count ?? 0),
-      signs: rows.rows.map((r) => ({
-        hash: r.sign_hash,
-        name: r.full_name,
-        village: r.village,
-        phoneLast4: r.phone_last4,
-        batchNo: r.batch_no,
-        signedAt: r.created_at,
-        verifyUrl: `/verify-sign?id=${encodeURIComponent(r.sign_hash)}`,
-      })),
+    const data = await cacheWrap(LEDGER_KEY, LEDGER_TTL_MS, async () => {
+      const total = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
+      const rows = await db.query<{
+        sign_hash: string; full_name: string; village: string; phone_last4: string | null;
+        batch_no: number; created_at: string;
+      }>(
+        `SELECT sign_hash, full_name, village, phone_last4, batch_no, created_at
+         FROM petition_signs ORDER BY created_at DESC LIMIT 500`,
+      );
+      return {
+        total: Number(total?.count ?? 0),
+        signs: rows.rows.map((r) => ({
+          hash: r.sign_hash,
+          name: r.full_name,
+          village: r.village,
+          phoneLast4: r.phone_last4,
+          batchNo: r.batch_no,
+          signedAt: r.created_at,
+          verifyUrl: `/verify-sign?id=${encodeURIComponent(r.sign_hash)}`,
+        })),
+      };
     });
+    res.json(data);
   } catch (e: any) {
     logger.error('ledger:', e.message);
     res.json({ total: 0, signs: [] });

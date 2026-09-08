@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import axios from 'axios';
+import compression from 'compression';
 dotenv.config();
 
 const __filename = typeof (import.meta as any)?.url === 'string'
@@ -90,6 +91,29 @@ export async function createApp() {
     app.use(express.json());
   app.use(cookieParser());
 
+  // ─── Response compression ───────────────────────────────────────────────────
+  // gzip JSON/HTML before it leaves the function — cuts payload size ~70% and
+  // reduces egress cost + time-to-first-byte for the ledger/media lists.
+  app.use(compression());
+
+  // ─── Load shedding (free-tier survival) ─────────────────────────────────────
+  // Serverless instances have a hard concurrency ceiling. When too many
+  // requests are in flight at once, shed the excess with a fast 503 instead of
+  // queueing DB work that would pile up and time out. This keeps the app
+  // responsive for the users who ARE being served.
+  const MAX_IN_FLIGHT = Number(process.env.MAX_IN_FLIGHT || 150);
+  let inFlight = 0;
+  app.use((req, res, next) => {
+    if (inFlight >= MAX_IN_FLIGHT) {
+      res.setHeader('Retry-After', '2');
+      return res.status(503).json({ error: 'Busy — please retry in a moment.' });
+    }
+    inFlight += 1;
+    res.on('finish', () => { inFlight -= 1; });
+    res.on('close', () => { inFlight -= 1; });
+    next();
+  });
+
   // â”€â”€ Rate limiting (abuse protection) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // In serverless (Netlify Function) runs the socket address can be absent;
   // key on req.ip with a safe fallback and skip the validations that throw
@@ -113,6 +137,9 @@ export async function createApp() {
   const authRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts });
   const publicRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts });
   const writeRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts });
+  // Stricter limiter for the AI chat endpoint — it calls an external LLM which
+  // is expensive and slow; a burst here is both a cost and a hang vector.
+  const aiRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many AI requests', keyGenerator: clientKey, ...limiterOpts });
 
   // Security headers (CSP updated â€” no *.supabase.co, no Realtime websocket)
   app.use((req, res, next) => {
@@ -583,10 +610,12 @@ YOUR MANTRA (end every reply with a variation of):
 
   // Mount the new CockroachDB-backed routers (replaces Supabase facades).
   app.use('/api/auth', authRateLimiter, authRoutes);
-  app.use('/api/petitions', petitionRoutes);
-  app.use('/api/manifesto', manifestoRoutes);
-  app.use('/api/wildlife', wildlifeRoutes);
-  app.use('/api/offline', wildlifeRoutes);
+  // Public polled endpoints get the public limiter (120/15min) so a crowd can't
+  // hammer the DB; writes are bounded by the write limiter where mounted.
+  app.use('/api/petitions', publicRateLimiter, petitionRoutes);
+  app.use('/api/manifesto', publicRateLimiter, manifestoRoutes);
+  app.use('/api/wildlife', publicRateLimiter, wildlifeRoutes);
+  app.use('/api/offline', publicRateLimiter, wildlifeRoutes);
   app.use('/api/officials', officialsRoutes);
   // Admin portal routes (hidden /admin — PLATFORM_ADMIN only)
   app.use('/api/admin', adminRoutes);
@@ -596,7 +625,7 @@ YOUR MANTRA (end every reply with a variation of):
 
   app.use('/api/config', publicRateLimiter, configRoutes);
   // Media storage: using CockroachDB only (Storj object storage removed).
-  app.use('/api/media', mediaRoutes);
+  app.use('/api/media', publicRateLimiter, mediaRoutes);
 
   // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // AI TRANSCRIPTION â€” self-hosted Whisper (Apache-2.0) converts voice reports to civic text
