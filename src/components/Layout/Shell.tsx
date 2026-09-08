@@ -280,11 +280,15 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                         type="button"
                         onClick={() => {
                           if (l.code === lang) return;
-                          // Store + RELOAD the current page so every string on
-                          // screen re-renders in the freshly selected language.
+                          // Persist immediately + reload so every string re-renders
+                          // in the newly selected language.
+                          try { localStorage.setItem('VoiceOfGudalur_lang', l.code); } catch { /* ignore */ }
                           setLang(l.code);
                           setMenuOpen(false);
-                          setTimeout(() => window.location.reload(), 60);
+                          // Update <html lang> for screen readers
+                          document.documentElement.lang = l.code;
+                          // Reload same URL to apply new language everywhere
+                          setTimeout(() => window.location.reload(), 100);
                         }}
                         title={l.label}
                         className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
