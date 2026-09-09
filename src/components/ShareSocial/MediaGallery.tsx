@@ -152,26 +152,31 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({ isOpen, onClose, med
             </div>
           </motion.div>
 
-          {viewing && (
-            <ShareSocialModal
-              isOpen={true}
-              item={{
-                id: viewing.id,
-                kind: viewing.kind,
-                title: viewing.title,
-                description: viewing.description,
-                url: viewing.url,
-                mime: viewing.mime,
-                createdAt: viewing.createdAt,
-                sizeBytes: viewing.sizeBytes ?? null,
-              }}
-              currentIndex={viewingIdx}
-              totalCount={filtered.length}
-              onPrev={() => step(-1)}
-              onNext={() => step(1)}
-              onClose={() => setViewing(null)}
-            />
-          )}
+          {viewing && (() => {
+            const nextIdx = (viewingIdx + 1) % filtered.length;
+            const nextUrl = filtered.length > 1 ? filtered[nextIdx].url : undefined;
+            return (
+              <ShareSocialModal
+                isOpen={true}
+                item={{
+                  id: viewing.id,
+                  kind: viewing.kind,
+                  title: viewing.title,
+                  description: viewing.description,
+                  url: viewing.url,
+                  mime: viewing.mime,
+                  createdAt: viewing.createdAt,
+                  sizeBytes: viewing.sizeBytes ?? null,
+                }}
+                currentIndex={viewingIdx}
+                totalCount={filtered.length}
+                onPrev={() => step(-1)}
+                onNext={() => step(1)}
+                onClose={() => setViewing(null)}
+                nextUrl={nextUrl}
+              />
+            );
+          })()}
         </div>
       )}
     </AnimatePresence>

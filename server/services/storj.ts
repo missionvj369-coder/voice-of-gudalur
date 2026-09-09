@@ -118,6 +118,33 @@ export function urlToKey(url: string): string {
   return url.split('?')[0];
 }
 
+/**
+ * Build a public, immutable URL from an object key. These URLs are the SAME
+ * for every user and never change (until the file changes), so browsers and
+ * CDNs can cache them forever. This eliminates per-request presigned URL
+ * generation — the #1 scaling bottleneck.
+ *
+ * Uses STORJ_PUBLIC_LINK_BASE (e.g. https://link.storjshare.io/raw/<access-id>/vog).
+ * Returns empty string if not configured.
+ */
+export function getPublicUrl(key: string): string {
+  const base = process.env.STORJ_PUBLIC_LINK_BASE;
+  if (!base) return '';
+  return `${base.replace(/\/$/, '')}/${key}`;
+}
+
+/**
+ * Get the media URL to serve to clients. Prefers the public immutable URL
+ * (fast, cacheable). Falls back to a presigned URL only if public links are
+ * not configured.
+ */
+export async function getMediaUrl(key: string): Promise<string> {
+  const pub = getPublicUrl(key);
+  if (pub) return pub;
+  // Fallback: presigned URL (unique per request, not cacheable)
+  return presignGet(key);
+}
+
 export default {
   isStorjConfigured,
   makeMediaKey,
@@ -126,4 +153,6 @@ export default {
   checkBucket,
   presignGet,
   urlToKey,
+  getPublicUrl,
+  getMediaUrl,
 };

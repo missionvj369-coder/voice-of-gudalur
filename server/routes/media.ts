@@ -30,9 +30,14 @@ import storj from '../services/storj';
 import { cacheWrap, cacheDel } from '../utils/ttlCache';
 
 // Public media list is fetched on every page load + by the AI greeter. Cache
-// it (metadata + presigned URLs) so a crowd hits the DB/Storj once per window.
+// it (metadata + public URLs) so a crowd hits the DB/Storj once per window.
+// The public URLs themselves are immutable and cached by browsers/CDNs for 1 year.
 const MEDIA_LIST_TTL_MS = 10 * 1000;
 const MEDIA_LIST_KEY = 'media:list';
+
+// Media files are immutable — cache them aggressively at every layer:
+// browser (1 year), CDN edge, service worker. URL changes only when file changes.
+const MEDIA_CACHE_HEADER = 'public, max-age=31536000, immutable';
 
 const router = Router();
 
@@ -78,15 +83,16 @@ router.get('/', async (_req: Request, res: Response) => {
         `SELECT id, kind, title, description, mime, size_bytes, file_url, created_at
          FROM media_posts WHERE active = TRUE ORDER BY created_at DESC`,
       );
-      // For Storj-hosted items, generate a fresh presigned URL (the public link
-      // grant is often misconfigured → 401, but presigned URLs always work).
+      // For Storj-hosted items, use a public immutable URL. Same URL for every
+      // user → browsers + CDNs cache it for 1 year. Zero presigning overhead.
+      // Falls back to presigned URL only if public links are not configured.
       const media: Array<Record<string, unknown>> = [];
       for (const r of rows.rows) {
         let url: string;
         if (r.file_url && storj.isStorjConfigured()) {
           try {
             const key = storj.urlToKey(r.file_url);
-            url = await storj.presignGet(key);
+            url = await storj.getMediaUrl(key);
           } catch {
             url = r.file_url; // fall back to stored URL
           }
@@ -117,14 +123,17 @@ router.get('/:id/file', async (req: Request, res: Response) => {
     );
     if (!row) return res.status(404).json({ error: 'Media not found' });
 
-    // Storj-hosted: redirect to a fresh presigned URL (reliable, no 401).
+    // Storj-hosted: redirect to the public immutable URL. Same URL for all
+    // users → browsers + CDNs cache it for 1 year. 301 permanent redirect
+    // is cached by browsers (unlike 302 temporary).
     if (row.file_url && storj.isStorjConfigured()) {
       try {
         const key = storj.urlToKey(row.file_url);
-        const signed = await storj.presignGet(key);
-        return res.redirect(302, signed);
+        const publicUrl = await storj.getMediaUrl(key);
+        res.setHeader('Cache-Control', MEDIA_CACHE_HEADER);
+        return res.redirect(301, publicUrl);
       } catch (e: any) {
-        logger.warn(`media file presign failed for ${req.params.id}: ${e?.message}`);
+        logger.warn(`media file public URL failed for ${req.params.id}: ${e?.message}`);
         // fall through to legacy handling
       }
     }
@@ -134,7 +143,7 @@ router.get('/:id/file', async (req: Request, res: Response) => {
       const parsed = parseDataUrl(row.data_url);
       if (!parsed) return res.status(404).json({ error: 'Media payload unavailable' });
       res.setHeader('Content-Type', parsed.mime || row.mime || 'application/octet-stream');
-      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.setHeader('Cache-Control', MEDIA_CACHE_HEADER);
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('Content-Length', String(parsed.buffer.length));
       return res.send(parsed.buffer);
@@ -169,12 +178,14 @@ router.post('/', requireAuth, requireRole('ADMIN', 'PLATFORM_ADMIN'), upload.sin
     if (!id) return res.status(500).json({ error: 'Failed to create media record' });
 
     if (storj.isStorjConfigured()) {
-      // Upload to Storj and store the public link. No base64 in the DB.
+      // Upload to Storj and store the public immutable link. No base64 in the DB.
+      // The public URL is the same for all users → cacheable for 1 year.
       try {
-        const { url, size } = await storj.uploadMedia(id, req.file.buffer, req.file.mimetype);
+        const { key, size } = await storj.uploadMedia(id, req.file.buffer, req.file.mimetype);
+        const publicUrl = storj.getPublicUrl(key);
         await db.query(
           'UPDATE media_posts SET file_url = $1, size_bytes = $2 WHERE id = $3',
-          [url, size, id],
+          [publicUrl || `${process.env.STORJ_PUBLIC_LINK_BASE}/${key}`, size, id],
         );
       } catch (e: any) {
         // Roll back the row so we don't leave an orphan.

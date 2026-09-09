@@ -11,6 +11,7 @@ export interface MediaItem {
 interface Props {
   isOpen: boolean; onClose: () => void; item: MediaItem | null;
   currentIndex?: number; totalCount?: number; onPrev?: () => void; onNext?: () => void;
+  nextUrl?: string; // URL of the next media item (for prefetching)
 }
 const SHARE_URL = 'https://voiceofgudalur.space';
 const downloadItem = async (url: string, fn: string) => {
@@ -57,7 +58,7 @@ function DescriptionWithToggle({ text }: { text: string }) {
   );
 }
 
-export const MediaViewer: React.FC<Props> = ({ isOpen, onClose, item, currentIndex = 0, totalCount = 1, onPrev, onNext }) => {
+export const MediaViewer: React.FC<Props> = ({ isOpen, onClose, item, currentIndex = 0, totalCount = 1, onPrev, onNext, nextUrl }) => {
   const { t } = useLanguage();
   const imgRef = useRef<HTMLImageElement>(null);
 
@@ -72,6 +73,18 @@ export const MediaViewer: React.FC<Props> = ({ isOpen, onClose, item, currentInd
     document.body.style.overflow = 'hidden';
     return () => { document.removeEventListener('keydown', h); document.body.style.overflow = ''; };
   }, [isOpen, onClose, onPrev, onNext]);
+
+  // Prefetch the next media item while the current one is viewing.
+  // With immutable URLs + service worker cache, the next item loads instantly.
+  useEffect(() => {
+    if (!isOpen || !nextUrl) return;
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.href = nextUrl;
+    link.as = 'image';
+    document.head.appendChild(link);
+    return () => { document.head.removeChild(link); };
+  }, [isOpen, nextUrl]);
 
   const onDl = useCallback(() => {
     if (!item) return;

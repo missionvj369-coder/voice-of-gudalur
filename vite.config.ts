@@ -151,6 +151,18 @@ export default defineConfig(() => {
                 cacheableResponse: { statuses: [0, 200] },
               },
             },
+            {
+              // MEDIA FILES (Storj): CacheFirst — immutable URLs, cache for 30 days.
+              // After first load, media is instant + works offline. The URL changes
+              // only when the file changes, so stale entries are impossible.
+              urlPattern: /^https:\/\/link\.storjshare\.io\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'vog-media-cache',
+                expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
           ],
           // NOTE: navigateFallback is explicitly DISABLED (undefined). The
           // plugin defaults it to "index.html", which emits a NavigationRoute
