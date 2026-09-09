@@ -347,7 +347,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'home.live': '{n} verified signs',
     'home.live_gudalur': 'Gudalur: {n}',
     'home.live_outside': 'Outside Gudalur: {n}',
-    'home.need_register': 'You must register (get a Digital Supporter ID) before signing — it takes 20 seconds, no OTP needed. Open to supporters from across India.',
+    'home.need_register': 'You must register (get a Digital Supporter ID) before signing — it takes 20 seconds. Open to supporters from across India.',
     'home.register_first_toast': '🙏 Register to get your Gudalur ID — then sign the movement! Together we solve all problems of Gudalur.',
     'home.register_cta': 'Register & Get Digital Supporter ID',
     'home.signing_as': 'Signing as',
@@ -385,7 +385,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'home.auto_signing_sub': 'Please wait while we submit your signature',
 
     'reg.title': 'Register — Get your Digital Supporter ID',
-    'reg.subtitle': 'No OTP needed. Your name, mobile number and full address — open to supporters from every district of India.',
+    'reg.subtitle': 'Your name, mobile number and full address — open to supporters from every district of India.',
     'reg.login_cta': 'Already registered? Login here',
     'reg.name': 'Full Name',
     'reg.phone': 'Mobile Number',
@@ -437,6 +437,11 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'sght.title': 'Animal Sightings',
     'sght.sub': 'Sighting reports will open here.',
     'sght.btn': 'Sign the Petition',
+
+    'vog.welcome_prefix': 'Welcome,',
+    'vog.welcome_suffix': '— you are part of the movement',
+    'vog.welcome_live': 'LIVE',
+    'vog.dismiss_banner': 'Dismiss welcome banner',
   },
   ta: {
     'mnu.title': 'மெனு',
@@ -456,7 +461,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'home.live': '{n} சரிபார்க்கப்பட்ட கையெழுத்துகள்',
     'home.live_gudalur': 'கூடலூர்: {n}',
     'home.live_outside': 'வெளியே: {n}',
-    'home.need_register': 'கையெழுத்திடுவதற்கு முன் பதிவு செய்ய வேண்டும் (டிஜிட்டல் ஆதரவாளர் ஐடி) — 20 வினாடிகளில் முடியும், OTP தேவையில்லை. இந்தியா முழுவதிலிருந்தும் ஆதரவாளர்கள் வரவேற்கப்படுகிறார்கள்.',
+    'home.need_register': 'கையெழுத்திடுவதற்கு முன் பதிவு செய்ய வேண்டும் (டிஜிட்டல் ஆதரவாளர் ஐடி) — 20 வினாடிகளில் முடியும். இந்தியா முழுவதிலிருந்தும் ஆதரவாளர்கள் வரவேற்கப்படுகிறார்கள்.',
     'home.register_first_toast': '🙏 பதிவு செய்து கூடலூர் ஐடி பெறுங்கள் — பின் மனுவில் கையெழுத்திடுங்கள்! ஒன்றாக கூடலூரின் அனைத்து பிரச்சனைகளையும் தீர்ப்போம்.',
     'home.register_cta': 'பதிவு & டிஜிட்டல் ஆதரவாளர் ஐடி பெறு',
     'home.signing_as': 'கையெழுத்திடுபவர்',
@@ -494,7 +499,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'home.auto_signing_sub': 'உங்கள் கையெழுத்தைச் சமர்ப்பிக்க காத்திருக்கவும்',
 
     'reg.title': 'பதிவு — உங்கள் டிஜிட்டல் ஆதரவாளர் ஐடி பெறுக',
-    'reg.subtitle': 'OTP தேவையில்லை. உங்கள் பெயர், கைபேசி எண் மற்றும் முழு முகவரி — இந்தியாவின் எந்த மாவட்டத்தைச் சேர்ந்தவரும் பதிவு செய்யலாம்.',
+    'reg.subtitle': 'உங்கள் பெயர், கைபேசி எண் மற்றும் முழு முகவரி — இந்தியாவின் எந்த மாவட்டத்தைச் சேர்ந்தவரும் பதிவு செய்யலாம்.',
     'reg.login_cta': 'ஏற்கனவே பதிவு செய்துவிட்டீர்களா? இங்கே உள்நுழையுங்கள்',
     'reg.name': 'முழு பெயர்',
     'reg.phone': 'கைபேசி எண்',
@@ -546,6 +551,11 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'sght.title': 'வனவிலங்கு நடமாட்டம்',
     'sght.sub': 'நடமாட்ட அறிக்கைகள் இங்கே திறக்கப்படும்.',
     'sght.btn': 'மனுவில் கையெழுத்திடு',
+
+    'vog.welcome_prefix': 'வணக்கம்,',
+    'vog.welcome_suffix': '— நீங்க இயக்கத்தில் இருக்கிறீங்க',
+    'vog.welcome_live': 'வாழ்வான சம்பவம்',
+    'vog.dismiss_banner': 'வரவேற்பு செயல்முறை அழிக்கவும்',
   },
   ml: {
     'mnu.title': 'മെനു',
@@ -565,7 +575,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'home.live': '{n} പരിശോധിച്ച ഒപ്പുകൾ',
     'home.live_gudalur': 'ഗൂഡല്ലൂർ: {n}',
     'home.live_outside': 'പുറത്ത്: {n}',
-    'home.need_register': 'ഒപ്പിടുന്നതിന് മുമ്പ് രജിസ്റ്റർ ചെയ്യണം (ഗൂഡല്ലൂർ ഐഡി) — 20 സെക്കൻഡ് മതി, OTP വേണ്ട.',
+    'home.need_register': 'ഒപ്പിടുന്നതിന് മുമ്പ് രജിസ്റ്റർ ചെയ്യണം (ഗൂഡല്ലൂർ ഐഡി) — 20 സെക്കൻഡ് മതി.',
     'home.register_first_toast': '🙏 രജിസ്റ്റർ ചെയ്ത് ഗൂഡല്ലൂർ ഐഡി നേടുക — പിന്നെ അഭ്യർത്ഥനയിൽ ഒപ്പിടുക! ഒന്നിച്ച് ഗൂഡല്ലൂറിന്റെ എല്ലാ പ്രശ്നങ്ങളും പരിഹരിക്കാം.',
     'home.register_cta': 'രജിസ്റ്റർ & GDR ഐഡി നേടുക',
     'home.signing_as': 'ഒപ്പിടുന്നത്',
@@ -603,7 +613,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'home.auto_signing_sub': 'നിങ്ങളുടെ ഒപ്പ് സമർപ്പിക്കാൻ കാത്തിരിക്കുക',
 
     'reg.title': 'രജിസ്റ്റർ — നിങ്ങളുടെ ഗൂഡല്ലൂർ ഐഡി നേടുക',
-    'reg.subtitle': 'OTP ആവശ്യമില്ല. പേര്, മൊബൈൽ നമ്പർ, സ്ഥലം മാത്രം — ഒരു നമ്പർ, ഒരു രജിസ്ട്രേഷൻ.',
+    'reg.subtitle': 'പേര്, മൊബൈൽ നമ്പർ, സ്ഥലം മാത്രം — ഒരു നമ്പർ, ഒരു രജിസ്ട്രേഷൻ.',
     'reg.login_cta': 'ഇതിനകം രജിസ്റ്റർ ചെയ്തോ? ഇവിടെ ലോഗിൻ ചെയ്യുക',
     'reg.name': 'മുഴുവൻ പേര്',
     'reg.phone': 'മൊബൈൽ നമ്പർ',
@@ -645,6 +655,11 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'sght.title': 'വന്യജീവി സാന്നിധ്യം',
     'sght.sub': 'സാന്നിധ്യ റിപ്പോർട്ടുകൾ ഇവിടെ തുറക്കും.',
     'sght.btn': 'പരാതിയിൽ ഒപ്പിടുക',
+
+    'vog.welcome_prefix': 'സ്വാഗതം,',
+    'vog.welcome_suffix': '— നിങ്ങൾ പ്രസ്ഥാനത്തിന്റെ ഭാഗമാണ്',
+    'vog.welcome_live': 'തത്സമയ',
+    'vog.dismiss_banner': 'സ്വാഗത ബാനർ അപ്പോഴും നീക്കം ചെയ്യുക',
   },
   kn: {
     'mnu.title': 'ಮೆನು',
@@ -664,7 +679,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'home.live': '{n} ಪರಿಶೀಲಿತ ಸಹಿಗಳು',
     'home.live_gudalur': 'ಗೂಡಲೂರ್: {n}',
     'home.live_outside': 'ಹೊರಗಿನ: {n}',
-    'home.need_register': 'ಸಹಿ ಹಾಕುವ ಮೊದಲು ನೋಂದಣಿ (ಗೂಡಲೂರು ಐಡಿ) — 20 ಸೆಕೆಂಡುಗಳಲ್ಲಿ ಆಗುತ್ತದೆ, OTP ಬೇಡ.',
+    'home.need_register': 'ಸಹಿ ಹಾಕುವ ಮೊದಲು ನೋಂದಣಿ (ಗೂಡಲೂರು ಐಡಿ) — 20 ಸೆಕೆಂಡುಗಳಲ್ಲಿ ಆಗುತ್ತದೆ.',
     'home.register_first_toast': '🙏 ನೋಂದಣಿಯಾಗಿ ಗೂಡಲೂರು ಐಡಿ ಪಡೆಯಿರಿ — ನಂತರ ಮನವಿಯಲ್ಲಿ ಸಹಿ ಹಾಕಿ! ಒಟ್ಟಿಗೆ ಗೂಡಲೂರಿನ ಎಲ್ಲಾ ಸಮಸ್ಯೆಗಳನ್ನು ಪರಿಹರಿಸೋಣ.',
     'home.register_cta': 'ನೋಂದಣಿ & GDR ಐಡಿ ಪಡೆಯಿರಿ',
     'home.signing_as': 'ಸಹಿ ಹಾಕುತ್ತಿರುವವರು',
@@ -702,7 +717,7 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'home.auto_signing_sub': 'ನಿಮ್ಮ ಸಹಿಯನ್ನು ಸಲ್ಲಿಸಲು ಕಾಯಿರಿ',
 
     'reg.title': 'ನೋಂದಣಿ — ನಿಮ್ಮ ಗೂಡಲೂರು ಐಡಿ ಪಡೆಯಿರಿ',
-    'reg.subtitle': 'OTP ಅಗತ್ಯವಿಲ್ಲ. ಹೆಸರು, ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಮತ್ತು ಸ್ಥಳ ಮಾತ್ರ — ಒಂದು ಸಂಖ್ಯೆ, ಒಂದು ನೋಂದಣಿ.',
+    'reg.subtitle': 'ಹೆಸರು, ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಮತ್ತು ಸ್ಥಳ ಮಾತ್ರ — ಒಂದು ಸಂಖ್ಯೆ, ಒಂದು ನೋಂದಣಿ.',
     'reg.login_cta': 'ಈಗಾಗಲೇ ನೋಂದಾಯಿಸಿದ್ದೀರಾ? ಇಲ್ಲಿ ಲಾಗಿನ್ ಮಾಡಿ',
     'reg.name': 'ಪೂರ್ಣ ಹೆಸರು',
     'reg.phone': 'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ',
@@ -744,6 +759,11 @@ const extraTranslations: Record<Language, Record<string, string>> = {
     'sght.title': 'ವನ್ಯಜೀವಿ ಸಂಚಾರ',
     'sght.sub': 'ಸಂಚಾರ ವರದಿಗಳು ಇಲ್ಲಿ ತೆರೆಯುತ್ತವೆ.',
     'sght.btn': 'ಅರ್ಜಿಗೆ ಸಹಿ ಹಾಕಿ',
+
+    'vog.welcome_prefix': 'ಸ್ವಾಗತ,',
+    'vog.welcome_suffix': '— ನೀವು ಚಳುವಳಿಯ ಭಾಗವಾಗಿದ್ದೀರಿ',
+    'vog.welcome_live': 'ತತ್ಸಮಯ',
+    'vog.dismiss_banner': 'ಸ್ವಾಗತ ಬ್ಯಾನರ್ ಅಳಿಸಿ',
   },
 };
 

@@ -1,15 +1,13 @@
 /**
  * Voice of Gudalur - Session & authentication service.
  *
- * Replaces Supabase Auth. Residents authenticate passwordless via OTP to
- * their mobile phone. Registration is a two-step flow:
- *   1. POST /api/auth/request-otp  — code sent to phone (6 digits, 5 min)
- *   2. POST /api/auth/verify-otp   — code validated, session issued
- *   3. GET  /api/auth/register     — resident completes profile (name, locality, pincode)
+ * Replaces Supabase Auth. Residents are fully passwordless and OTP-free:
+ *   1. POST /api/auth/register — instant account + Gudalur ID (GD-YYYY-XXXXXX)
+ *   2. POST /api/auth/lookup   — passwordless login by mobile number OR Gudalur ID
  *
- * Officials authenticate via email + OTP (not password). A govt official
- * requests access by email; the master admin approves from the backend.
- * Once approved the official requests an OTP, then sets a password.
+ * Officials authenticate via email + password; the officials portal can also
+ * issue one-time email codes for portal access. Access itself is granted by
+ * the master admin after the email request/approval flow.
  */
 import crypto from 'crypto';
 import { db } from '../db/client';

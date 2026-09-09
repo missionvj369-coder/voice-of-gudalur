@@ -2,7 +2,7 @@
 
 > A citizen-led civic platform for **Gudalur, The Nilgiris** — connecting residents, government desks, and forest authorities to solve real problems. **Privacy-first, offline-first, open-source.**
 
-Voice of Gudalur is a model civic-tech reference build: **zero passwords**, phone-based OTP registration, a government-aligned resident ID (GDR), a petition docket ledger that officials verify, and emergency wildlife-conflict alerts that work even with **no network**.
+Voice of Gudalur is a model civic-tech reference build: **zero passwords**, instant passwordless registration, a government-aligned resident ID (GDR), a petition docket ledger that officials verify, and emergency wildlife-conflict alerts that work even with **no network**.
 
 ---
 
@@ -12,7 +12,7 @@ Voice of Gudalur is a model civic-tech reference build: **zero passwords**, phon
 |---|---|
 | No internet in ghat roads | **PWA + Service Worker + IndexedDB offline queue**; reports sync when signal returns |
 | No network at all | **SMS emergency bridge** (works on every phone) + **BLE/WiFi-Direct P2P relay** between phones |
-| People can't prove who they are | **Phone OTP registration** (10-digit mobile verification, only last-4 stored) |
+| People can't prove who they are | **Instant Gudalur ID** (GD-YYYY-XXXXXX) issued on registration; only phone last-4 stored |
 | Tribal/regional languages | English · தமிழ் · മലയാളം · ಕನ್ನಡ |
 | Govt doesn't trust citizen data | **Official verification portal** with OTP access, RLS-protected views, immutable docket hashes |
 | AI in rural context | **On-device Whisper ASR** (Transformers.js) + local-LLM civic guide with Tamil fallback helplines |
@@ -25,8 +25,8 @@ Voice of Gudalur is a model civic-tech reference build: **zero passwords**, phon
 src/
 ├── pages/            # Route-level lazy-loaded pages (code-split via React.lazy)
 ├── components/       # Shell, NavBar, registration modal, live counter, maps…
-├── context/          # Auth (passwordless phone OTP + GDR ID), Language, Proximity alerts
-├── lib/              # auth (offline OTP), db (Dexie), security
+├── context/          # Auth (passwordless + GDR ID), Language, Proximity alerts
+├── lib/              # db (Dexie), security
 ├── services/         # backgroundSync, peerRelay (BLE), aiService, voice services
 ├── utils/            # PDF generators, WhatsApp share, petition toolkit
 ├── data/             # Locality/master data, corridors, manifesto content (en/ta/ml/kn)
@@ -40,11 +40,9 @@ tests/                # Playwright E2E (geolocation-simulated, Chromium + Pixel 
 
 ### Data flow (privacy-first registration)
 
-1. Resident taps **"Get GDR ID"** → phone number entry.
-2. A 6-digit OTP is sent to the phone — resident enters it to verify possession.
-3. Resident enters name, selects locality, pincode.
-4. The backend generates the GDR ID; the resident is registered with `verificationLevel=PHONE_VERIFIED`.
-5. Petitions/dockets can then be signed and later **verified by officials** through the officials portal (OTP → RLS-protected view).
+1. Resident taps **"Get GDR ID"** → enters name, mobile number and full address.
+2. No codes, no passwords — the backend instantly generates the GDR ID; the resident is registered with `verificationLevel=PHONE_VERIFIED`.
+3. Petitions/dockets can then be signed and later **verified by officials** through the officials portal.
 
 ---
 
@@ -63,7 +61,7 @@ npm run dev          # tsx server.ts (Express + Vite-compatible SPA at :3000)
 
 ```bash
 npm run lint         # tsc --noEmit — strict type-check of the whole project
-npm test             # vitest run — unit tests for OTP auth, security utils
+npm test             # vitest run — unit tests for auth API + security utils
 npm run build        # vite build — PWA build, manualChunks + route-split output
 npx playwright test  # E2E (Chromium desktop + Pixel 7 mobile)
 ```
@@ -95,8 +93,8 @@ CI (`.github/workflows/ci.yml`) runs **lint → test → build** on every push a
 
 ## 🔐 Security & Privacy posture
 
-- **Auth:** passwordless phone OTP registration and login; GDR ID as the civic identity.
-- **Client hardening:** `sanitizeText` (XSS), `checkRateLimit` (anti-spam), `sha256Hex` device fingerprint, OTP-gated officials access.
+- **Auth:** fully passwordless registration and login for residents (name + mobile → instant GDR ID); GDR ID as the civic identity.
+- **Client hardening:** `sanitizeText` (XSS), `checkRateLimit` (anti-spam), `sha256Hex` device fingerprint; officials portal access gated by the admin-approval flow.
 - **Server:** strict CSP, HSTS, nosniff, frame-deny headers; files stored via S3 presigned uploads.
 
 ---

@@ -86,20 +86,6 @@ export interface AuthUser {
 }
 
 export const authApi = {
-  /** POST /api/auth/request-otp - send a 6-digit code to a phone number. */
-  requestOtp: (input: { phone: string }) =>
-    request<{ message: string; otp?: string }>('/api/auth/request-otp', {
-      method: 'POST',
-      body: JSON.stringify(input),
-    }),
-
-  /** POST /api/auth/verify-otp - validate OTP, returns user (login) or isNew + phone (new registration). */
-  verifyOtp: (input: { phone: string; code: string }) =>
-    request<{ user?: AuthUser; isNew: boolean; phone: string; csrfToken?: string }>('/api/auth/verify-otp', {
-      method: 'POST',
-      body: JSON.stringify(input),
-    }),
-
   /** POST /api/auth/register — create a supporter (issues a Digital Supporter ID + session). */
   register: (input: {
     name: string; phone: string; localityId?: string; customPlaceName?: string;
@@ -239,6 +225,8 @@ export interface PetitionSignResult {
   verifyUrl?: string;
   isDuplicate: boolean;
   message: string;
+  /** The authoritative signature time (their ORIGINAL sign time on a duplicate). */
+  signedAt?: string;
 }
 
 export const petitionApi = {
@@ -266,6 +254,17 @@ export const petitionApi = {
         batchNo: number; signedAt: string; verifyUrl: string;
       }>;
     }>('/api/petitions/ledger'),
+
+  /** GET /api/petitions/my-sign — THIS resident's own petition signature (auth).
+   *  Restores the accurate "already signed" UI after re-login / new device /
+   *  cleared localStorage. Null means this resident has not signed. */
+  mySign: () =>
+    request<{
+      sign: {
+        signHash: string; fullName: string; village: string | null;
+        batchNo: number; signedAt: string; verifyUrl: string;
+      } | null;
+    }>('/api/petitions/my-sign'),
 
   list: () =>
     request<{ petitions: Array<Record<string, unknown>> }>('/api/petitions/list'),

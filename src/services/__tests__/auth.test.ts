@@ -6,10 +6,12 @@ describe('auth types', () => {
     expect(levels).toContain('PHONE_VERIFIED');
   });
 
-  it('authApi has requestOtp and verifyOtp methods', async () => {
+  it('authApi has passwordless register + lookup methods (no OTP anywhere)', async () => {
     const { authApi } = await import('../api');
-    expect(typeof authApi.requestOtp).toBe('function');
-    expect(typeof authApi.verifyOtp).toBe('function');
     expect(typeof authApi.register).toBe('function');
+    expect(typeof authApi.lookup).toBe('function');
+    // Resident flows are OTP-free by design — the dead OTP client was removed.
+    expect((authApi as Record<string, unknown>).requestOtp).toBeUndefined();
+    expect((authApi as Record<string, unknown>).verifyOtp).toBeUndefined();
   });
 });

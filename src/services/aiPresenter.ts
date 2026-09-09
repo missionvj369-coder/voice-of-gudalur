@@ -129,7 +129,7 @@ const L: Record<Language, {
   live: string;
 }> = {
   en: {
-    new: 'Namaste! {total} supporters have signed the Right to Life petition{top}. Register in 10 seconds (no OTP) and add your voice.',
+    new: 'Namaste! {total} supporters have signed the Right to Life petition{top}. Register in 10 seconds and add your voice.',
     reg: 'Welcome{name}! You hold a Gudalur ID but your signature is still missing - {total} of us have signed. It takes 10 seconds.',
     signed: 'Your support is on the public ledger, {name}. We are {total} strong now{top}. Share a poster to carry the voice further.',
     done: 'You signed and shared - the movement breathes because of you{name}. {wild} wildlife reports keep our corridors watched.',
@@ -294,7 +294,7 @@ function detectIntent(q: string): Intent | null {
 
 const FAQ_EN: Record<Intent, string> = {
   sign: 'Open the petition at the top of the home page, confirm your name and locality, and sign - you get a VG- hash receipt that anyone can verify. Takes about 10 seconds.',
-  register: 'Registering creates your Gudalur ID: name, phone and locality, no OTP needed. Tap the avatar in the header and pick Register - the ID appears instantly on your card.',
+  register: 'Registering creates your Gudalur ID: name, phone and locality. Tap the avatar in the header and pick Register - the ID appears instantly on your card.',
   id: 'Your Gudalur ID (GD-YYYY-XXXXXX) is your digital supporter identity. Tap your avatar in the header to view, download or share the card.',
   receipt: 'After signing you receive a VG- hash. Verify it anytime on the Verify page - the public ledger shows your name, village and batch number.',
   share: 'The gallery has posters and short videos made by neighbours. Share one to your family or status groups - that is how the petition crosses 1,000 signatures.',
@@ -309,7 +309,7 @@ const FAQ_EN: Record<Intent, string> = {
 
 const FAQ_TA: Record<Intent, string> = {
   sign: 'முதற்பக்கத்தில் உரிமை வாழ்வு மனுவைத் திறந்து, பெயர்-பகுதியை உறுதி செய்து கையெழுத்திடுங்கள் - யாரும் சரிபார்க்கக்கூடிய VG- ரசீது கிடைக்கும். 10 வினாடி மட்டுமே.',
-  register: 'பதிவு செய்தால் கூடலூர் ஐடி கிடைக்கும்: பெயர், தொலைபேசி, பகுதி - OTP இல்லை. தலைப்பில் உள்ள உருவத்தை தட்டி Register தேர்வு செய்யுங்கள்.',
+  register: 'பதிவு செய்தால் கூடலூர் ஐடி கிடைக்கும்: பெயர், தொலைபேசி, பகுதி. தலைப்பில் உள்ள உருவத்தை தட்டி Register தேர்வு செய்யுங்கள்.',
   id: 'உங்கள் கூடலூர் ஐடி (GD-YYYY-XXXXXX) டிஜிட்டல் ஆதரவாளர் அடையாளம். தலைப்பில் உள்ள உருவத்தை தட்டி பார்க்கலாம், பதிவிறக்கலாம், பகிரலாம்.',
   receipt: 'கையெழுத்துக்குப் பின் VG- ஹாஷ் கிடைக்கும். Verify பக்கத்தில் எப்போது வேண்டுமானாலும் சரிபாருங்கள் - பொது பதிவேட்டில் பெயர், ஊர், பதிவு எண் தெரியும்.',
   share: 'கேலரியில் அண்டை வீட்டினர் தயாரித்த போஸ்டர்கள், குறுமீடியங்கள் உண்டு. குடும்ப/ஸ்டேட்டஸ் குழுக்களில் பகிருங்கள் - மனு 1000 என்ற எண்ணிக்கையை நோக்கி செல்கிறது.',
@@ -324,7 +324,7 @@ const FAQ_TA: Record<Intent, string> = {
 
 const FAQ_ML: Record<Intent, string> = {
   sign: 'ഹോം പേജിലെ ഹർജി തുറന്ന് പേരും പ്രദേശവും സ്ഥിരീകരിച്ച് ഒപ്പുവെക്കൂ - ആർക്കും പരിശോധിക്കാവുന്ന VG- രശീത് ലഭിക്കും. 10 സെക്കൻഡ്.',
-  register: 'രജിസ്റ്റർ ചെയ്യുമ്പോൾ ഗൂഡല്ലൂർ ഐഡി ലഭിക്കും: പേര്, ഫോൺ, പ്രദേശം - OTP വേണ്ട. തലക്കെട്ടിലെ അവതാറിൽ തൊട്ട് Register തിരഞ്ഞെടുക്കൂ.',
+  register: 'രജിസ്റ്റർ ചെയ്യുമ്പോൾ ഗൂഡല്ലൂർ ഐഡി ലഭിക്കും: പേര്, ഫോൺ, പ്രദേശം. തലക്കെട്ടിലെ അവതാറിൽ തൊട്ട് Register തിരഞ്ഞെടുക്കൂ.',
   id: 'നിങ്ങളുടെ ഗൂഡല്ലൂർ ഐഡി (GD-YYYY-XXXXXX) ഡിജിറ്റൽ അടുപ്പമാണ്. അവതാറിൽ തൊട്ട് കാർഡ് കാണാം, ഡൗൺലോഡ് ചെയ്യാം, ഷെയർ ചെയ്യാം.',
   receipt: 'ഒപ്പിട്ടാൽ VG- ഹാഷ് ലഭിക്കും. Verify പേജിൽ എപ്പോൾ വേണമെങ്കിലും പരിശോധിക്കാം - പേര്, ഗ്രാമം, ബാച്ച് നമ്പർ കാണാം.',
   share: 'ഗാലറിയിൽ അയൽവാസികളുടെ പോസ്റ്ററുകളും വീഡിയോകളും ഉണ്ട്. കുടുംബ ഗ്രൂപ്പുകളിൽ പങ്കുവെക്കൂ - അതാണ് ഹർജി വളരാൻ വഴി.',
@@ -339,7 +339,7 @@ const FAQ_ML: Record<Intent, string> = {
 
 const FAQ_KN: Record<Intent, string> = {
   sign: 'ಮುಖಪುಟದ ಮನವಿ ತೆರೆದು ಹೆಸರು-ಸ್ಥಳ ದೃಢೀಕರಿಸಿ ಸಹಿ ಹಾಕಿ - ಯಾರೂ ಪರಿಶೀಲಿಸಬಹುದಾದ VG- ರಶೀದಿ ಸಿಗುತ್ತದೆ. 10 ಸೆಕೆಂಡ್.',
-  register: 'ನೋಂದಣಿಯಿಂದ ಗೂಡಲ್ಲೂರು ಐಡಿ ಸಿಗುತ್ತದೆ: ಹೆಸರು, ಫೋನ್, ಸ್ಥಳ - OTP ಬೇಡ. ಹೆಡರ್ ಅವತಾರವನ್ನು ಒತ್ತಿ Register ಆಯ್ಕೆ ಮಾಡಿ.',
+  register: 'ನೋಂದಣಿಯಿಂದ ಗೂಡಲ್ಲೂರು ಐಡಿ ಸಿಗುತ್ತದೆ: ಹೆಸರು, ಫೋನ್, ಸ್ಥಳ. ಹೆಡರ್ ಅವತಾರವನ್ನು ಒತ್ತಿ Register ಆಯ್ಕೆ ಮಾಡಿ.',
   id: 'ನಿಮ್ಮ ಗೂಡಲ್ಲೂರು ಐಡಿ (GD-YYYY-XXXXXX) ಡಿಜಿಟಲ್ ಗುರುತು. ಅವತಾರವನ್ನು ಒತ್ತಿ ಕಾರ್ಡ್ ನೋಡಿ, ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ, ಹಂಚಿ.',
   receipt: 'ಸಹಿಯ ನಂತರ VG- ಹ್ಯಾಶ್ ಸಿಗುತ್ತದೆ. Verify ಪುಟದಲ್ಲಿ ಯಾವಾಗ ಬೇಕಾದರೂ ಪರಿಶೀಲಿಸಿ - ಹೆಸರು, ಊರು, ಬ್ಯಾಚ್ ಸಂಖ್ಯೆ ಕಾಣುತ್ತದೆ.',
   share: 'ಗ್ಯಾಲರಿಯಲ್ಲಿ ನೆರೆಯವರ ಪೋಸ್ಟರ್‌ಗಳು ಮತ್ತು ವೀಡಿಯೊಗಳಿವೆ. ಕುಟುಂಬ ಗುಂಪುಗಳಲ್ಲಿ ಹಂಚಿ - ಮನವಿ ಬೆಳೆಯುವುದು ಅದರಿಂದ.',

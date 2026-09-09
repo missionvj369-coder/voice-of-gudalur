@@ -33,8 +33,6 @@
 #   DATABASE_POOL_MAX   5 recommended for serverless (each instance has its own pool)
 #   DATABASE_SSL        optional — verify-full | require; encryption-only
 #                       fallback when no CA file is present (server/db/client.ts)
-#   OTP_PROVIDER        devel | sms — registration is OTP-free; devel returns
-#                       the code in the response (dev/test ONLY)
 
 [functions]
   node_bundler = "esbuild"
