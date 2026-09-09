@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Share2, Download, ChevronLeft, ChevronRight, ImageIcon, Video } from 'lucide-react';
+import { X, Share2, Download, ChevronLeft, ChevronRight, ImageIcon, Video, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { PlatformIcon, PLATFORMS, type PlatformName } from './PlatformIcon';
 
@@ -35,6 +35,28 @@ const shareTo = (p: PlatformName, item: MediaItem) => {
   };
   window.open(u[p], '_blank');
 };
+const MAX_DESC_LENGTH = 120;
+
+function DescriptionWithToggle({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = text.length > MAX_DESC_LENGTH;
+  if (!isLong) return <p className="text-xs sm:text-sm text-slate-300 mt-1">{text}</p>;
+  const displayed = expanded ? text : text.slice(0, MAX_DESC_LENGTH) + '…';
+  return (
+    <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
+      {displayed}
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="ml-1.5 text-emerald-500 hover:text-emerald-400 font-semibold transition shrink-0 inline-flex items-center gap-0.5 align-middle"
+        aria-expanded={expanded}
+      >
+        {expanded ? <><ChevronUp size={12} /> less</> : <><ChevronDown size={12} /> more</>}
+      </button>
+    </p>
+  );
+}
+
 export const MediaViewer: React.FC<Props> = ({ isOpen, onClose, item, currentIndex = 0, totalCount = 1, onPrev, onNext }) => {
   const { t } = useLanguage();
   const imgRef = useRef<HTMLImageElement>(null);
@@ -86,7 +108,7 @@ export const MediaViewer: React.FC<Props> = ({ isOpen, onClose, item, currentInd
             </div>
             <div className="mt-4 text-center max-w-2xl px-2">
               <h3 className="text-base sm:text-lg font-bold text-white">{item.title}</h3>
-              {item.description && <p className="text-xs sm:text-sm text-slate-300 mt-1">{item.description}</p>}
+              {item.description && <DescriptionWithToggle text={item.description} />}
             </div>
             <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
               {item.kind === 'poster' ? <ImageIcon size={14} /> : <Video size={14} />}

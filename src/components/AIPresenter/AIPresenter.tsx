@@ -186,9 +186,17 @@ export const AIPresenter: React.FC<AIPresenterProps> = ({ language }) => {
     }
   }, [language, saveSnapshot, profile?.name]);
 
+  // Fire greeting on mount AND whenever profile becomes available (registered users).
+  // greetedRef prevents double-firing within the same session.
   useEffect(() => {
     if (!greetedRef.current) void runGreeting();
   }, [runGreeting]);
+
+  // When a registered profile finishes loading, re-greet with personal data
+  // if the user has not been greeted yet in this session.
+  useEffect(() => {
+    if (profile && !greetedRef.current) void runGreeting();
+  }, [profile, runGreeting]);
 
   // Every VOG notification auto-closes after 9 seconds.
   useEffect(() => {
