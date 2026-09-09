@@ -308,8 +308,6 @@ export const manifestoApi = {
       `/api/manifesto/submission/${encodeURIComponent(ref)}`,
     ),
 
-  /** My latest docket (auth). */
-  mySubmission: () => request<{ submission: Record<string, unknown> | null }>('/api/manifesto/my-submission'),
 };
 
 // ─────────────────────────────────────────────────────────────
