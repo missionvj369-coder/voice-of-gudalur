@@ -37,6 +37,9 @@ export interface PetitionSignResult {
   batchNo: number;
   isDuplicate: boolean;
   verifyUrl: string;
+  /** The authoritative signature time from petition_signs.created_at
+   *  (their ORIGINAL sign time on a duplicate attempt — never Date.now()). */
+  signedAt?: string;
 }
 
 function generateSignHash(): string {
@@ -75,22 +78,32 @@ export async function recordPetitionSign(input: PetitionSignInput): Promise<Peti
       );
       const parsed = parseIdemResponse<{ signHash: string; batchNo: number }>(idem?.response);
       if (parsed?.signHash) {
+        const original = await tx.queryOne<{ created_at: string }>(
+          'SELECT created_at FROM petition_signs WHERE sign_hash = $1',
+          [parsed.signHash],
+        );
         return {
           signHash: parsed.signHash,
           batchNo: parsed.batchNo,
           isDuplicate: false,
           verifyUrl: `/verify-sign?hash=${parsed.signHash}`,
+          signedAt: original?.created_at,
         };
       }
     }
 
     // 2. Duplicate protection: one signature per resident identity.
     let dupHash: string | null = null;
+    let dupCreatedAt: string | null = null;
     if (input.userUid) {
-      dupHash = (await tx.queryOne<{ sign_hash: string }>('SELECT sign_hash FROM petition_signs WHERE user_uid = $1 ORDER BY created_at ASC LIMIT 1', [input.userUid]))?.sign_hash ?? null;
+      const dup = await tx.queryOne<{ sign_hash: string; created_at: string }>('SELECT sign_hash, created_at FROM petition_signs WHERE user_uid = $1 ORDER BY created_at ASC LIMIT 1', [input.userUid]);
+      dupHash = dup?.sign_hash ?? null;
+      dupCreatedAt = dup?.created_at ?? null;
     }
     if (!dupHash && input.gdrId) {
-      dupHash = (await tx.queryOne<{ sign_hash: string }>('SELECT sign_hash FROM petition_signs WHERE gdr_id = $1 ORDER BY created_at ASC LIMIT 1', [input.gdrId]))?.sign_hash ?? null;
+      const dup = await tx.queryOne<{ sign_hash: string; created_at: string }>('SELECT sign_hash, created_at FROM petition_signs WHERE gdr_id = $1 ORDER BY created_at ASC LIMIT 1', [input.gdrId]);
+      dupHash = dup?.sign_hash ?? null;
+      dupCreatedAt = dup?.created_at ?? null;
     }
     if (dupHash) {
       const row = await tx.queryOne<{ batch_no: number }>('SELECT batch_no FROM petition_signs WHERE sign_hash = $1', [dupHash]);
@@ -99,6 +112,7 @@ export async function recordPetitionSign(input: PetitionSignInput): Promise<Peti
         batchNo: row?.batch_no ?? 1,
         isDuplicate: true,
         verifyUrl: `/verify-sign?hash=${dupHash}`,
+        signedAt: dupCreatedAt ?? undefined,
       };
     }
 
@@ -123,11 +137,12 @@ export async function recordPetitionSign(input: PetitionSignInput): Promise<Peti
     // 5. Insert the signature row (phone_last4 only).
     const uaHash = input.userAgentHash ?? sha256('');
     const phone4 = input.phone ? phoneLast4(input.phone) : undefined;
-    await tx.query(
+    const inserted = await tx.queryOne<{ id: number; created_at: string }>(
       `INSERT INTO petition_signs
          (sign_hash, user_uid, gdr_id, full_name, village, pincode, phone_last4,
           aadhaar_last4, aadhaar_ref, latitude, longitude, user_agent_hash, batch_no)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       RETURNING id, created_at`,
       [signHash, input.userUid ?? null, input.gdrId, input.fullName, input.village ?? null, input.pincode ?? null,
        phone4, input.aadhaarLast4 ?? null, input.aadhaarRef ?? null,
        input.lat ?? null, input.lng ?? null, uaHash, batchNo],
@@ -148,6 +163,7 @@ export async function recordPetitionSign(input: PetitionSignInput): Promise<Peti
       batchNo,
       isDuplicate: false,
       verifyUrl: `/verify-sign?hash=${signHash}`,
+      signedAt: inserted?.created_at,
     };
   });
 }
@@ -184,6 +200,41 @@ export async function listPetitionSigns(batchNo?: number, limit = 200, offset = 
     params.push(batchNo);
   }
   return db.query(sql, params);
+}
+
+export interface MyPetitionSign {
+  signHash: string;
+  fullName: string;
+  village: string | null;
+  batchNo: number;
+  signedAt: string;
+  verifyUrl: string;
+}
+
+/**
+ * This resident's OWN petition signature (the Right-to-Life sign ledger) —
+ * derived from the authoritative petition_signs table, never from client
+ * state. Lets the app restore an accurate "already signed" UI after a
+ * re-login, a new device, or a cleared localStorage.
+ */
+export async function getMyPetitionSign(userUid: string): Promise<MyPetitionSign | null> {
+  const row = await db.queryOne<{
+    sign_hash: string; full_name: string; village: string | null; batch_no: number; created_at: string;
+  }>(
+    `SELECT sign_hash, full_name, village, batch_no, created_at
+     FROM petition_signs WHERE user_uid = $1
+     ORDER BY created_at DESC LIMIT 1`,
+    [userUid],
+  );
+  if (!row) return null;
+  return {
+    signHash: row.sign_hash,
+    fullName: row.full_name,
+    village: row.village ?? null,
+    batchNo: Number(row.batch_no),
+    signedAt: row.created_at,
+    verifyUrl: `/verify-sign?hash=${encodeURIComponent(row.sign_hash)}`,
+  };
 }
 
 

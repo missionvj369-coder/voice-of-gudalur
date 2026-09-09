@@ -10,7 +10,7 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
-import { recordPetitionSign, verifyPetitionSign, listPetitionSigns } from '../db/repositories/petitionRepository';
+import { recordPetitionSign, verifyPetitionSign, listPetitionSigns, getMyPetitionSign } from '../db/repositories/petitionRepository';
 import { requireAuth, requireRole, logAudit } from '../middleware/auth';
 import { db } from '../db/client';
 import { logger } from '../utils/logger';
@@ -96,6 +96,9 @@ router.post('/sign', writeLimiter, requireAuth, async (req: Request, res: Respon
       batchNo: result.batchNo,
       verifyUrl: result.verifyUrl,
       isDuplicate: result.isDuplicate,
+      // Always the ORIGINAL signature time — on a duplicate this is the user's
+      // very first sign, never the current Date.now().
+      signedAt: result.signedAt ?? new Date().toISOString(),
       message: result.isDuplicate ? 'You have already signed this petition.' : 'Signature recorded.',
     });
   } catch (e: any) {
@@ -220,6 +223,21 @@ router.get('/ledger', async (_req: Request, res: Response) => {
   } catch (e: any) {
     logger.error('ledger:', e.message);
     res.json({ total: 0, signs: [] });
+  }
+});
+
+/** GET /api/petitions/my-sign — this resident's OWN petition signature (auth).
+ *  Lets the app restore the accurate "already signed" UI after a re-login, a
+ *  new device, or a cleared localStorage — sourced from the authoritative
+ *  petition_signs ledger, never from client state. */
+router.get('/my-sign', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user!;
+    const sign = await getMyPetitionSign(user.uid);
+    res.json({ sign });
+  } catch (e: any) {
+    logger.error('my-sign:', e.message);
+    res.status(500).json({ error: 'Could not load your signature' });
   }
 });
 

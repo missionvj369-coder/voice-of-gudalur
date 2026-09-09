@@ -61,9 +61,23 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   // "Once signed, everywhere shows it" — only a REAL server-issued (VG-*) sign.
+  // Re-render on sign events too (AuthContext dispatches 'vog:petition-signed'
+  // after its server-authoritative sync on every login/register/boot), so the
+  // menu pill survives re-login, new devices and cleared caches.
+  const [, forceSignedTick] = useState(0);
   const supportRecorded = (() => {
     try { return readLocalSignature().signed; } catch { return false; }
   })();
+
+  React.useEffect(() => {
+    const bump = () => forceSignedTick((n) => n + 1);
+    window.addEventListener('vog:petition-signed', bump);
+    window.addEventListener('storage', bump);
+    return () => {
+      window.removeEventListener('vog:petition-signed', bump);
+      window.removeEventListener('storage', bump);
+    };
+  }, []);
   const [readyQueue, setReadyQueue] = useState<{ id: number; fn: () => void }[]>([]);
 
   const openIdModal = () => {

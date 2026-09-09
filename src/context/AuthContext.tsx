@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { UserProfile, Role, VerificationLevel } from '../types';
 import { GUDALUR_LOCALITIES } from '../data/gudalurMasterData';
-import { authApi } from '../services/api';
+import { authApi, petitionApi } from '../services/api';
 import type { AuthUser } from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -253,6 +253,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (cached && (cached.gudalurId === u.gudalurId || cached.phone === u.phone)) {
             persistProfile(applyPlatformAdminOverride(cached));
           }
+          // Server-authoritative signed-state sync on boot (fresh page load).
+          if (u.gudalurId) void syncPetitionSignature(cached ? applyPlatformAdminOverride(cached) : null);
         }
       } catch {
         // Server unreachable: only a card issued by the official server can be
@@ -270,6 +272,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     })();
   }, []);
+
+  /**
+   * Server-authoritative "has the user signed the petition?" sync.
+   *
+   * The old app stored the signed flag ONLY in localStorage
+   * (vog_petition_signed / vog_petition_result) and logout() deliberately
+   * wiped those keys for shared-phone privacy — so after any re-login, new
+   * device, or cleared cache the UI wrongly showed "Sign the Petition" and
+   * clicking it only produced the duplicate toast. The authoritative source is
+   * petition_signs; this restores local state from the server on every auth
+   * transition (login, register, boot session-restore).
+   */
+  const syncPetitionSignature = async (p: UserProfile | null): Promise<void> => {
+    try {
+      const { sign } = await petitionApi.mySign();
+      if (sign) {
+        const verifyUrl = new URL(sign.verifyUrl, window.location.origin).toString();
+        const result: LocalSignatureResult = {
+          hash: sign.signHash,
+          verifyUrl,
+          batchNo: sign.batchNo,
+          signedAt: sign.signedAt,
+          name: p?.name || sign.fullName,
+          gudalurId: p?.gudalurId || '',
+          locality: p ? p.customPlaceName || p.localityName || '' : sign.village || '',
+        };
+        localStorage.setItem('vog_petition_signed', '1');
+        localStorage.setItem('vog_petition_result', JSON.stringify(result));
+        // Let Shell / Manifesto / any page update their "Petition Signed" UI.
+        window.dispatchEvent(new Event('vog:petition-signed'));
+      } else {
+        // Resident has never signed — clear any stale local claim.
+        localStorage.removeItem('vog_petition_signed');
+        localStorage.removeItem('vog_petition_result');
+      }
+    } catch {
+      // Offline / service down — leave whatever localStorage already holds;
+      // the rest of the app already falls back to the local cache.
+    }
+  };
 
   const registerResident = async (data: {
     name: string;
@@ -317,6 +359,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const prof = applyPlatformAdminOverride(toUserProfile(res.resident));
       persistProfile(prof);
       setUser(toAuthUser(prof));
+      // A brand-new resident hasn't signed yet — make sure no stale local
+      // "signed" flag from a previous user on a shared phone survives.
+      void syncPetitionSignature(prof);
       return prof;
     } catch (e: any) {
       const msg = String(e?.message || '');
@@ -362,6 +407,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const prof = applyPlatformAdminOverride(toUserProfile(res.resident));
       persistProfile(prof);
       setUser(toAuthUser(prof));
+      // Server-authoritative signed-state sync on login: an already-signed
+      // resident must see "Petition Signed ✓" immediately (not the Sign
+      // button + duplicate toast). petition_signs is the authority.
+      void syncPetitionSignature(prof);
       return prof;
     } catch (e: any) {
       const msg = String(e?.message || '');

@@ -37,6 +37,7 @@ export const SignPetitionPage: React.FC = () => {
     locality: string;
   } | null>(null);
   const [showRegister, setShowRegister] = useState(false);
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
@@ -61,11 +62,51 @@ export const SignPetitionPage: React.FC = () => {
   // Check if user has already signed â€” only a server-issued (VG-*) sign hash
   // counts as real; synthetic local placeholders are purged by the helper.
   useEffect(() => {
-    const { signed, result } = readLocalSignature();
-    setHasSigned(signed);
-    if (signed && profile && result) {
-      setResult(result);
-    }
+    let alive = true;
+    (async () => {
+      if (profile) {
+        try {
+          const { sign } = await petitionApi.mySign();
+          if (!alive) return;
+          if (sign) {
+            const verifyUrl = new URL(sign.verifyUrl, window.location.origin).toString();
+            const serverResult = {
+              hash: sign.signHash,
+              verifyUrl,
+              batchNo: sign.batchNo,
+              signedAt: sign.signedAt,
+              name: profile.name,
+              gudalurId: profile.gudalurId || '',
+              locality: profile.customPlaceName || profile.localityName || sign.village || '',
+            };
+            try {
+              localStorage.setItem('vog_petition_signed', '1');
+              localStorage.setItem('vog_petition_result', JSON.stringify(serverResult));
+            } catch { /* ignore */ }
+            setHasSigned(true);
+            setResult(serverResult);
+            window.dispatchEvent(new Event('vog:petition-signed'));
+            return;
+          }
+          try {
+            localStorage.removeItem('vog_petition_signed');
+            localStorage.removeItem('vog_petition_result');
+          } catch { /* ignore */ }
+          setHasSigned(false);
+          setResult(null);
+          return;
+        } catch { /* ignore */ }
+      }
+      const { signed, result: cached } = readLocalSignature();
+      if (!alive) return;
+      setHasSigned(signed);
+      if (signed && profile && cached) {
+        setResult(cached);
+      } else if (!signed) {
+        setResult(null);
+      }
+    })();
+    return () => { alive = false; };
   }, [profile]);
 
   const loadStats = useCallback(async () => {
@@ -178,6 +219,8 @@ export const SignPetitionPage: React.FC = () => {
       resultData.hash = res.signHash;
       resultData.verifyUrl = verifyUrl;
       resultData.batchNo = res.batchNo ?? 1;
+      // Server is authoritative: on a duplicate this is the ORIGINAL sign time.
+      if (res.signedAt) resultData.signedAt = res.signedAt;
 
       if (res.isDuplicate) {
         toast.success(t("home.dup_toast"), { duration: 5000 });
@@ -253,6 +296,38 @@ export const SignPetitionPage: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto px-3 py-3 sm:px-4 sm:py-8 space-y-3 sm:space-y-6">
+      {/* Sticky Welcome Banner — stays pinned at top during scroll */}
+      {showWelcomeBanner && profile && (
+        <div className="sticky top-0 z-40 rounded-2xl border border-emerald-200 bg-emerald-50/95 backdrop-blur-sm px-4 py-2.5 sm:px-5 sm:py-3 shadow-md">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-black text-emerald-800 whitespace-nowrap hidden sm:inline">{t('vog.welcome_prefix')}</span>
+              <span className="text-sm font-bold text-emerald-900 truncate">{profile.name}</span>
+              <span className="text-xs text-emerald-600 font-semibold whitespace-nowrap">{t('vog.welcome_suffix')}</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[10px] text-emerald-600 font-bold whitespace-nowrap">{t('vog.welcome_live')}</span>
+              <div className="flex items-center gap-1">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
+                </span>
+              </div>
+              <button
+                onClick={() => setShowWelcomeBanner(false)}
+                className="p-1 rounded-lg hover:bg-emerald-200/60 text-emerald-600 transition"
+                aria-label={t('vog.dismiss_banner')}
+                title={t('vog.dismiss_banner')}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-emerald-500">
+                  <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero â€” petition + live counter */}
       <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4 sm:p-6 text-center space-y-3">
         <h1 className="text-xl sm:text-2xl font-black text-slate-900">{t("home.title")}</h1>
@@ -320,7 +395,7 @@ export const SignPetitionPage: React.FC = () => {
               <Clock size={16} className="text-emerald-600" />
               <div>
                 <p className="text-[10px] text-slate-500 uppercase">{t("home.registered_label")}</p>
-                <p className="font-bold text-slate-900">{new Date().toLocaleDateString()}</p>
+                <p className="font-bold text-slate-900">{profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-IN') : '—'}</p>
               </div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { BadgeCheck, PenLine, ScrollText } from 'lucide-react';
@@ -21,19 +21,67 @@ export const Manifesto: React.FC = () => {
   const { profile } = useAuth();
   const [total, setTotal] = useState<number | null>(null);
   // "Petition Signed" — the CTA locks ONLY for a real server-issued (VG-*) sign.
+  // After a re-login / new device / cleared cache the flag is restored from the
+  // authoritative petition_signs ledger (petitionApi.mySign), never just local.
   const [hasSigned, setHasSigned] = useState<boolean>(() => readLocalSignature().signed);
 
   React.useEffect(() => {
-    const sync = () => {
+    // Re-query the server whenever the logged-in resident changes so an
+    // already-signed user never sees "Sign in Petition" after logging in.
+    let alive = true;
+    (async () => {
+      if (profile) {
+        try {
+          const { sign } = await petitionApi.mySign();
+          if (!alive) return;
+          if (sign) {
+            try {
+              localStorage.setItem('vog_petition_signed', '1');
+              localStorage.setItem('vog_petition_result', JSON.stringify({
+                hash: sign.signHash,
+                verifyUrl: new URL(sign.verifyUrl, window.location.origin).toString(),
+                batchNo: sign.batchNo,
+                signedAt: sign.signedAt,
+                name: profile.name,
+                gudalurId: profile.gudalurId || '',
+                locality: profile.customPlaceName || profile.localityName || sign.village || '',
+              }));
+            } catch { /* ignore */ }
+            setHasSigned(true);
+            window.dispatchEvent(new Event('vog:petition-signed'));
+          } else {
+            try {
+              localStorage.removeItem('vog_petition_signed');
+              localStorage.removeItem('vog_petition_result');
+            } catch { /* ignore */ }
+            setHasSigned(false);
+          }
+        } catch {
+          // Offline / service down — keep the locally cached flag.
+          if (alive) {
+            try { setHasSigned(readLocalSignature().signed); } catch { /* ignore */ }
+          }
+        }
+      } else {
+        // Logged out — fall back to whatever the local cache holds.
+        try { setHasSigned(readLocalSignature().signed); } catch { /* ignore */ }
+      }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.uid]);
+
+  React.useEffect(() => {
+    const syncFromLocal = () => {
       try { setHasSigned(readLocalSignature().signed); } catch { /* ignore */ }
     };
-    window.addEventListener('vog:petition-signed', sync);
-    window.addEventListener('storage', sync);
-    window.addEventListener('focus', sync);
+    window.addEventListener('vog:petition-signed', syncFromLocal);
+    window.addEventListener('storage', syncFromLocal);
+    window.addEventListener('focus', syncFromLocal);
     return () => {
-      window.removeEventListener('vog:petition-signed', sync);
-      window.removeEventListener('storage', sync);
-      window.removeEventListener('focus', sync);
+      window.removeEventListener('vog:petition-signed', syncFromLocal);
+      window.removeEventListener('storage', syncFromLocal);
+      window.removeEventListener('focus', syncFromLocal);
     };
   }, []);
 
@@ -41,7 +89,8 @@ export const Manifesto: React.FC = () => {
     let alive = true;
     petitionApi.signStats().then((s) => { if (alive) setTotal(s?.total ?? 0); }).catch(() => {});
     return () => { alive = false; };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.uid]);
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 space-y-10">
