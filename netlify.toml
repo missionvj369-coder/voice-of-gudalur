@@ -1,8 +1,15 @@
 # VOICE OF GUDALUR — Netlify configuration
 [build]
-  command = "npm run build && npm run db:migrate && npm run db:seed"
+  # Default deploy: build the PWA only. Migrations/seed are NOT run automatically
+  # so a frontend deploy never fails because the build sandbox cannot reach the DB.
+  command = "npm run build"
   publish = "dist"
   functions = "netlify/functions"
+
+  # If the deployment environment is expected to own DB bootstrapping, use the
+  # explicit combined command instead (fails fast when DATABASE_URL is missing):
+  #   command = "npm run build:with-db"
+  #   build:with-db = "npm run db:check && npm run db:migrate && npm run db:seed && npm run build"
 
 # ── Build environment ───────────────────────────────────────────────
 # Force npm to always install devDependencies (vite, vite-plugin-pwa,
