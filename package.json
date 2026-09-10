@@ -10,9 +10,9 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "db:migrate": "tsx server/db/migrate.ts up",
-    "db:status": "tsx server/db/migrate.ts status",
-    "db:seed": "tsx server/db/migrate.ts seed",
+    "db:migrate": "node --env-file-if-exists=.env --import tsx server/db/migrate.ts up",
+    "db:status": "node --env-file-if-exists=.env --import tsx server/db/migrate.ts status",
+    "db:seed": "node --env-file-if-exists=.env --import tsx server/db/migrate.ts seed",
     "db:check": "node -e \"const e=process.env; if(!e.DATABASE_URL){ console.error('\\n[db:check] Missing DATABASE_URL.\\nSet it in Netlify Site configuration → Environment variables (or locally in .env).\\nThe app cannot start or run migrations without a CockroachDB connection string.\\n'); process.exit(2); } console.log('DB check OK — DATABASE_URL is configured.'); process.exit(0);\"",
     "build:with-db": "npm run db:check && npm run db:migrate && npm run db:seed && npm run build"
   },
