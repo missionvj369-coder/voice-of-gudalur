@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 // Playwright E2E lives in /tests and is run separately (npx playwright test).
 export default defineConfig({
   test: {
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'server/**/*.test.ts'],
     exclude: ['node_modules/**', 'dist/**', 'tests/**'],
     environment: 'node',
     reporters: ['default'],

@@ -16,6 +16,7 @@ import { db } from '../db/client';
 import { logger } from '../utils/logger';
 import { clusterPlaces } from '../utils/placeCluster';
 import { cacheWrap, cacheDel } from '../utils/ttlCache';
+import { validateBody, type ValidationSchema } from '../middleware/validate';
 
 const router = Router();
 
@@ -25,6 +26,20 @@ const writeLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
   message: { error: 'Too many sign attempts — please wait a moment.' },
+  keyGenerator: (req: any) => {
+    const ip: string = req.ip || req.socket?.remoteAddress || 'anonymous';
+    if (!ip || ip === 'anonymous') return 'anonymous';
+    try { return ipKeyGenerator(ip as any); } catch { return 'anonymous'; }
+  },
+  validate: { xForwardedForHeader: false, ip: false } as any,
+});
+
+// External supporters have NO account — the only throttle is per-IP. Strict cap
+// so one IP can't flood the external_supports table with junk rows.
+const externalLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many support attempts — please try again later.' },
   keyGenerator: (req: any) => {
     const ip: string = req.ip || req.socket?.remoteAddress || 'anonymous';
     if (!ip || ip === 'anonymous') return 'anonymous';
@@ -290,6 +305,55 @@ router.post('/:id/support', requireAuth, async (req: Request, res: Response) => 
     detail: { gudalurId: user.gudalurId, isDuplicate: result.isDuplicate }, ip: req.ip,
   });
   res.status(result.isDuplicate ? 200 : 201).json({ supportCount: result.supportCount, isDuplicate: result.isDuplicate });
+});
+
+/** POST /api/petitions/:id/external-support — non-resident supports the movement (no auth, no Aadhaar). */
+const externalSupportSchema: ValidationSchema = {
+  name:    { type: 'string', required: true, min: 1, max: 100 },
+  email:   { type: 'string', max: 254 },
+  place:   { type: 'string', max: 100 },
+  pincode: { type: 'string', min: 6, max: 6 },
+  message: { type: 'string', max: 500 },
+};
+
+interface ExternalSupportBody {
+  name?: string;
+  email?: string;
+  place?: string;
+  pincode?: string;
+  message?: string;
+}
+
+router.post('/:id/external-support', externalLimiter, validateBody(externalSupportSchema), async (req: Request, res: Response) => {
+  try {
+    const body: ExternalSupportBody = req.body;
+    const pId = req.params.id;
+    const result = await db.withTransaction(async (tx) => {
+      const existing = await tx.queryOne<{ id: string }>(
+        'SELECT id FROM external_supports WHERE petition_id = $1 AND email = $2',
+        [pId, body.email || null],
+      );
+      if (!existing) {
+        await tx.query(
+          `INSERT INTO external_supports (petition_id, name, email, place, pincode, message)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [pId, body.name, body.email || null, body.place || null, body.pincode || null, body.message || null],
+        );
+        await tx.query('UPDATE petitions SET external_support_count = external_support_count + 1 WHERE id = $1', [pId]);
+      }
+      const row = await tx.queryOne<{ external_support_count: number }>('SELECT external_support_count FROM petitions WHERE id = $1', [pId]);
+      return { count: row?.external_support_count ?? 0 };
+    });
+    logger.info('[external-support] recorded', { petitionId: pId, name: body.name, email: body.email });
+    res.status(201).json({ ok: true, count: result.count });
+  } catch (e: any) {
+    if (e.code === '23505') {
+      const row = await db.queryOne<{ external_support_count: number }>('SELECT external_support_count FROM petitions WHERE id = $1', [req.params.id]);
+      return res.status(200).json({ ok: true, count: row?.external_support_count ?? 0, duplicate: true });
+    }
+    logger.error('[external-support] error:', e.message);
+    res.status(500).json({ error: 'Could not record external support' });
+  }
 });
 
 /** GET /api/officials/signs — officials-only. */
