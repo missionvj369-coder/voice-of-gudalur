@@ -126,11 +126,20 @@ export function urlToKey(url: string): string {
  *
  * Uses STORJ_PUBLIC_LINK_BASE (e.g. https://link.storjshare.io/raw/<access-id>/vog).
  * Returns empty string if not configured.
+ *
+ * DEFENSIVE NORMALIZATION: Storj's /s/ path is the HTML share-viewer PAGE, not
+ * the file. An <img src> pointing at /s/ renders a broken image ("media not
+ * found") — this shipped to production once. If the base was configured with
+ * /s/, rewrite it to /raw/ (raw file content) here so the code is correct no
+ * matter how the environment variable was filled in.
  */
 export function getPublicUrl(key: string): string {
-  const base = process.env.STORJ_PUBLIC_LINK_BASE;
+  let base = process.env.STORJ_PUBLIC_LINK_BASE;
   if (!base) return '';
-  return `${base.replace(/\/$/, '')}/${key}`;
+  base = base
+    .replace(/\/+$/, '')
+    .replace('link.storjshare.io/s/', 'link.storjshare.io/raw/');
+  return `${base}/${key}`;
 }
 
 /**

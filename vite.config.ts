@@ -155,10 +155,12 @@ export default defineConfig(() => {
               // MEDIA FILES (Storj): CacheFirst — immutable URLs, cache for 30 days.
               // After first load, media is instant + works offline. The URL changes
               // only when the file changes, so stale entries are impossible.
+              // v2: the -v2 name drops entries poisoned by the /s/-viewer bug
+              // (broken HTML pages were cached as "media" for 30 days).
               urlPattern: /^https:\/\/link\.storjshare\.io\/.*/i,
               handler: 'CacheFirst',
               options: {
-                cacheName: 'vog-media-cache',
+                cacheName: 'vog-media-cache-v2',
                 expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
                 cacheableResponse: { statuses: [0, 200] },
               },

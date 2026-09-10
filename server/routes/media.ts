@@ -124,14 +124,20 @@ router.get('/:id/file', async (req: Request, res: Response) => {
     if (!row) return res.status(404).json({ error: 'Media not found' });
 
     // Storj-hosted: redirect to the public immutable URL. Same URL for all
-    // users → browsers + CDNs cache it for 1 year. 301 permanent redirect
-    // is cached by browsers (unlike 302 temporary).
+    // users → browsers + CDNs cache it for 1 year.
+    //
+    // 302 (temporary), NOT 301 (permanent): when the public link grant is not
+    // configured, getMediaUrl() falls back to a PRESIGNED URL that expires in
+    // an hour. A 301 would make the browser cache that redirect — target URL
+    // included — for up to a year (browsers ignore short max-age on 301s),
+    // permanently pinning every visitor to a dead link. A 302 is re-fetched
+    // every time, so a fixed base or changing grant takes effect immediately.
     if (row.file_url && storj.isStorjConfigured()) {
       try {
         const key = storj.urlToKey(row.file_url);
         const publicUrl = await storj.getMediaUrl(key);
-        res.setHeader('Cache-Control', MEDIA_CACHE_HEADER);
-        return res.redirect(301, publicUrl);
+        res.setHeader('Cache-Control', 'no-store');
+        return res.redirect(302, publicUrl);
       } catch (e: any) {
         logger.warn(`media file public URL failed for ${req.params.id}: ${e?.message}`);
         // fall through to legacy handling
