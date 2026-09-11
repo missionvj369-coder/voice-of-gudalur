@@ -138,6 +138,10 @@ export function getPublicUrl(key: string): string {
   if (!base) return '';
   base = base
     .replace(/\/+$/, '')
+    // Defensive: a base configured with a trailing "/media" (easy mistake —
+    // Storj's share UI copies the full folder link) would double the key's
+    // "media/" segment and 404 every file. The key already carries it.
+    .replace(/\/media\/?$/i, '')
     .replace('link.storjshare.io/s/', 'link.storjshare.io/raw/');
   return `${base}/${key}`;
 }

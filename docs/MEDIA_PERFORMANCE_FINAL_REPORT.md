@@ -19,13 +19,13 @@ GET /api/media/:id/file ──302 + no-store──▶ same Storj URL (never 301)
 - CockroachDB stores metadata only; `data_url` base64 rows are legacy and are never selected for the public list.
 - Storj URL resolution: `getMediaUrl()` prefers the **public `/raw/` link** but only after a **bounded in-process health probe** (HEAD, 4 s timeout, cached 10 min — never per item, never per visitor); otherwise it serves **presigned gateway URLs** (1 h validity, reused 50 min per key via an in-process cache).
 
-## 2. Storj public-grant condition (current)
+## 2. Storj public-grant condition
 
-- `STORJ_PUBLIC_LINK_BASE` is configured as `https://link.storjshare.io/raw/jwx5xkbqglx4xwwvgp2wdc3ipiwa/vog`.
-- The public grant currently returns **HTTP 401 for every public URL** (`/raw/` included) — verified externally on 2026-09-10. The grant appears revoked/misconfigured in Storj.
-- Consequence: the server's probe marks the grant unhealthy and **all media URLs fall back to hourly presigned gateway URLs**. Media loads, but long-lived caching is limited while the grant is broken.
+- **2026-09-10 (latest):** a NEW public access grant was provided and verified working —
+  `https://link.storjshare.io/raw/jwjnus2uult6vkt6akh7wmnmncra/vog/media/<id>.png` returns **HTTP 200, `image/png`** for a real poster (2,566,784 bytes verified). `STORJ_PUBLIC_LINK_BASE` must be set to `https://link.storjshare.io/raw/jwjnus2uult6vkt6akh7wmnmncra/vog` (the code also normalizes `/s/`→`/raw/` and strips an accidental trailing `/media`).
+- **Earlier same day:** the previous grant (`jwx5xkbqglx4xwwvgp2wdc3ipiwa`) returned **HTTP 401 for every public URL** — revoked/misconfigured in Storj. While it was broken, the probe marked the grant unhealthy and **all media URLs fell back to hourly presigned gateway URLs** (media loaded, but long-lived caching was limited).
 - **Operational safeguard:** admin-only `GET /api/media/storage-health` (ADMIN/PLATFORM_ADMIN) reports exactly: `publicGrantConfigured`, `publicGrantHealthy`, `lastHealthCheckAt`, `presignedFallbackActive`. It exposes no keys, secrets, presigned URLs or connection details. Public visitors never call it.
-- **Recommended permanent fix (post-launch):** repair/recreate the shared access grant in Storj's UI (or front Storj with a CDN) — the app auto-upgrades to stable `/raw/` URLs within 10 minutes of the grant becoming healthy, no redeploy needed.
+- **Self-healing:** once the env var points at the healthy grant (and after the next deploy/restart), the probe flips to healthy within 10 minutes and stable `/raw/` URLs resume — no code change needed.
 
 ## 3. Files changed in this emergency work
 

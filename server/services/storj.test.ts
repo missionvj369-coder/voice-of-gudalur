@@ -14,6 +14,17 @@ describe('getPublicUrl (Storj public-link safety)', () => {
     expect(getPublicUrl(KEY)).toBe('https://link.storjshare.io/raw/grantid/vog/media/abc.png');
   });
 
+  it('strips a trailing /media from the base (no doubled path segment)', () => {
+    process.env.STORJ_PUBLIC_LINK_BASE = 'https://link.storjshare.io/raw/grantid/vog/media/';
+    expect(getPublicUrl(KEY)).toBe('https://link.storjshare.io/raw/grantid/vog/media/abc.png');
+  });
+
+  it('fixes /s/ AND a trailing /media together', () => {
+    process.env.STORJ_PUBLIC_LINK_BASE = 'https://link.storjshare.io/s/grantid/vog/media';
+    const url = getPublicUrl(KEY);
+    expect(url).toBe('https://link.storjshare.io/raw/grantid/vog/media/abc.png');
+  });
+
   it('never emits /s/ regardless of configuration', () => {
     process.env.STORJ_PUBLIC_LINK_BASE = 'https://link.storjshare.io/s/grantid/vog';
     const url = getPublicUrl(KEY);
