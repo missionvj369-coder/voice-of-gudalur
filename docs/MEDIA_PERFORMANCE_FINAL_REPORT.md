@@ -27,6 +27,23 @@ GET /api/media/:id/file ──302 + no-store──▶ same Storj URL (never 301)
 - **Operational safeguard:** admin-only `GET /api/media/storage-health` (ADMIN/PLATFORM_ADMIN) reports exactly: `publicGrantConfigured`, `publicGrantHealthy`, `lastHealthCheckAt`, `presignedFallbackActive`. It exposes no keys, secrets, presigned URLs or connection details. Public visitors never call it.
 - **Self-healing:** once the env var points at the healthy grant (and after the next deploy/restart), the probe flips to healthy within 10 minutes and stable `/raw/` URLs resume — no code change needed.
 
+## ⚠️ ACTION REQUIRED — Netlify environment variable
+
+The **code is pushed** (`f563c0a`) but the running production function still has the **OLD broken grant** (`jwx5xkbqglx4xwwvgp2wdc3ipiwa`) in `STORJ_PUBLIC_LINK_BASE`. To adopt the new working grant:
+
+1. **Netlify → Site → Environment variables → `STORJ_PUBLIC_LINK_BASE`**
+2. Set the value to:
+   ```
+   https://link.storjshare.io/raw/jwjnus2uult6vkt6akh7wmnmncra/vog
+   ```
+   (the `/raw/` form, **no trailing `/media`** — the code also normalizes `/s/`→`/raw/` and strips an accidental trailing `/media` defensively)
+3. Redeploy so the running functions pick it up:
+   ```powershell
+   netlify deploy --prod
+   ```
+
+Until then, the site keeps serving **hourly presigned gateway URLs** (they work, just rotate). After the update, the probe marks the grant healthy within 10 minutes and stable, cacheable `/raw/` URLs resume automatically.
+
 ## 3. Files changed in this emergency work
 
 | File | Change |
