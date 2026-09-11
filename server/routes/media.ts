@@ -28,6 +28,7 @@ import { requireAuth, requireRole, logAudit } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import storj from '../services/storj';
 import { cacheWrap, cacheDel } from '../utils/ttlCache';
+import { clampWindow, toPublicMediaItem, ensureRawMediaUrl, MEDIA_LIST_HARD_CAP, type PublicMediaItem } from '../services/mediaPresenter';
 
 // Public media list is fetched on every page load + by the AI greeter. Cache
 // it (metadata + public URLs) so a crowd hits the DB/Storj once per window.
@@ -75,38 +76,49 @@ function parseDataUrl(dataUrl: string | null): { mime: string; buffer: Buffer } 
   return { mime, buffer: Buffer.from(m[3], 'utf8') };
 }
 
-/** GET /api/media — metadata ONLY (no payloads), newest first. */
-router.get('/', async (_req: Request, res: Response) => {
+/** GET /api/media — public, compact, bounded. Metadata ONLY (never payloads).
+ *  ONE bounded DB query per cache window serves every page-size request: the
+ *  compact list is cached as a whole and each request slices its own window
+ *  (?limit/?offset), so pagination costs zero extra CockroachDB reads.
+ *  Fields are whitelisted by mediaPresenter — base64/data_url can never leak.
+ */
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const payload = await cacheWrap(MEDIA_LIST_KEY, MEDIA_LIST_TTL_MS, async () => {
-      const rows = await db.query<MediaRow>(
-        `SELECT id, kind, title, description, mime, size_bytes, file_url, created_at
-         FROM media_posts WHERE active = TRUE ORDER BY created_at DESC`,
+    const win = clampWindow(req.query.limit, req.query.offset);
+    const cached = await cacheWrap(MEDIA_LIST_KEY, MEDIA_LIST_TTL_MS, async () => {
+      const rows = await db.query<MediaRow & { total_count?: number | string }>(
+        `SELECT id, kind, title, description, mime, size_bytes, file_url, created_at,
+                COUNT(*) OVER() AS total_count
+         FROM media_posts
+         WHERE active = TRUE
+         ORDER BY created_at DESC
+         LIMIT ${MEDIA_LIST_HARD_CAP}`,
       );
-      // For Storj-hosted items, use a public immutable URL. Same URL for every
-      // user → browsers + CDNs cache it for 1 year. Zero presigning overhead.
-      // Falls back to presigned URL only if public links are not configured.
-      const media: Array<Record<string, unknown>> = [];
+      const media: Array<PublicMediaItem> = [];
       for (const r of rows.rows) {
         let url: string;
         if (r.file_url && storj.isStorjConfigured()) {
           try {
-            const key = storj.urlToKey(r.file_url);
-            url = await storj.getMediaUrl(key);
+            url = await storj.getMediaUrl(storj.urlToKey(r.file_url));
           } catch {
-            url = r.file_url; // fall back to stored URL
+            url = ensureRawMediaUrl(r.file_url); // fall back to stored URL, /s/ stripped
           }
         } else {
-          url = r.file_url || `/api/media/${encodeURIComponent(r.id)}/file`;
+          url = ensureRawMediaUrl(r.file_url) || `/api/media/${encodeURIComponent(String(r.id))}/file`;
         }
-        media.push({
-          id: r.id, kind: r.kind, title: r.title, description: r.description,
-          mime: r.mime, sizeBytes: r.size_bytes, url, createdAt: r.created_at,
-        });
+        media.push(toPublicMediaItem(r, url));
       }
-      return { media };
+      const total = Number(rows.rows[0]?.total_count ?? media.length) || media.length;
+      return { media, total };
     });
-    res.json(payload);
+    const all = cached.media ?? [];
+    const total = Number(cached.total ?? all.length) || all.length;
+    res.json({
+      media: all.slice(win.offset, win.offset + win.limit),
+      total,
+      limit: win.limit,
+      offset: win.offset,
+    });
   } catch (e: any) {
     logger.error('media list:', e.message);
     res.status(500).json({ error: 'Failed to load media' });
@@ -251,6 +263,29 @@ router.delete('/:id', requireAuth, requireRole('ADMIN', 'PLATFORM_ADMIN'), async
   } catch (e: any) {
     logger.error('media delete:', e.message);
     res.status(500).json({ error: 'Delete failed' });
+  }
+});
+
+/** GET /api/media/storage-health — ADMIN-ONLY diagnostic (Step 6 safeguard).
+ *  Reports ONLY: grant configured / healthy / last check time / fallback active.
+ *  Never exposes access keys, secrets, presigned URLs or any private config.
+ *  Public visitors never call this route, so it never adds latency for them.
+ */
+router.get('/storage-health', requireAuth, requireRole('ADMIN', 'PLATFORM_ADMIN'), async (_req: Request, res: Response) => {
+  try {
+    const status = storj.getPublicLinkStatus();
+    if (status.publicGrantHealthy === 'unknown' && storj.isStorjConfigured()) {
+      const row = await db.queryOne<{ file_url: string | null }>(
+        'SELECT file_url FROM media_posts WHERE active = TRUE AND file_url IS NOT NULL LIMIT 1',
+      );
+      const key = row?.file_url ? storj.urlToKey(row.file_url) : '';
+      const pub = key ? storj.getPublicUrl(key) : '';
+      if (pub) await storj.probePublicLink(pub); // bounded (4s) + cached in-process
+    }
+    res.json(storj.getPublicLinkStatus());
+  } catch (e: any) {
+    logger.error('storage-health:', e.message);
+    res.status(500).json({ error: 'Diagnostic failed' });
   }
 });
 

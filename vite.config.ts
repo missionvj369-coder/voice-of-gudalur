@@ -162,6 +162,13 @@ export default defineConfig(() => {
               options: {
                 cacheName: 'vog-media-cache-v2',
                 expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                // statuses [0,200] only — error pages are never cached. The old
+                // /s/-HTML poisoning is prevented UPSTREAM: the API normalizes
+                // every URL to /raw/ (see mediaPresenter), so an HTML viewer
+                // page can no longer reach this cache as a "media" URL.
+                // NOTE: a content-type header filter is intentionally NOT used —
+                // <img> requests are opaque (status 0, unreadable headers) and
+                // would be wrongly rejected.
                 cacheableResponse: { statuses: [0, 200] },
               },
             },

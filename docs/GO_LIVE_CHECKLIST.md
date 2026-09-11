@@ -19,11 +19,11 @@
 
 ## Database
 
-- [ ] Database reachable from Netlify function region
-- [ ] Migrations 001–012 applied (012 pending: drops dead functions, creates petition_supports)
-- [ ] Migration 013 applied (creates external_supports, adds external_support_count)
-- [ ] Admin bootstrap ran (PLATFORM_ADMIN row created with env hash)
-- [ ] Health endpoint returns `{ status: 'ok', db: 'connected' }`
+- [x] Database reachable from Netlify function region
+- [x] Migrations 001–014 applied (verified via `schema_migrations` on 2026-09-10; 014 = external-support CHECK backstops)
+- [x] Migration 013 applied (creates external_supports, adds external_support_count)
+- [x] Admin bootstrap ran (PLATFORM_ADMIN row created with env hash)
+- [x] Health endpoint returns `{ status: 'ok', db: 'connected' }` (verified live 2026-09-10)
 
 ## Application
 
@@ -57,6 +57,13 @@
 - [x] Sign stats cached (6s TTL) + CDN edge cache
 - [x] Ledger cached (6s TTL) + CDN edge cache
 - [x] Media list cached (10s TTL) + CDN edge cache
+- [x] `/api/media` compact + bounded: whitelisted fields only (no base64), descriptions ≤280, `?limit/?offset` windows, ONE cached query serves all windows (verified 2026-09-10)
+- [x] Gallery bounded initial window (6 items) + "Load more" pagination
+- [x] Per-card skeleton/error/retry — one slow/broken media item cannot block the page
+- [x] Video cards download 0 bytes until opened (static play tile); viewer uses `preload="metadata"`, never `auto`, never autoplay
+- [x] SW `vog-media-cache-v2` caches only `image/*|video/*` responses (never HTML/error pages)
+- [x] `/api/media/:id/file` uses 302 + no-store (never a permanent 301 to an expiring URL)
+- [x] Storj public-link grant health probe (bounded, cached 10 min) + presigned fallback; admin diagnostic at `/api/media/storage-health`
 - [x] Petition signing invalidates caches on write
 - [x] Connection pooling (pg.Pool)
 - [x] Load shedding (503 when in-flight > MAX_IN_FLIGHT)

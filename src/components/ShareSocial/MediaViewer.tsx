@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Share2, Download, ChevronLeft, ChevronRight, ImageIcon, Video, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { PlatformIcon, PLATFORMS, type PlatformName } from './PlatformIcon';
+import { VIDEO_PRELOAD } from '../../utils/mediaAttrs';
 
 export interface MediaItem {
   id: string; kind: 'poster' | 'video'; title: string; description: string | null;
@@ -117,7 +118,7 @@ export const MediaViewer: React.FC<Props> = ({ isOpen, onClose, item, currentInd
             <div className="relative rounded-2xl overflow-hidden bg-black/50 max-w-full">
               {item.kind === 'poster'
                 ? <img ref={imgRef} src={item.url} alt={item.title} className="max-w-full max-h-[58dvh] object-contain" loading="eager" decoding="async" draggable={false} />
-                : <video src={item.url} controls playsInline preload="metadata" className="max-w-full max-h-[58dvh] object-contain" />}
+                : <video src={item.url} controls playsInline preload={VIDEO_PRELOAD} className="max-w-full max-h-[58dvh] object-contain" />}
             </div>
             <div className="mt-4 text-center max-w-2xl px-2">
               <h3 className="text-base sm:text-lg font-bold text-white">{item.title}</h3>

@@ -404,16 +404,23 @@ export interface MediaItem {
 }
 
 export const mediaApi = {
-  /** GET /api/media — every published poster & video (metadata only). */
-  list: async (): Promise<MediaItem[]> => {
-    // Do NOT swallow errors silently anymore — that's how the 502 from the
-    // Netlify response-size cap turned into "published: 0". Surface it.
-    const r = await request<{ media: Array<MediaItem> }>('/api/media');
-    return (r.media || []).map((m) => ({
+  /** GET /api/media?limit&offset — bounded window of public media metadata. */
+  listPaged: async (limit = 24, offset = 0): Promise<{ items: MediaItem[]; total: number }> => {
+    // Do NOT swallow errors silently — surface failures to callers.
+    const q = `?limit=${encodeURIComponent(String(limit))}&offset=${encodeURIComponent(String(offset))}`;
+    const r = await request<{ media: Array<MediaItem>; total: number }>(`/api/media${q}`);
+    const items = (r.media || []).map((m) => ({
       ...m,
       // CockroachDB's pgwire returns INT columns as strings — normalize.
       sizeBytes: m.sizeBytes != null ? Number(m.sizeBytes) : null,
     }));
+    return { items, total: Number(r.total) || items.length };
+  },
+
+  /** GET /api/media — every published poster & video (metadata only). */
+  list: async (): Promise<MediaItem[]> => {
+    const { items } = await mediaApi.listPaged(50, 0);
+    return items;
   },
 
   /** GET /api/media/:id/file — binary payload for a single poster/video. */

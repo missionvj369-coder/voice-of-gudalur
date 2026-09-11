@@ -201,6 +201,26 @@ function presignCached(key: string): Promise<string> {
   });
 }
 
+/**
+ * Bounded, cached probe of the public-link grant. Reused by getMediaUrl() and
+ * by the admin-only storage-health diagnostic. Never called per media item —
+ * the in-process cache short-circuits for PUBLIC_LINK_RECHECK_MS.
+ */
+export async function probePublicLink(pub: string): Promise<boolean> {
+  return publicLinkWorks(pub);
+}
+
+/** Safe diagnostic snapshot — no credentials, no signed URLs, nothing private. */
+export function getPublicLinkStatus() {
+  const configured = !!process.env.STORJ_PUBLIC_LINK_BASE;
+  return {
+    publicGrantConfigured: configured,
+    publicGrantHealthy: configured ? (publicLinksHealthy === null ? 'unknown' : publicLinksHealthy) : false,
+    lastHealthCheckAt: publicLinkCheckedAt ? new Date(publicLinkCheckedAt).toISOString() : null,
+    presignedFallbackActive: !(configured && publicLinksHealthy === true),
+  };
+}
+
 export default {
   isStorjConfigured,
   makeMediaKey,
@@ -211,4 +231,6 @@ export default {
   urlToKey,
   getPublicUrl,
   getMediaUrl,
+  probePublicLink,
+  getPublicLinkStatus,
 };

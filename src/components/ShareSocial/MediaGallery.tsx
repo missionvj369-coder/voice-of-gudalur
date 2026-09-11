@@ -16,17 +16,116 @@ import { X, Share2, ImageIcon, Video, Eye } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import type { MediaItem } from '../../services/api';
 import ShareSocialModal from './MediaViewer';
+import { cardImgAttrs, retryUrl } from '../../utils/mediaAttrs';
 
 interface MediaGalleryProps {
   isOpen: boolean;
   onClose: () => void;
   media: MediaItem[];
   onShare: (item: MediaItem) => void;
+  /** Total active media on the server — drives bounded pagination. */
+  total?: number;
+  /** Appends the next bounded window (the page implements it; gallery stays dumb). */
+  onLoadMore?: () => Promise<void> | void;
+  /** True while the parent fetches the next window. */
+  loadingMore?: boolean;
 }
 
 type KindFilter = 'all' | 'poster' | 'video';
 
-export const MediaGallery: React.FC<MediaGalleryProps> = ({ isOpen, onClose, media, onShare }) => {
+/**
+ * One grid card with a fully isolated lifecycle: its own skeleton, its own
+ * error state, its own retry. A slow or broken Storj object can never blank
+ * or freeze the rest of the gallery — each card fails alone.
+ *
+ * Video cards are ZERO bytes until the user opens the viewer: a static play
+ * tile replaces the old <video preload="metadata"> card, so opening a gallery
+ * of 30 videos downloads nothing automatically.
+ */
+const MediaCard: React.FC<{
+  m: MediaItem;
+  idx: number;
+  onOpen: (m: MediaItem) => void;
+  onShare: (m: MediaItem, e?: React.MouseEvent) => void;
+}> = ({ m, idx, onOpen, onShare }) => {
+  const { t } = useLanguage();
+  const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
+  const [src, setSrc] = useState(m.url);
+  const attrs = cardImgAttrs(idx);
+  // Long lists skip painting offscreen cards entirely (smoother scrolling).
+  const cv = idx > 5 ? ' [content-visibility:auto] [contain-intrinsic-size:auto_340px]' : '';
+  return (
+    <div className={`group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 text-left${cv}`}>
+      <button type="button" className="w-full text-left" onClick={() => onOpen(m)}>
+        {m.kind === 'poster' ? (
+          <div className="w-full aspect-[4/5] bg-slate-100 overflow-hidden relative">
+            {status === 'loading' && (
+              <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-slate-200 via-slate-100 to-slate-200" aria-hidden="true" />
+            )}
+            {status === 'error' ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400">
+                <ImageIcon size={22} />
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); setSrc(retryUrl(m.url)); setStatus('loading'); }}
+                  className="text-xl font-bold text-emerald-700 hover:text-emerald-500 cursor-pointer leading-none px-2"
+                  title="Retry"
+                >
+                  ↻
+                </span>
+              </div>
+            ) : (
+              <img
+                src={src}
+                alt={m.title}
+                loading={attrs.loading}
+                decoding={attrs.decoding}
+                fetchPriority={attrs.fetchPriority}
+                onLoad={() => setStatus('ok')}
+                onError={() => setStatus('error')}
+                className="w-full h-full object-contain"
+                draggable={false}
+              />
+            )}
+          </div>
+        ) : (
+          <div className="w-full aspect-video bg-gradient-to-br from-slate-800 to-slate-900 relative flex items-center justify-center">
+            <span className="h-12 w-12 rounded-full bg-white/15 backdrop-blur flex items-center justify-center" aria-hidden="true">
+              <Video size={22} className="text-white/80 ml-0.5" />
+            </span>
+            <span className="absolute bottom-2 inset-x-0 text-center text-[10px] font-bold text-white/60">{t('media.video')}</span>
+          </div>
+        )}
+      </button>
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pt-10 pb-2 pointer-events-none">
+        <p className="text-[11px] font-bold text-white truncate">{m.title}</p>
+        {m.description && <p className="text-[10px] text-slate-300 line-clamp-1">{m.description}</p>}
+      </div>
+      <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition">
+        <button
+          type="button"
+          onClick={() => onOpen(m)}
+          className="p-1.5 rounded-lg bg-black/50 text-white backdrop-blur hover:bg-black/70 transition"
+          title={t('home.view_media')}
+          aria-label={t('home.view')}
+        >
+          <Eye size={12} />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => onShare(m, e)}
+          className="p-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 transition"
+          title={t('media.share')}
+        >
+          <Share2 size={12} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export const MediaGallery: React.FC<MediaGalleryProps> = ({ isOpen, onClose, media, onShare, total, onLoadMore, loadingMore }) => {
   const { t } = useLanguage();
   const [filter, setFilter] = useState<KindFilter>('all');
   const [viewing, setViewing] = useState<MediaItem | null>(null);
@@ -107,46 +206,25 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({ isOpen, onClose, med
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {filtered.map((m) => (
-                    <div
+                    <MediaCard
                       key={m.id}
-                      className="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 text-left"
-                    >
-                      <button type="button" className="w-full text-left" onClick={() => openItem(m)}>
-                        {m.kind === 'poster' ? (
-                          <div className="w-full aspect-[4/5] bg-slate-100 overflow-hidden">
-                            <img src={m.url} alt={m.title} loading="lazy" className="w-full h-full object-contain" />
-                          </div>
-                        ) : (
-                          <div className="w-full aspect-video bg-black overflow-hidden">
-                            <video src={m.url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
-                          </div>
-                        )}
-                      </button>
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pt-10 pb-2 pointer-events-none">
-                        <p className="text-[11px] font-bold text-white truncate">{m.title}</p>
-                        {m.description && <p className="text-[10px] text-slate-300 line-clamp-1">{m.description}</p>}
-                      </div>
-                      <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition">
-                        <button
-                          type="button"
-                          onClick={() => openItem(m)}
-                          className="p-1.5 rounded-lg bg-black/50 text-white backdrop-blur hover:bg-black/70 transition"
-                          title={t('home.view_media')}
-                          aria-label={t('home.view')}
-                        >
-                          <Eye size={12} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => handleShare(m, e)}
-                          className="p-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 transition"
-                          title={t('media.share')}
-                        >
-                          <Share2 size={12} />
-                        </button>
-                      </div>
-                    </div>
+                      m={m}
+                      idx={filtered.indexOf(m)}
+                      onOpen={openItem}
+                      onShare={handleShare}
+                    />
                   ))}
+                  {typeof total === 'number' && media.length < total && onLoadMore && (
+                    <button
+                      type="button"
+                      onClick={() => { void onLoadMore(); }}
+                      disabled={loadingMore}
+                      className="col-span-full flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-dashed border-slate-300 text-slate-600 font-bold text-sm hover:border-emerald-400 hover:text-emerald-700 transition disabled:opacity-60"
+                    >
+                      <Eye size={16} />
+                      {loadingMore ? '…' : `${t('home.see_all')} (+${Math.max((total ?? 0) - media.length, 0)})`}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

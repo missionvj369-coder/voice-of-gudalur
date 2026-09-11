@@ -52,12 +52,32 @@ export const SignPetitionPage: React.FC = () => {
   const [ledgerTotal, setLedgerTotal] = useState<number | null>(null);
   const pollRef = useRef<number | null>(null);
 
+  const [mediaTotal, setMediaTotal] = useState(0);
+  const [mediaLoadingMore, setMediaLoadingMore] = useState(false);
+
   // Load admin-published movement media (posters + videos) for the Support the Movement section.
+  // BOUNDED first window (6 items): the petition CTA must never wait for the
+  // gallery — this fetch is fire-and-forget and the page renders immediately.
   useEffect(() => {
     let alive = true;
-    mediaApi.list().then((items) => { if (alive) setMediaItems(items); }).catch(() => {});
+    mediaApi.listPaged(6, 0).then(({ items, total }) => { if (alive) { setMediaItems(items); setMediaTotal(total); } }).catch(() => {});
     return () => { alive = false; };
   }, []);
+
+  // Explicit pagination: appends the next bounded window on user action.
+  const loadMoreMedia = async () => {
+    if (mediaLoadingMore) return;
+    setMediaLoadingMore(true);
+    try {
+      const { items, total } = await mediaApi.listPaged(6, mediaItems.length);
+      setMediaItems((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...items.filter((i) => !seen.has(i.id))];
+      });
+      setMediaTotal(total);
+    } catch { /* keep current window; the user can retry */ }
+    finally { setMediaLoadingMore(false); }
+  };
 
   // Check if user has already signed â€” only a server-issued (VG-*) sign hash
   // counts as real; synthetic local placeholders are purged by the helper.
@@ -698,7 +718,7 @@ export const SignPetitionPage: React.FC = () => {
               onClick={() => setShowGallery(true)}
               className="w-full py-2.5 rounded-xl border border-emerald-200 text-emerald-700 font-bold text-xs hover:bg-emerald-50 transition flex items-center justify-center gap-1.5"
             >
-              <ImageIcon size={14} /> {t("home.see_all")} ({mediaItems.length})
+              <ImageIcon size={14} /> {t("home.see_all")} ({mediaTotal || mediaItems.length})
             </button>
           )}
         </div>
@@ -709,6 +729,9 @@ export const SignPetitionPage: React.FC = () => {
         isOpen={showGallery}
         onClose={() => setShowGallery(false)}
         media={mediaItems}
+        total={mediaTotal}
+        onLoadMore={loadMoreMedia}
+        loadingMore={mediaLoadingMore}
         onShare={(item) => {
           setShareActive({
             id: item.id,
