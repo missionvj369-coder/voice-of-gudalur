@@ -16,6 +16,9 @@ const read = (p: string) => readFileSync(path.resolve(here, p), 'utf8');
 describe('emergency media regression pins', () => {
   const mediaRoute = read('./media.ts');
   const petitionsRoute = read('./petitions.ts');
+  const manifestoRoute = read('./manifesto.ts');
+  const wildlifeRoute = read('./wildlife.ts');
+  const netlifyCfg = read('../../netlify.toml');
   const viteCfg = read('../../vite.config.ts');
   const page = read('../../src/pages/SignPetitionPage.tsx');
   const gallery = read('../../src/components/ShareSocial/MediaGallery.tsx');
@@ -79,5 +82,22 @@ describe('emergency media regression pins', () => {
   it('public-grant health probe is bounded and cached (not per item)', () => {
     expect(storjSvc).toMatch(/PUBLIC_LINK_RECHECK_MS/);
     expect(storjSvc).toMatch(/probePublicLink/);
+  });
+
+  it('public aggregate reads are TTL-cached (manifesto + wildlife) with edge headers', () => {
+    expect(manifestoRoute).toMatch(/cacheWrap\(STATS_KEY/);
+    expect(manifestoRoute).toMatch(/cacheDel\(STATS_KEY\)/);
+    expect(wildlifeRoute).toMatch(/cacheWrap\(INCIDENTS_KEY/);
+    expect(wildlifeRoute).toMatch(/cacheWrap\(SIGHTINGS_KEY/);
+    expect(wildlifeRoute).toMatch(/cacheWrap\(VOICE_KEY/);
+    expect(netlifyCfg).toMatch(/for = "\/api\/manifesto\/stats"/);
+    expect(netlifyCfg).toMatch(/for = "\/api\/wildlife\/incidents"/);
+    expect(netlifyCfg).toMatch(/for = "\/api\/wildlife\/sightings"/);
+    expect(netlifyCfg).toMatch(/for = "\/api\/wildlife\/voice"/);
+  });
+
+  it('/api/wildlife/voice stays public (no auth introduced by caching)', () => {
+    expect(wildlifeRoute).toMatch(/router\.get\('\/voice'/);
+    expect(wildlifeRoute.slice(wildlifeRoute.indexOf("get('/voice'"), wildlifeRoute.indexOf("get('/voice'") + 120)).not.toMatch(/requireAuth/);
   });
 });

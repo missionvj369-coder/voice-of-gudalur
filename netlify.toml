@@ -103,3 +103,28 @@
   for = "/api/media"
   [headers.values]
     Cache-Control = "public, max-age=10, stale-while-revalidate=10"
+
+# ─── Public aggregate/counter endpoints (healthy-cacheability, crowd-friendly) ──
+# These are public, non-personal aggregate reads already TTL-cached in-process.
+# The CDN edge absorbs a synchronized crowd before it reaches a serverless
+# function (mirrors /api/media). Writes invalidate in-process; the edge TTL is
+# short enough that counters stay fresh.
+[[headers]]
+  for = "/api/manifesto/stats"
+  [headers.values]
+    Cache-Control = "public, max-age=6, stale-while-revalidate=6"
+
+[[headers]]
+  for = "/api/wildlife/incidents"
+  [headers.values]
+    Cache-Control = "public, max-age=6, stale-while-revalidate=6"
+
+[[headers]]
+  for = "/api/wildlife/sightings"
+  [headers.values]
+    Cache-Control = "public, max-age=6, stale-while-revalidate=6"
+
+[[headers]]
+  for = "/api/wildlife/voice"
+  [headers.values]
+    Cache-Control = "public, max-age=6, stale-while-revalidate=6"

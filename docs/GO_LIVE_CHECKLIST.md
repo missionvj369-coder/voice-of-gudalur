@@ -56,6 +56,8 @@
 - [x] Petition list cached (3s TTL) + lightweight (no supporters_json)
 - [x] Sign stats cached (6s TTL) + CDN edge cache
 - [x] Ledger cached (6s TTL) + CDN edge cache
+- [x] Manifesto stats cached (6s TTL) + CDN edge cache
+- [x] Wildlife incidents / sightings / voice cached (6s TTL each) + CDN edge cache
 - [x] Media list cached (10s TTL) + CDN edge cache
 - [x] `/api/media` compact + bounded: whitelisted fields only (no base64), descriptions ≤280, `?limit/?offset` windows, ONE cached query serves all windows (verified 2026-09-10)
 - [x] Gallery bounded initial window (6 items) + "Load more" pagination

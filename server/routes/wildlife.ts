@@ -17,8 +17,17 @@ import {
 } from '../db/repositories/wildlifeRepository';
 import { requireAuth, requireRole, logAudit } from '../middleware/auth';
 import { logger } from '../utils/logger';
+import { cacheWrap, cacheDel } from '../utils/ttlCache';
 
 const router = Router();
+
+// Public list reads (incidents map/toast, sightings GIS, voice soundboard) are
+// polled by every open client. Cache each for 6s so a crowd collapses to a few
+// DB hits per window instead of one per request. Writes invalidate the keys.
+const LIST_TTL_MS = 6 * 1000;
+const INCIDENTS_KEY = 'wildlife:incidents';
+const SIGHTINGS_KEY = 'wildlife:sightings';
+const VOICE_KEY = 'wildlife:voice';
 
 /** POST /api/wildlife/incident */
 router.post('/incident', async (req: Request, res: Response) => {
@@ -41,6 +50,7 @@ router.post('/incident', async (req: Request, res: Response) => {
       ip: req.ip,
     });
     res.status(result.isNew ? 201 : 200).json({ id: result.id, isNew: result.isNew });
+    cacheDel(INCIDENTS_KEY);
   } catch (e: any) {
     logger.error('wildlife incident:', e.message);
     res.status(500).json({ error: 'Could not record incident' });
@@ -60,6 +70,7 @@ router.post('/sighting', async (req: Request, res: Response) => {
       idempotencyKey: req.body.idempotencyKey,
     });
     res.status(result.isNew ? 201 : 200).json({ id: result.id, isNew: result.isNew });
+    cacheDel(SIGHTINGS_KEY);
   } catch (e: any) {
     logger.error('sighting:', e.message);
     res.status(500).json({ error: 'Could not record sighting' });
@@ -68,22 +79,37 @@ router.post('/sighting', async (req: Request, res: Response) => {
 
 /** GET /api/wildlife/incidents */
 router.get('/incidents', async (_req: Request, res: Response) => {
-  const rows = await listIncidents(100);
-  res.json({ incidents: rows.rows });
+  try {
+    const rows = await cacheWrap(INCIDENTS_KEY, LIST_TTL_MS, () => listIncidents(100));
+    res.json({ incidents: rows.rows });
+  } catch (e: any) {
+    logger.error('wildlife incidents:', e.message);
+    res.status(500).json({ error: 'Failed to load incidents' });
+  }
 });
 
 /** GET /api/wildlife/sightings — recent sightings (GIS map). */
 router.get('/sightings', async (_req: Request, res: Response) => {
-  const { listAnimalSightings } = await import('../db/repositories/wildlifeRepository');
-  const rows = await listAnimalSightings(100);
-  res.json({ sightings: rows.rows });
+  try {
+    const { listAnimalSightings } = await import('../db/repositories/wildlifeRepository');
+    const rows = await cacheWrap(SIGHTINGS_KEY, LIST_TTL_MS, () => listAnimalSightings(100));
+    res.json({ sightings: rows.rows });
+  } catch (e: any) {
+    logger.error('wildlife sightings:', e.message);
+    res.status(500).json({ error: 'Failed to load sightings' });
+  }
 });
 
 /** GET /api/wildlife/voice — community voice petitions (soundboard + map). */
 router.get('/voice', async (_req: Request, res: Response) => {
-  const { listVoicePetitions } = await import('../db/repositories/wildlifeRepository');
-  const rows = await listVoicePetitions(50);
-  res.json({ petitions: rows.rows });
+  try {
+    const { listVoicePetitions } = await import('../db/repositories/wildlifeRepository');
+    const rows = await cacheWrap(VOICE_KEY, LIST_TTL_MS, () => listVoicePetitions(50));
+    res.json({ petitions: rows.rows });
+  } catch (e: any) {
+    logger.error('wildlife voice:', e.message);
+    res.status(500).json({ error: 'Failed to load voice petitions' });
+  }
 });
 
 /** POST /api/wildlife/voice — publish a voice petition (auth; audio via Storj). */
@@ -106,6 +132,7 @@ router.post('/voice', requireAuth, async (req: Request, res: Response) => {
     });
     await logAudit({ actorId: user.uid, actorKind: 'user', action: 'ADD_VOICE_PETITION', target: `voice_petitions/${result.id}`, ip: req.ip });
     res.status(201).json(result);
+    cacheDel(VOICE_KEY);
   } catch (e: any) {
     logger.error('voice petition:', e.message);
     res.status(500).json({ error: 'Could not publish voice petition' });
