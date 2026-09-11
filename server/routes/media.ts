@@ -28,7 +28,7 @@ import { requireAuth, requireRole, logAudit } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import storj from '../services/storj';
 import { cacheWrap, cacheDel } from '../utils/ttlCache';
-import { clampWindow, toPublicMediaItem, ensureRawMediaUrl, MEDIA_LIST_HARD_CAP, type PublicMediaItem } from '../services/mediaPresenter';
+import { clampWindow, toPublicMediaItem, ensureRawMediaUrl, MEDIA_LIST_HARD_CAP, resolveMediaRowUrl, type PublicMediaItem } from '../services/mediaPresenter';
 
 // Public media list is fetched on every page load + by the AI greeter. Cache
 // it (metadata + public URLs) so a crowd hits the DB/Storj once per window.
@@ -96,16 +96,7 @@ router.get('/', async (req: Request, res: Response) => {
       );
       const media: Array<PublicMediaItem> = [];
       for (const r of rows.rows) {
-        let url: string;
-        if (r.file_url && storj.isStorjConfigured()) {
-          try {
-            url = await storj.getMediaUrl(storj.urlToKey(r.file_url));
-          } catch {
-            url = ensureRawMediaUrl(r.file_url); // fall back to stored URL, /s/ stripped
-          }
-        } else {
-          url = ensureRawMediaUrl(r.file_url) || `/api/media/${encodeURIComponent(String(r.id))}/file`;
-        }
+        const url = await resolveMediaRowUrl(r, storj); // same logic as the snapshot script
         media.push(toPublicMediaItem(r, url));
       }
       const total = Number(rows.rows[0]?.total_count ?? media.length) || media.length;

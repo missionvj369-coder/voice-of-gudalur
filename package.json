@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build",
+    "build": "vite build && npm run snapshots",
+    "snapshots": "node --env-file-if-exists=.env --import tsx scripts/exportSnapshot.ts",
     "preview": "vite build && tsx server.ts --serve-dist",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",

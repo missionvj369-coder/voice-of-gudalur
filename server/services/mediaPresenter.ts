@@ -58,6 +58,33 @@ export function ensureRawMediaUrl(url: string | null | undefined): string {
 }
 
 /**
+ * Resolve a media row to its client-facing URL. Pure wrapper so the runtime
+ * route and the snapshot script share EXACTLY the same decision logic:
+ *   - prefer the public raw/grant URL (with /s/ safeguard)
+ *   - fall back to the stored file_url (normalized)
+ *   - else the api media-file endpoint
+ * `storj` is duck-typed (isStorjConfigured/getMediaUrl/urlToKey) so this stays
+ * unit-testable without a network dependency.
+ */
+export async function resolveMediaRowUrl(
+  row: { id: unknown; file_url: string | null },
+  storj: {
+    isStorjConfigured: () => boolean;
+    getMediaUrl: (key: string) => Promise<string>;
+    urlToKey: (url: string) => string;
+  },
+): Promise<string> {
+  if (row.file_url && storj.isStorjConfigured()) {
+    try {
+      return await storj.getMediaUrl(storj.urlToKey(row.file_url));
+    } catch {
+      return ensureRawMediaUrl(row.file_url); // fall back to stored URL, /s/ stripped
+    }
+  }
+  return ensureRawMediaUrl(row.file_url) || `/api/media/${encodeURIComponent(String(row.id))}/file`;
+}
+
+/**
  * Project a media_posts row to the compact public shape. ONLY the fields
  * listed here ever reach the browser — base64 payloads, emails, admin-only
  * columns are structurally impossible to leak through this function.

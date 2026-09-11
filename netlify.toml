@@ -48,10 +48,10 @@
   # that is never used here but would otherwise fail the esbuild pass.
   external_node_modules = ["vite", "pg-native"]
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
-  status = 200
-  force = true
+    from = "/api/*"
+    to = "/.netlify/functions/api/:splat"
+    status = 200
+    force = true
 
 # SPA fallback — lets /verify-docket and other client routes work on Netlify.
 # Function routes (/.netlify/functions/*) always take precedence over redirects.
@@ -104,7 +104,14 @@
   [headers.values]
     Cache-Control = "public, max-age=10, stale-while-revalidate=10"
 
-# ─── Public aggregate/counter endpoints (healthy-cacheability, crowd-friendly) ──
+# ─── Public data snapshots (dist/data/*.json) — crowd read path ──────────────
+# Generated at build time by scripts/exportSnapshot.ts and refreshed by the
+# refresh-snapshots cron function. Long-lived because they only change on
+# writes; revalidated so a fresh snapshot is picked up quickly after a write.
+[[headers]]
+  for = "/data/*.json"
+  [headers.values]
+    Cache-Control = "public, max-age=30, stale-while-revalidate=30"
 # These are public, non-personal aggregate reads already TTL-cached in-process.
 # The CDN edge absorbs a synchronized crowd before it reaches a serverless
 # function (mirrors /api/media). Writes invalidate in-process; the edge TTL is

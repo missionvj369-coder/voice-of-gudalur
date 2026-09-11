@@ -15,6 +15,8 @@ export interface ApiError extends Error {
   status: number;
 }
 
+import { snapshotOrLive } from '../utils/snapshotFirst';
+
 function csrfToken(): string | null {
   const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
   return match ? decodeURIComponent(match[1]) : null;
@@ -241,19 +243,34 @@ export const petitionApi = {
       `/api/petitions/verify/${encodeURIComponent(hash)}`,
     ),
 
-  /** GET /api/petitions/sign-stats — live total + per-place signature leaderboard (highest first). */
+  /** GET /api/petitions/sign-stats — CDN-snapshot first, live API fallback. */
   signStats: () =>
-    request<{ total: number; places: Array<{ place: string; count: number }> }>('/api/petitions/sign-stats'),
+    snapshotOrLive<{ total: number; places: Array<{ place: string; count: number }> }>(
+      '/data/stats.json',
+      () => request<{ total: number; places: Array<{ place: string; count: number }> }>('/api/petitions/sign-stats'),
+      { acceptStaleMs: 20_000 },
+    ),
 
-  /** GET /api/petitions/ledger — PUBLIC live hash ledger (anyone can read; phone masked). */
+  /** GET /api/petitions/ledger — CDN-snapshot first, live API fallback.
+   *  (PUBLIC hash ledger, phone masked. Snapshot is refreshed on writes + cron.) */
   ledger: () =>
-    request<{
+    snapshotOrLive<{
       total: number;
       signs: Array<{
         hash: string; name: string; village: string; phoneLast4: string | null;
         batchNo: number; signedAt: string; verifyUrl: string;
       }>;
-    }>('/api/petitions/ledger'),
+    }>(
+      '/data/ledger.json',
+      () => request<{
+        total: number;
+        signs: Array<{
+          hash: string; name: string; village: string; phoneLast4: string | null;
+          batchNo: number; signedAt: string; verifyUrl: string;
+        }>;
+      }>('/api/petitions/ledger'),
+      { acceptStaleMs: 30_000 },
+    ),
 
   /** GET /api/petitions/my-sign — THIS resident's own petition signature (auth).
    *  Restores the accurate "already signed" UI after re-login / new device /
@@ -417,10 +434,14 @@ export const mediaApi = {
     return { items, total: Number(r.total) || items.length };
   },
 
-  /** GET /api/media — every published poster & video (metadata only). */
+  /** GET /api/media — every published poster & video (metadata only, snapshot-first). */
   list: async (): Promise<MediaItem[]> => {
-    const { items } = await mediaApi.listPaged(50, 0);
-    return items;
+    const items = await snapshotOrLive<{ media: MediaItem[] } | MediaItem[]>(
+      '/data/media.json',
+      () => request<{ media: MediaItem[] }>('/api/media'),
+      { acceptStaleMs: 30_000 },
+    ).then((d) => (Array.isArray(d) ? d : (d as { media: MediaItem[] }).media || []));
+    return items.map((m) => ({ ...m, sizeBytes: m.sizeBytes != null ? Number(m.sizeBytes) : null }));
   },
 
   /** GET /api/media/:id/file — binary payload for a single poster/video. */
