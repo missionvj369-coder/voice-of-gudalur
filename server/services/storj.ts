@@ -144,14 +144,61 @@ export function getPublicUrl(key: string): string {
 
 /**
  * Get the media URL to serve to clients. Prefers the public immutable URL
- * (fast, cacheable). Falls back to a presigned URL only if public links are
- * not configured.
+ * (fast, cacheable) — but ONLY after verifying the public-link grant actually
+ * serves files. Falls back to presigned URLs (cached) otherwise.
+ *
+ * WHY THE PROBE: the public link grant is configured in Storj's UI and can be
+ * revoked/misconfigured silently. When it breaks, every public URL returns
+ * 401 — which blanked every poster on the live site even with correct /raw/
+ * paths. The probe (HEAD on the public URL, result cached in-process for 10
+ * minutes) detects that and presigns instead — the scheme that always works
+ * since it uses the same credentials that uploaded the file.
  */
 export async function getMediaUrl(key: string): Promise<string> {
   const pub = getPublicUrl(key);
-  if (pub) return pub;
-  // Fallback: presigned URL (unique per request, not cacheable)
-  return presignGet(key);
+  if (pub && (await publicLinkWorks(pub))) return pub;
+  return presignCached(key);
+}
+
+// In-process state: is the Storj public-link grant actually serving files?
+// null = unknown (probed on first request after boot).
+let publicLinksHealthy: boolean | null = null;
+let publicLinkCheckedAt = 0;
+const PUBLIC_LINK_RECHECK_MS = 10 * 60 * 1000;
+
+// Presigned URLs are signed for 60 min; reuse each for 50 min so repeat list
+// builds never re-sign. This keeps presigning off the scaling path (one
+// presign per media item per hour, not one per viewer per request).
+const presignCache = new Map<string, { url: string; exp: number }>();
+const PRESIGN_REUSE_MS = 50 * 60 * 1000;
+
+async function publicLinkWorks(pub: string): Promise<boolean> {
+  const now = Date.now();
+  if (publicLinksHealthy !== null && now - publicLinkCheckedAt < PUBLIC_LINK_RECHECK_MS) {
+    return publicLinksHealthy;
+  }
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 4000);
+    const res = await fetch(pub, { method: 'HEAD', signal: ctrl.signal });
+    clearTimeout(timer);
+    publicLinksHealthy = res.ok;
+  } catch {
+    // Network error / timeout / probe blocked — assume unhealthy and presign.
+    publicLinksHealthy = false;
+  }
+  publicLinkCheckedAt = Date.now();
+  logger.info(`[storj] public-link probe: ${publicLinksHealthy ? 'healthy' : 'unhealthy — falling back to presigned URLs'}`);
+  return publicLinksHealthy;
+}
+
+function presignCached(key: string): Promise<string> {
+  const cached = presignCache.get(key);
+  if (cached && cached.exp > Date.now()) return Promise.resolve(cached.url);
+  return presignGet(key).then((url) => {
+    presignCache.set(key, { url, exp: Date.now() + PRESIGN_REUSE_MS });
+    return url;
+  });
 }
 
 export default {
