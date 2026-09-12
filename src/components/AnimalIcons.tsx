@@ -1,7 +1,7 @@
-import React from 'react';
+﻿import React from 'react';
 
 /**
- * Professional silhouette icons for the two residents of Gudalur's forests —
+ * Professional silhouette icons for the two residents of Gudalur's forests â€”
  * the elephant and the tiger. lucide-react ships no animal glyphs, so these
  * inline SVGs use the app's stroke/fill language and read clearly at any size.
  */
@@ -45,5 +45,25 @@ export const TigerIcon: React.FC<{ size?: number; className?: string }> = ({ siz
     <path d="M21 22c2 1.5 5 1.5 7 0" stroke="rgba(255,255,255,0.7)" strokeWidth="1.6" strokeLinecap="round" />
     {/* tail */}
     <path d="M58 34c4 1 6 4 4 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+  </svg>
+);
+/**
+ * Human figure icon — a person standing in peaceful coexistence with nature.
+ * Simple, elegant silhouette that reads clearly at small sizes.
+ */
+export const HumanIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24, className }) => (
+  <svg width={size} height={size * 1.4} viewBox="0 0 32 44" fill="none" className={className} aria-hidden="true">
+    {/* head */}
+    <circle cx="16" cy="7" r="6" fill="currentColor" />
+    {/* body / torso */}
+    <path d="M16 13 L16 32" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+    {/* left arm — raised gently in peace */}
+    <path d="M16 18 L8 26" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    {/* right arm — relaxed */}
+    <path d="M16 18 L24 24" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    {/* left leg */}
+    <path d="M16 32 L11 42" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    {/* right leg */}
+    <path d="M16 32 L21 42" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
   </svg>
 );
