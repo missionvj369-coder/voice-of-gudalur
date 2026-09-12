@@ -266,9 +266,15 @@ export const Shell: React.FC<{ children: React.ReactNode; petitionOnly?: boolean
                   )}
                   {!petitionOnly && (
                     <>
+                      <DrawerLink to="/sign-petition" icon={<PenLine size={16} />} label={t('mnu.sign_full') || 'Sign Petition'} onNavigate={() => setMenuOpen(false)} />
+                      <DrawerLink to="/petition" icon={<PenLine size={16} />} label={t('mnu.sign_mobile') || 'Quick Sign (Mobile)'} onNavigate={() => setMenuOpen(false)} />
                       <DrawerLink to="/about" icon={<BookOpen size={16} />} label={t('mnu.about')} onNavigate={() => setMenuOpen(false)} />
                       <DrawerLink to="/corridors" icon={<MapIcon size={16} />} label={t('mnu.corridors')} onNavigate={() => setMenuOpen(false)} />
                       <DrawerLink to="/sightings" icon={<PawPrint size={16} />} label={t('mnu.sightings')} onNavigate={() => setMenuOpen(false)} />
+                      <DrawerLink to="/voices" icon={<Flame size={16} />} label={t('mnu.voices') || 'Community Voices'} onNavigate={() => setMenuOpen(false)} />
+                      <DrawerLink to="/verify-sign" icon={<Flame size={16} />} label={t('mnu.verify') || 'Verify Signature'} onNavigate={() => setMenuOpen(false)} />
+                      <DrawerLink to="/officials" icon={<User size={16} />} label={t('mnu.officials') || 'Officials Portal'} onNavigate={() => setMenuOpen(false)} />
+                      <DrawerLink to="/trust" icon={<BookOpen size={16} />} label={t('mnu.trust') || 'Trust & Privacy'} onNavigate={() => setMenuOpen(false)} />
                     </>
                   )}
                 </nav>

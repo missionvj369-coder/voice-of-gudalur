@@ -101,12 +101,11 @@ export async function createApp() {
   // reduces egress cost + time-to-first-byte for the ledger/media lists.
   app.use(compression());
 
-  // ─── Load shedding (free-tier survival) ─────────────────────────────────────
-  // Serverless instances have a hard concurrency ceiling. When too many
-  // requests are in flight at once, shed the excess with a fast 503 instead of
-  // queueing DB work that would pile up and time out. This keeps the app
-  // responsive for the users who ARE being served.
-  const MAX_IN_FLIGHT = Number(process.env.MAX_IN_FLIGHT || 150);
+  // ─── Load shedding (paid-tier capacity) ─────────────────────────────────────
+  // Serverless instances have a generous concurrency ceiling post-upgrade.
+  // When too many requests are in flight at once, shed the excess with a
+  // fast 503 instead of queueing DB work that would pile up and time out.
+  const MAX_IN_FLIGHT = Number(process.env.MAX_IN_FLIGHT || 1000);
   const EDGE_CACHE_TTL_SECONDS = Number(process.env.EDGE_CACHE_TTL_SECONDS ?? 10) || 10;
   let inFlight = 0;
   app.use((req, res, next) => {
@@ -144,17 +143,17 @@ export async function createApp() {
   const limiterOpts = { validate: { xForwardedForHeader: false, ip: false } as any };
   const retryAfterSecs = 60; // seconds to wait before retrying
   const rateLimitHeaders = { standardHeaders: 'draft-7' as const, legacyHeaders: false };
-  const authRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts, ...rateLimitHeaders });
-  const publicRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts, ...rateLimitHeaders });
-  const writeRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts, ...rateLimitHeaders });
+  const authRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts, ...rateLimitHeaders });
+  const publicRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 600, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts, ...rateLimitHeaders });
+  const writeRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts, ...rateLimitHeaders });
   // Stricter limiter for the civic chat endpoint — it calls an external LLM which
   // is expensive and slow; a burst here is both a cost and a hang vector.
-  const aiRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many AI requests', keyGenerator: clientKey, ...limiterOpts });
+  const aiRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: 'Too many AI requests', keyGenerator: clientKey, ...limiterOpts });
 
-  // AI VOG feature flag (petition-only launch): set AI_VOG_ENABLED=false to
-  // switch every /api/ai/* endpoint off with a stable 503. The AI code stays
-  // in the codebase untouched — flip the flag to reactivate it later. No
-  // petition-signing path calls AI, so signing never depends on an LLM.
+  // AI VOG feature flag (full-app mode): enabled by default post-upgrade.
+  // Set AI_VOG_ENABLED=false ONLY to switch every /api/ai/* endpoint off with
+  // a stable 503. No petition-signing path calls AI, so signing never depends
+  // on an LLM.
   const aiGate = (_req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (process.env.AI_VOG_ENABLED === 'false') {
       return res.status(503).json({ error: 'AI_VOG_DISABLED', fallback: true });

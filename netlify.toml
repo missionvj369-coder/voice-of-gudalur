@@ -19,15 +19,18 @@
 [build.environment]
   NPM_FLAGS = "--include=dev"
   NODE_ENV = "production"
-  # Free-tier survival knobs:
-  #   DATABASE_POOL_MAX   2 — each serverless instance keeps a tiny pool so the
-  #                        total connection count stays far below CockroachDB's
-  #                        free-tier ceiling when Netlify spins up many instances.
-  #   MAX_IN_FLIGHT       150 — shed excess concurrent requests with a fast 503
-  #                        so the function stays responsive for the users it IS
-  #                        serving instead of queueing DB work that times out.
-  DATABASE_POOL_MAX = "2"
-  MAX_IN_FLIGHT = "150"
+  # FULL-APP (post free-tier upgrade) knobs:
+  #   DATABASE_POOL_MAX   20 — paid tier allows a real pool per serverless
+  #                        instance (was 2 on free tier).
+  #   MAX_IN_FLIGHT       1000 — generous concurrency now that functions have
+  #                        paid timeout/memory (was 150 free-tier shedding).
+  #   VITE_APP_MODE       full — the entire app loads (all routes, AI VOG,
+  #                        wildlife, officials, admin).
+  #   VITE_AI_VOG_ENABLED true — AI VOG greeter mounts in full mode.
+  DATABASE_POOL_MAX = "20"
+  MAX_IN_FLIGHT = "1000"
+  VITE_APP_MODE = "full"
+  VITE_AI_VOG_ENABLED = "true"
 
 # ── API (Netlify Function — the Express backend itself) ─────────────────────
 # server.ts#createApp() is wrapped with serverless-http in

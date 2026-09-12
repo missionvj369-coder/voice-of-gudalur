@@ -13,6 +13,7 @@
  */
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { petitionApi } from '../services/api';
 import { GrievanceTicket } from '../components/GrievanceTicket';
 import { CorridorMap } from '../components/CorridorMap';
 import { useNavigate } from 'react-router-dom';

@@ -19,6 +19,7 @@ const OfficialLoginPage = lazy(() => import('./pages/OfficialLoginPage').then((m
 const SightingsPage = lazy(() => import('./pages/SightingsPage').then((m) => ({ default: m.SightingsPage })));
 const PetitionOnlyPage = lazy(() => import('./pages/PetitionOnlyPage').then((m) => ({ default: m.PetitionOnlyPage })));
 const TrustPage = lazy(() => import('./pages/TrustPage').then((m) => ({ default: m.TrustPage })));
+const VoiceSoundboardPage = lazy(() => import('./pages/VoiceSoundboardPage').then((m) => ({ default: m.VoiceSoundboardPage })));
 
 const RouteFallback: React.FC = () => (
   <div className="min-h-[60vh] flex items-center justify-center" role="status" aria-label="Loading page">
@@ -78,9 +79,11 @@ const AppContent: React.FC = () => {
                 <Routes>
                   <Route path="/" element={<CampaignDashboard />} />
                   <Route path="/sign-petition" element={<SignPetitionPage />} />
+                  <Route path="/petition" element={<PetitionOnlyPage />} />
                   <Route path="/about" element={<Manifesto />} />
                   <Route path="/corridors" element={<ClosedCorridorsPage />} />
                   <Route path="/sightings" element={<SightingsPage />} />
+                  <Route path="/voices" element={<VoiceSoundboardPage />} />
                   <Route path="/verify-sign" element={<VerifySignPage />} />
                   <Route path="/officials" element={<OfficialsPortalPage />} />
                   <Route path="/trust" element={<TrustPage />} />
