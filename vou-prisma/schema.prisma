@@ -1,0 +1,184 @@
+datasource db {
+  provider = "cockroachdb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+/// Verified identity — one per verified mobile identity
+model Identity {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider               String
+  provider_subject_hash  String
+  identity_key           String   @unique
+  phone_verified         Boolean  @default(false)
+  phone_e164_hash        String?  @unique
+  assurance_level        String   @default("low")
+  status                 String   @default("active")
+  created_at             DateTime @default(now())
+  last_verified_at       DateTime @default(now())
+
+  signatures             Signature[]
+  validations            Validation[] @relation("WitnessValidations")
+  risk_events            RiskEvent[]
+  idempotency_keys       IdempotencyKey[]
+  audit_events           AuditEvent[]
+
+  @@unique([provider, provider_subject_hash])
+  @@index([identity_key])
+  @@index([phone_e164_hash])
+  @@index([status])
+}
+
+/// The petition being signed
+model Petition {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String
+  description     String
+  consent_version String
+  status          String   @default("active")
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  signatures      Signature[]
+  validations     Validation[]
+
+  @@index([status])
+}
+
+/// A signature on a petition by a verified identity
+model Signature {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  petition_id         String   @db.Uuid
+  identity_id         String   @db.Uuid
+  public_reference    String   @unique
+  public_display_mode String   @default("anonymous")
+  display_name        String?
+  area                String?
+  status              String   @default("SIGNING_PENDING")
+  consent_version     String
+  signed_at           DateTime @default(now())
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  petition            Petition @relation(fields: [petition_id], references: [id])
+  identity            Identity @relation(fields: [identity_id], references: [id])
+  validation_links    ValidationLink[]
+  validations         Validation[]
+
+  @@unique([petition_id, identity_id])
+  @@index([petition_id, status])
+  @@index([public_reference])
+  @@index([signed_at])
+}
+
+/// Secure token for witness validation
+model ValidationLink {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  signature_id String    @db.Uuid
+  token_hash   String    @unique
+  expires_at   DateTime
+  used_at      DateTime?
+  revoked_at   DateTime?
+  status       String    @default("active")
+  created_at   DateTime  @default(now())
+
+  signature    Signature @relation(fields: [signature_id], references: [id])
+
+  @@index([token_hash])
+  @@index([signature_id])
+  @@index([status])
+}
+
+/// A witness validation of a signature
+model Validation {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  petition_id          String   @db.Uuid
+  signature_id         String   @db.Uuid
+  witness_identity_id  String   @db.Uuid
+  status               String   @default("accepted")
+  created_at           DateTime @default(now())
+
+  petition             Petition @relation(fields: [petition_id], references: [id])
+  signature            Signature @relation(fields: [signature_id], references: [id])
+  witness_identity     Identity @relation("WitnessValidations", fields: [witness_identity_id], references: [id])
+
+  @@unique([signature_id, witness_identity_id])
+  @@unique([witness_identity_id, petition_id])
+  @@index([petition_id])
+  @@index([status])
+}
+
+/// Idempotency keys for write operations
+model IdempotencyKey {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identity_id            String   @db.Uuid
+  endpoint               String
+  key_hash               String   @unique
+  request_hash           String
+  response_status        Int
+  response_body_redacted String
+  created_at             DateTime @default(now())
+  expires_at             DateTime
+
+  identity               Identity @relation(fields: [identity_id], references: [id])
+
+  @@index([key_hash])
+  @@index([expires_at])
+}
+
+/// Risk events for abuse detection
+model RiskEvent {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identity_id       String?  @db.Uuid
+  event_type        String
+  risk_level        String
+  redacted_metadata String
+  created_at        DateTime @default(now())
+
+  identity          Identity? @relation(fields: [identity_id], references: [id])
+
+  @@index([identity_id])
+  @@index([event_type])
+  @@index([created_at])
+}
+
+/// Hash-chained audit log
+model AuditEvent {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_id      String   @unique
+  event_type    String
+  actor_type    String
+  actor_id      String?  @db.Uuid
+  object_type   String
+  object_id     String?
+  request_id    String?
+  metadata      String?
+  previous_hash String?
+  event_hash    String
+  created_at    DateTime @default(now())
+
+  identity      Identity? @relation(fields: [actor_id], references: [id])
+
+  @@index([event_type])
+  @@index([object_type, object_id])
+  @@index([created_at])
+}
+
+/// Admin review queue
+model AdminReview {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  object_type  String
+  object_id    String
+  reviewer_id  String?
+  action       String
+  reason       String
+  status       String   @default("pending")
+  created_at   DateTime @default(now())
+  resolved_at  DateTime?
+
+  @@index([status])
+  @@index([object_type, object_id])
+}
