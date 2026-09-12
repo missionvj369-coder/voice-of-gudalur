@@ -11,7 +11,7 @@ const externalSupportSchema: ValidationSchema = {
 };
 
 function makeReq(body: any, params: any = {}) { return { body, params, headers: {} } as any; }
-function makeRes() {
+function makeRes(): any {
   return { statusCode: 200, _json: undefined, status(code) { this.statusCode = code; return this; }, json(obj) { this._json = obj; return this; } };
 }
 
@@ -192,5 +192,6 @@ describe('external supporter flow -- route handler', () => {
     expect(res3._json.count).toBe(2);
   });
 });
+
 
 
