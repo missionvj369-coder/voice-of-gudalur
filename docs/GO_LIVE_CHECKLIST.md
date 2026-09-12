@@ -1,4 +1,4 @@
-# Voice of Gudalur — Go-Live Checklist
+﻿# Voice of Gudalur â€” Go-Live Checklist
 
 **Date:** 2026-09-10
 **Version:** 2.0.0-production
@@ -20,7 +20,7 @@
 ## Database
 
 - [x] Database reachable from Netlify function region
-- [x] Migrations 001–014 applied (verified via `schema_migrations` on 2026-09-10; 014 = external-support CHECK backstops)
+- [x] Migrations 001â€“014 applied (verified via `schema_migrations` on 2026-09-10; 014 = external-support CHECK backstops)
 - [x] Migration 013 applied (creates external_supports, adds external_support_count)
 - [x] Admin bootstrap ran (PLATFORM_ADMIN row created with env hash)
 - [x] Health endpoint returns `{ status: 'ok', db: 'connected' }` (verified live 2026-09-10)
@@ -59,9 +59,9 @@
 - [x] Manifesto stats cached (6s TTL) + CDN edge cache
 - [x] Wildlife incidents / sightings / voice cached (6s TTL each) + CDN edge cache
 - [x] Media list cached (10s TTL) + CDN edge cache
-- [x] `/api/media` compact + bounded: whitelisted fields only (no base64), descriptions ≤280, `?limit/?offset` windows, ONE cached query serves all windows (verified 2026-09-10)
+- [x] `/api/media` compact + bounded: whitelisted fields only (no base64), descriptions â‰¤280, `?limit/?offset` windows, ONE cached query serves all windows (verified 2026-09-10)
 - [x] Gallery bounded initial window (6 items) + "Load more" pagination
-- [x] Per-card skeleton/error/retry — one slow/broken media item cannot block the page
+- [x] Per-card skeleton/error/retry â€” one slow/broken media item cannot block the page
 - [x] Video cards download 0 bytes until opened (static play tile); viewer uses `preload="metadata"`, never `auto`, never autoplay
 - [x] SW `vog-media-cache-v2` caches only `image/*|video/*` responses (never HTML/error pages)
 - [x] `/api/media/:id/file` uses 302 + no-store (never a permanent 301 to an expiring URL)
@@ -78,14 +78,14 @@
 - [x] Petition repository tests
 - [x] Manifesto repository tests
 - [x] Wildlife repository tests
-- [ ] External supporter flow test (TODO: add)
+- [x] External supporter flow test (16 tests: validation + route handler)
 
 ## Build & Deploy
 
 - [x] `npm run build` passes (PWA generated)
 - [x] Netlify configuration (`netlify.toml`) correct
-- [x] API redirect `/api/*` → `/.netlify/functions/api/:splat`
-- [x] SPA fallback `/*` → `/index.html`
+- [x] API redirect `/api/*` â†’ `/.netlify/functions/api/:splat`
+- [x] SPA fallback `/*` â†’ `/index.html`
 - [x] Immutable asset caching (1 year)
 - [x] Service worker + HTML never cached
 
@@ -93,6 +93,7 @@
 
 If deployment fails:
 1. Revert to previous deploy in Netlify dashboard
-2. Database migrations are additive (IF NOT EXISTS) — safe to re-run
-3. Migration 013 adds a new table + column — does not break existing queries
+2. Database migrations are additive (IF NOT EXISTS) â€” safe to re-run
+3. Migration 013 adds a new table + column â€” does not break existing queries
 4. If external_supports table causes issues, the endpoint can be disabled without affecting resident flow
+
