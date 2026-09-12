@@ -5,7 +5,7 @@ import { useLanguage, type Language } from '../../context/LanguageContext';
 import { useAuth, readLocalSignature } from '../../context/AuthContext';
 import {
   Flame, User, LogIn, LogOut, Menu, X, PenLine, BookOpen,
-  Map as MapIcon, PawPrint, IdCard, UserPlus, Facebook,
+  Map as MapIcon, PawPrint, IdCard, UserPlus,
 } from 'lucide-react';
 
 const InstagramIcon = ({ size = 15 }: { size?: number }) => (
@@ -13,6 +13,12 @@ const InstagramIcon = ({ size = 15 }: { size?: number }) => (
     <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
     <circle cx="12" cy="12" r="5" />
     <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+const FacebookIcon = ({ size = 15 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
   </svg>
 );
 import { OPEN_REGISTER_EVENT, OPEN_LOGIN_EVENT } from '../../pages/about_helpers';
@@ -227,7 +233,7 @@ export const Shell: React.FC<{ children: React.ReactNode; petitionOnly?: boolean
                     <InstagramIcon size={15} />
                   </a>
                   <a href="https://www.facebook.com/universalguardtrust" target="_blank" rel="noopener noreferrer" title="Facebook — Universal Guard Trust" aria-label="Universal Guard Trust on Facebook" className="rounded-full border border-[#AED581]/40 p-2 transition hover:bg-[#AED581]/20">
-                    <Facebook size={15} />
+                    <FacebookIcon size={15} />
                   </a>
                 </div>
               </div>
