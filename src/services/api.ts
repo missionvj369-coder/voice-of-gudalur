@@ -294,6 +294,78 @@ export const petitionApi = {
 };
 
 // ─────────────────────────────────────────────────────────────
+// PUBLIC Name+Mobile petition signing (petition-only launch).
+// No account required. The server issues an anti-bot challenge and the
+// DATABASE enforces one-signature-per-mobile (HMAC identity, never the raw
+// number). POSTs need the global CSRF double-submit token, so callers
+// bootstrap the csrf_token cookie via ensureCsrf() once before the sign.
+// ─────────────────────────────────────────────────────────────
+
+export interface PetitionChallenge {
+  challenge: string;   // base64url payload {n,iat,exp}
+  sig: string;         // HMAC signature over the payload
+  exp: number;         // expiry (ms epoch)
+}
+
+export interface PetitionPublicSignResult {
+  ok: boolean;
+  isDuplicate: boolean;
+  signHash: string;
+  verifyUrl: string;
+  batchNo: number;
+  signedAt: string;    // ORIGINAL sign time (authoritative, server-issued)
+  count: number;       // live public signature count after this write
+  message: string;
+}
+
+/** GET /api/auth/csrf → sets the readable csrf_token cookie for mutations. */
+async function ensureCsrf(): Promise<void> {
+  try {
+    await fetch('/api/auth/csrf', { credentials: 'same-origin' });
+  } catch { /* the sign POST will surface a proper CSRF error if it fails */ }
+}
+
+export const petitionPublicApi = {
+  /** GET /api/petition/challenge — signed anti-bot challenge (single-use). */
+  challenge: () => request<PetitionChallenge>('/api/petition/challenge'),
+
+  /** GET /api/petition/count — live authoritative count (6s server TTL). */
+  count: () => request<{ count: number }>('/api/petition/count'),
+
+  /** GET /api/petition/check?mobile=… — UX-only "already signed?" pre-check. */
+  check: (mobile: string) =>
+    request<{ signed: boolean; signHash: string | null }>(
+      `/api/petition/check?mobile=${encodeURIComponent(mobile)}`,
+    ),
+
+  /** Bootstrap the CSRF cookie once (before the first sign POST). */
+  ensureCsrf,
+
+  /** POST /api/petition/sign — one Name + Mobile = one signature (idempotent
+   *  by idempotencyKey: retries return the ORIGINAL response, same result). */
+  sign: (input: {
+    name: string;
+    mobile: string;          // raw as typed — the server re-normalizes (authoritative)
+    challenge: string;
+    sig: string;
+    hp?: string;             // honeypot — must stay empty
+    idempotencyKey: string;
+  }) =>
+    ensureCsrf().then(() =>
+      request<PetitionPublicSignResult>('/api/petition/sign', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    ),
+
+  /** GET /api/petition/verify/:hash — receipt verification (public signs). */
+  verify: (hash: string) =>
+    request<{ valid: boolean; full_name?: string; phone_last4?: string | null; batch_no?: number; signed_at?: string }>(
+      `/api/petition/verify/${encodeURIComponent(hash)}`,
+    ),
+};
+
+// ─────────────────────────────────────────────────────────────
 // Manifesto (Right to Life)
 // ─────────────────────────────────────────────────────────────
 
