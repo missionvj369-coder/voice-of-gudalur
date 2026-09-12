@@ -34,17 +34,57 @@ async function writeJson(file: string, data: unknown) {
 }
 
 async function buildStats() {
-  const totalRow = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
-  const totalNum = Number(totalRow?.count ?? 0);
+  // Use the maintained petition_stats aggregate (falls back to COUNT(*) if not migrated).
+  let totalNum = 0;
+  try {
+    const totalRow = await db.queryOne<{ count: number }>('SELECT signature_count::int AS count FROM petition_stats WHERE id = $1', ['global']);
+    totalNum = Number(totalRow?.count ?? 0);
+  } catch {
+    const totalRow = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
+    totalNum = Number(totalRow?.count ?? 0);
+  }
+
+  // External (non-resident) supporters — table may not be migrated yet.
+  let external = 0;
+  try {
+    const ext = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM external_supports WHERE petition_id = $1', ['global']);
+    external = Number(ext?.count ?? 0);
+  } catch { /* table absent — treat as 0 */ }
+
+  // Gudalur vs Outside split via pincode prefix (64* = The Nilgiris).
+  let gudalur = 0;
+  let outsideGudalur = 0;
+  try {
+    const rows = await db.query<{ c: number }>(
+      `SELECT COUNT(*)::int AS c FROM petition_signs WHERE petition_id = $1 AND pincode ~ '^64'
+       UNION ALL
+       SELECT COUNT(*)::int AS c FROM petition_signs WHERE petition_id = $1 AND pincode IS NOT NULL AND pincode NOT LIKE '64%'
+       UNION ALL
+       SELECT COUNT(*)::int AS c FROM petition_signs WHERE petition_id = $1 AND pincode IS NULL
+       UNION ALL
+       SELECT COUNT(*)::int AS c FROM petition_mobile_signs WHERE petition_id = $1`,
+      ['global'],
+    );
+    gudalur = Number(rows?.rows?.[0]?.c ?? 0);
+    outsideGudalur =
+      Number(rows?.rows?.[1]?.c ?? 0) +
+      Number(rows?.rows?.[2]?.c ?? 0) +
+      Number(rows?.rows?.[3]?.c ?? 0);
+  } catch { /* tables absent — split is 0 */ }
+
   const places = await db.query<{ place: string; count: number }>(
     `SELECT village AS place, COUNT(*)::int AS count
      FROM petition_signs WHERE village IS NOT NULL AND village <> '' GROUP BY village`,
   );
   const clustered = clusterPlaces(places.rows.map((r) => ({ place: String(r.place), count: Number(r.count) }))).slice(0, 10);
-  const external = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM external_supports');
+
   return {
     total: totalNum,
-    external: Number(external?.count ?? 0),
+    validations: totalNum,
+    communityReach: totalNum + external,
+    external,
+    gudalur,
+    outsideGudalur,
     places: clustered,
     updatedAt: new Date().toISOString(),
   };
@@ -57,8 +97,31 @@ async function buildLedger() {
     `SELECT sign_hash, full_name, village, phone_last4, created_at
      FROM petition_signs ORDER BY created_at DESC LIMIT 500`,
   );
+  // Public Name+Mobile signatures (petition-only launch) share the snapshot —
+  // same masked privacy posture; village is empty for public signs.
+  // Graceful: before migration 016 is applied the table doesn't exist (42P01)
+  // — fall back to resident signatures only without failing the build.
+  let mobileRows = { rows: [] as Array<{
+    sign_hash: string; full_name: string; phone_last4: string | null; created_at: string;
+  }> };
+  try {
+    const res = await db.query<{
+      sign_hash: string; full_name: string; phone_last4: string | null; created_at: string;
+    }>(
+      `SELECT sign_hash, full_name, phone_last4, created_at
+       FROM petition_mobile_signs ORDER BY created_at DESC LIMIT 500`,
+    );
+    mobileRows = res;
+  } catch (e: any) {
+    if (e?.code !== '42P01') throw e; // real errors still fail the build
+    console.log('  (petition_mobile_signs not migrated yet — resident signs only)');
+  }
+  const combined = [
+    ...rows.rows,
+    ...mobileRows.rows.map((r) => ({ ...r, village: '' as string | null })),
+  ].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, 500);
   return {
-    signs: rows.rows.map((r) => ({
+    signs: combined.map((r) => ({
       hash: r.sign_hash,
       name: r.full_name,
       village: r.village,

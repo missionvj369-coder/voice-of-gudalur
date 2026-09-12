@@ -117,6 +117,11 @@
 # function (mirrors /api/media). Writes invalidate in-process; the edge TTL is
 # short enough that counters stay fresh.
 [[headers]]
+  for = "/stats.json"
+  [headers.values]
+    Cache-Control = "public, max-age=6, stale-while-revalidate=6"
+
+[[headers]]
   for = "/api/manifesto/stats"
   [headers.values]
     Cache-Control = "public, max-age=6, stale-while-revalidate=6"

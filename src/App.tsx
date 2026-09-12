@@ -6,8 +6,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider, useLanguage, type Language } from './context/LanguageContext';
 import { Shell } from './components/Layout/Shell';
 import { OpeningAnimation } from './components/OpeningAnimation';
+import { PETITION_ONLY } from './config/productionMode';
 
-// Route-level code splitting — every page downloads only when first visited.
 const SignPetitionPage = lazy(() => import('./pages/SignPetitionPage').then((m) => ({ default: m.SignPetitionPage })));
 const Manifesto = lazy(() => import('./pages/Manifesto').then((m) => ({ default: m.Manifesto })));
 const ClosedCorridorsPage = lazy(() => import('./pages/ClosedCorridorsPage').then((m) => ({ default: m.ClosedCorridorsPage })));
@@ -17,6 +17,8 @@ const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage').then((m) => (
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })));
 const OfficialLoginPage = lazy(() => import('./pages/OfficialLoginPage').then((m) => ({ default: m.OfficialLoginPage })));
 const SightingsPage = lazy(() => import('./pages/SightingsPage').then((m) => ({ default: m.SightingsPage })));
+const PetitionOnlyPage = lazy(() => import('./pages/PetitionOnlyPage').then((m) => ({ default: m.PetitionOnlyPage })));
+const TrustPage = lazy(() => import('./pages/TrustPage').then((m) => ({ default: m.TrustPage })));
 
 const RouteFallback: React.FC = () => (
   <div className="min-h-[60vh] flex items-center justify-center" role="status" aria-label="Loading page">
@@ -24,97 +26,59 @@ const RouteFallback: React.FC = () => (
   </div>
 );
 
-const AdminRoutes: React.FC = () => (
+const CampaignDashboard = lazy(() => import('./pages/CampaignDashboard').then((m) => ({ default: m.CampaignDashboard })));
+
+const PetitionOnlyRoutes: React.FC = () => (
   <Suspense fallback={<RouteFallback />}>
     <Routes>
-      <Route path="/admin" element={<AdminLoginPage />} />
-      <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-      <Route path="/official/login" element={<OfficialLoginPage />} />
-      <Route path="/official/set-password" element={<OfficialLoginPage />} />
+      <Route path="/" element={<CampaignDashboard />} />
+      <Route path="/sign-petition" element={<PetitionOnlyPage />} />
+      <Route path="/verify-sign" element={<VerifySignPage />} />
+      <Route path="/trust" element={<TrustPage />} />
+      <Route path="*" element={<CampaignDashboard />} />
     </Routes>
   </Suspense>
 );
 
+const AdminRoutes: React.FC = () => (
+  <Routes>
+    <Route path="/admin/login" element={<AdminLoginPage />} />
+    <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+    <Route path="/official/login" element={<OfficialLoginPage />} />
+  </Routes>
+);
+
 const AppContent: React.FC = () => {
-  const { loading } = useAuth();
-  const { setLang } = useLanguage();
-  const { pathname } = useLocation();
-  // First-visit language gate: shown BEFORE the front page. The chosen
-  // language persists (VoiceOfGudalur_lang_chosen), so returning visitors go
-  // straight into the app in their language.
-  const [langChosen, setLangChosen] = useState<boolean>(() => {
-    try {
-      // ?intro=1 force-shows the opening animation (demo/testing) even for
-      // returning visitors who already chose a language.
-      if (new URLSearchParams(window.location.search).has('intro')) return false;
-      return !!localStorage.getItem('VoiceOfGudalur_lang_chosen');
-    } catch {
-      return true;
-    }
-  });
-  const handleLanguageChosen = (lang: Language) => {
-    try { localStorage.setItem('VoiceOfGudalur_lang_chosen', '1'); } catch { /* ignore */ }
-    setLang(lang);
-    setLangChosen(true);
-  };
-  // WCAG 2.3.3 — honor the user's motion preference for page transitions.
-  const [prefersReducedMotion] = useState<boolean>(() => {
-    try {
-      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    } catch {
-      return false;
-    }
-  });
-
-  // Every navigation starts at the top of the page (no mid-page open; no
-  // sticky scroll between routes). 100% of sessions start at the top.
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  }, [pathname]);
-
-  if (!langChosen) {
-    return <OpeningAnimation onChoose={handleLanguageChosen} />;
-  }
-
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[#1B5E20]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent"></div>
-      </div>
-    );
-  }
-
+  const { lang, setLang } = useLanguage();
+  const location = useLocation();
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [location.pathname]);
+  const [showOpening, setShowOpening] = useState(true);
+  const handleLanguageChange = (l: Language) => { setLang(l); };
   return (
     <>
+      <OpeningAnimation onChoose={() => setShowOpening(false)} />
       <Shell>
-        {/* Maintenance Notice Tab */}
-        <div className="w-full bg-[#9ACD32] text-white text-center py-3 px-4 font-bold text-sm shadow-md">
-          ⚠️ Voice of Gudalur is currently undergoing maintenance. We'll be back shortly. Thank you for your patience!
-        </div>
-        {/* Elegant low-latency page transitions — a light fade + lift that
-            never blocks content (LCP-safe: the page paints on frame one). */}
-        <motion.div
-          key={pathname}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: prefersReducedMotion ? 0 : 0.25, ease: 'easeOut' }}
-          className="min-h-[50vh]"
-        >
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
-              {/* Clean homepage — the Right to Life petition sign-in. */}
-              <Route path="/" element={<SignPetitionPage />} />
-              <Route path="/sign-petition" element={<SignPetitionPage />} />
-              {/* Original home content lives as a topic inside the menu. */}
-              <Route path="/about" element={<Manifesto />} />
-              <Route path="/corridors" element={<ClosedCorridorsPage />} />
-              <Route path="/sightings" element={<SightingsPage />} />
-              <Route path="/verify-sign" element={<VerifySignPage />} />
-              <Route path="/officials" element={<OfficialsPortalPage />} />
-              <Route path="*" element={<SignPetitionPage />} />
-            </Routes>
-          </Suspense>
-        </motion.div>
+        {PETITION_ONLY ? (
+          <PetitionOnlyRoutes />
+        ) : (
+          <>
+            <motion.div key={location.pathname} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, ease: 'easeOut' }} className="min-h-[50vh]">
+              <Suspense fallback={<RouteFallback />}>
+                <Routes>
+                  <Route path="/" element={<CampaignDashboard />} />
+                  <Route path="/sign-petition" element={<SignPetitionPage />} />
+                  <Route path="/about" element={<Manifesto />} />
+                  <Route path="/corridors" element={<ClosedCorridorsPage />} />
+                  <Route path="/sightings" element={<SightingsPage />} />
+                  <Route path="/verify-sign" element={<VerifySignPage />} />
+                  <Route path="/officials" element={<OfficialsPortalPage />} />
+                  <Route path="/trust" element={<TrustPage />} />
+                  <Route path="*" element={<CampaignDashboard />} />
+                </Routes>
+              </Suspense>
+            </motion.div>
+          </>
+        )}
       </Shell>
     </>
   );
@@ -125,25 +89,12 @@ export default function App() {
     <LanguageProvider>
       <AuthProvider>
         <Router>
-          <AdminRoutes />
+          {!PETITION_ONLY && <AdminRoutes />}
           <AppContent />
-          <Toaster
-            position="top-center"
-            toastOptions={{
-              duration: Infinity,
-              style: {
-                borderRadius: '24px',
-                background: '#9ACD32',
-                color: '#FFFFFF',
-                fontSize: '13px',
-                fontWeight: '900',
-                padding: '6px 16px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              },
-            }}
-          />
+          <Toaster position="top-center" toastOptions={{ duration: Infinity, style: { borderRadius: '24px', background: '#9ACD32', color: '#FFFFFF', fontSize: '13px', fontWeight: '900', padding: '6px 16px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' } }} />
         </Router>
       </AuthProvider>
     </LanguageProvider>
   );
 }
+
