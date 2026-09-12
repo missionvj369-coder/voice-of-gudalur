@@ -71,15 +71,23 @@ export const PetitionOnlyPage: React.FC = () => {
   }, []);
 
   const loadCount = useCallback(async () => {
-    // Primary: the authoritative live endpoint (6s server TTL).
-    // Fallback: the CDN snapshot first-paint stats (graceful degradation).
+    // Snapshot-first (CDN-cached /data/stats.json) for instant first paint,
+    // then live /api/petition/count for subsequent polling.
+    // A signature counter never goes DOWN — every setter below guards against
+    // a failed live call (503 during a DB blip) regressing a good count to 0.
+    try {
+      const s = await petitionApi.signStats();
+      if (s && Number(s.total) > 0) { setTotal((prev) => Math.max(prev ?? 0, Number(s.total))); return; }
+    } catch { /* snapshot unavailable — fall through to live */ }
     try {
       const { count } = await petitionPublicApi.count();
-      setTotal(Number(count ?? 0));
+      const n = Number(count ?? 0);
+      if (n > 0) setTotal((prev) => Math.max(prev ?? 0, n));
     } catch {
       try {
         const s = await petitionApi.signStats();
-        setTotal(Number(s?.total ?? 0));
+        const n = Number(s?.total ?? 0);
+        if (n > 0) setTotal((prev) => Math.max(prev ?? 0, n));
       } catch { /* keep the last value */ }
     }
   }, []);

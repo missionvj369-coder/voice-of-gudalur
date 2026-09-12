@@ -45,32 +45,35 @@ async function buildStats() {
   }
 
   // External (non-resident) supporters — table may not be migrated yet.
+  // NOTE: petition_signs has NO petition_id column — never filter by it here.
   let external = 0;
   try {
-    const ext = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM external_supports WHERE petition_id = $1', ['global']);
+    const ext = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM external_supports');
     external = Number(ext?.count ?? 0);
   } catch { /* table absent — treat as 0 */ }
 
   // Gudalur vs Outside split via pincode prefix (64* = The Nilgiris).
+  // RESILIENT: the mobile-signs table may not be migrated yet — it is counted
+  // in its own try/catch so one missing table can never blank the whole split
+  // (a failing UNION here reported gudalur=0/outside=0 with total=14).
   let gudalur = 0;
   let outsideGudalur = 0;
   try {
-    const rows = await db.query<{ c: number }>(
-      `SELECT COUNT(*)::int AS c FROM petition_signs WHERE petition_id = $1 AND pincode ~ '^64'
-       UNION ALL
-       SELECT COUNT(*)::int AS c FROM petition_signs WHERE petition_id = $1 AND pincode IS NOT NULL AND pincode NOT LIKE '64%'
-       UNION ALL
-       SELECT COUNT(*)::int AS c FROM petition_signs WHERE petition_id = $1 AND pincode IS NULL
-       UNION ALL
-       SELECT COUNT(*)::int AS c FROM petition_mobile_signs WHERE petition_id = $1`,
-      ['global'],
+    const row = await db.queryOne<{ g: number; o: number }>(
+      `SELECT
+         SUM(CASE WHEN pincode ~ '^64' THEN 1 ELSE 0 END)::int AS g,
+         SUM(CASE WHEN pincode IS NULL OR pincode NOT LIKE '64%' THEN 1 ELSE 0 END)::int AS o
+       FROM petition_signs`,
     );
-    gudalur = Number(rows?.rows?.[0]?.c ?? 0);
-    outsideGudalur =
-      Number(rows?.rows?.[1]?.c ?? 0) +
-      Number(rows?.rows?.[2]?.c ?? 0) +
-      Number(rows?.rows?.[3]?.c ?? 0);
-  } catch { /* tables absent — split is 0 */ }
+    gudalur = Number(row?.g ?? 0);
+    outsideGudalur = Number(row?.o ?? 0);
+  } catch { /* signs table absent — split stays 0 */ }
+  try {
+    const m = await db.queryOne<{ count: number }>(
+      'SELECT COUNT(*)::int AS count FROM petition_mobile_signs',
+    );
+    outsideGudalur += Number(m?.count ?? 0);
+  } catch { /* mobile table not migrated yet — resident split only */ }
 
   const places = await db.query<{ place: string; count: number }>(
     `SELECT village AS place, COUNT(*)::int AS count

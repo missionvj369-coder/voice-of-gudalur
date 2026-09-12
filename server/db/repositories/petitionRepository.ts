@@ -217,6 +217,56 @@ export interface MyPetitionSign {
  * state. Lets the app restore an accurate "already signed" UI after a
  * re-login, a new device, or a cleared localStorage.
  */
+/**
+ * Read the maintained petition signature count from the petition_stats aggregate
+ * table (updated by a DB trigger on every new signature). This replaces
+ * COUNT(*) on the full petition_signs table — the public sign-stats endpoint
+ * reads this lightweight single-row table instead of scanning the entire
+ * signatures table on every TTL refresh.
+ */
+export async function getPetitionStats(): Promise<{ total: number; updatedAt: string | null }> {
+  const row = await db.queryOne<{ signature_count: number; updated_at: string }>('SELECT signature_count, updated_at FROM petition_stats WHERE id = $1', ['global']);
+  return { total: Number(row?.signature_count ?? 0), updatedAt: row?.updated_at ?? null };
+}
+
+/**
+ * List petition signatures with cursor-based (keyset) pagination.
+ * Replaces the old OFFSET pagination which scans/skips rows on large tables.
+ * Callers pass `cursor` = the created_at timestamp of the last row from the
+ * previous page (null for the first page).
+ */
+export interface PetitionSignListResult {
+  rows: Array<{
+    sign_hash: string; gdr_id: string; full_name: string;
+    village: string | null; batch_no: number; created_at: string;
+  }>;
+  hasMore: boolean;
+  cursor: string | null; // pass this to the next call for the next page
+}
+
+export async function listPetitionSignsCursor(
+  limit = 200,
+  cursor: string | null = null,
+): Promise<PetitionSignListResult> {
+  const safeLimit = Math.min(Math.max(limit, 1), 200);
+  const params: any[] = [safeLimit];
+  let sql = 'SELECT sign_hash, gdr_id, full_name, village, batch_no, created_at FROM petition_signs';
+
+  if (cursor) {
+    params.push(cursor);
+    sql += ' WHERE created_at < $2';
+  }
+  sql += ' ORDER BY created_at DESC LIMIT $1';
+
+  const res = await db.query(sql, params);
+  const rows = res.rows;
+  return {
+    rows,
+    hasMore: rows.length >= safeLimit,
+    cursor: rows.length > 0 ? rows[rows.length - 1].created_at : null,
+  };
+}
+
 export async function getMyPetitionSign(userUid: string): Promise<MyPetitionSign | null> {
   const row = await db.queryOne<{
     sign_hash: string; full_name: string; village: string | null; batch_no: number; created_at: string;

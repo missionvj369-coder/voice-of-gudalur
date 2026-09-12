@@ -65,14 +65,46 @@ export const CampaignDashboard: React.FC = () => {
     let alive = true;
     let timer: ReturnType<typeof setInterval>;
 
+    // Snapshot-first via petitionApi.signStats() (CDN-cached /data/stats.json),
+    // then live /stats.json endpoint. On Netlify the SPA fallback would
+    // otherwise intercept /stats.json and return HTML instead of JSON.
     const fetchStats = async () => {
+      try {
+        // 1) Snapshot-first: instant, always available, no DB hit. The snapshot
+        //    already carries the full metric set (gudalur/outside split, reach).
+        const snap = await petitionApi.signStats();
+        if (alive && snap) {
+          const next: DashboardStats = {
+            total: Number(snap.total) || 0,
+            validations: Number(snap.validations ?? snap.total) || 0,
+            communityReach: Number(snap.communityReach ?? snap.total) || 0,
+            external: Number(snap.external ?? 0) || 0,
+            gudalur: Number(snap.gudalur ?? 0) || 0,
+            outsideGudalur: Number(snap.outsideGudalur ?? 0) || 0,
+            places: snap.places ?? [],
+            updatedAt: snap.updatedAt || new Date().toISOString(),
+          };
+          // Monotonic counters: never let a partial source regress a good value.
+          setStats((prev) => (prev && next.total < prev.total ? prev : next));
+          setLoading(false);
+          return;
+        }
+      } catch { /* snapshot unavailable — fall through to live */ }
+
+      // 2) Live endpoint (serverless function, needs DB).
       try {
         const res = await fetch('/stats.json', { cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const ct = res.headers.get('content-type') ?? '';
+        if (!ct.startsWith('application/json')) throw new Error('Not JSON');
         const data: DashboardStats = await res.json();
-        if (alive) { setStats(data); setLoading(false); }
+        if (alive) {
+          // Monotonic: a live response may lag the snapshot — never regress.
+          setStats((prev) => (prev && Number(data?.total) < prev.total ? prev : data));
+          setLoading(false);
+        }
       } catch {
-        if (!stats) setLoading(false); // never flash to zero on network blip
+        setLoading(false); // never flash to zero on network blip — keep last stats
       }
     };
 

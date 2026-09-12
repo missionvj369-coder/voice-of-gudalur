@@ -10,7 +10,8 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
-import { recordPetitionSign, verifyPetitionSign, listPetitionSigns, getMyPetitionSign } from '../db/repositories/petitionRepository';
+import { recordPetitionSign, verifyPetitionSign, listPetitionSigns, getMyPetitionSign, getPetitionStats } from '../db/repositories/petitionRepository';
+import { getMobileSignByHash } from '../db/repositories/petitionMobileRepository';
 import { requireAuth, requireRole, logAudit } from '../middleware/auth';
 import { db } from '../db/client';
 import { logger } from '../utils/logger';
@@ -126,20 +127,39 @@ router.post('/sign', writeLimiter, requireAuth, async (req: Request, res: Respon
 router.get('/verify/:hash', async (req: Request, res: Response) => {
   try {
     const row = await verifyPetitionSign(req.params.hash);
-    if (!row) return res.status(404).json({ valid: false });
-    // Only masked proof fields are exposed publicly (no raw PII).
-    res.json({
-      valid: true,
-      sign_hash: row.sign_hash,
-      gdr_id: row.gdr_id,
-      full_name: row.full_name,
-      village: row.village,
-      phone_last4: row.phone_last4,
-      aadhaar_last4: row.aadhaar_last4,
-      batch_no: row.batch_no,
-      created_at: row.signed_at,
-      verified: row.verified,
-    });
+    if (row) {
+      // Only masked proof fields are exposed publicly (no raw PII).
+      return res.json({
+        valid: true,
+        sign_hash: row.sign_hash,
+        gdr_id: row.gdr_id,
+        full_name: row.full_name,
+        village: row.village,
+        phone_last4: row.phone_last4,
+        aadhaar_last4: row.aadhaar_last4,
+        batch_no: row.batch_no,
+        created_at: row.signed_at,
+        verified: row.verified,
+      });
+    }
+    // Not a resident receipt — check the public Name+Mobile ledger
+    // (petition_mobile_signs). Same masked proof shape, no PII.
+    const mobileRow = await getMobileSignByHash(req.params.hash);
+    if (mobileRow) {
+      return res.json({
+        valid: true,
+        sign_hash: mobileRow.sign_hash,
+        gdr_id: null,
+        full_name: mobileRow.full_name,
+        village: null,
+        phone_last4: mobileRow.phone_last4,
+        aadhaar_last4: null,
+        batch_no: mobileRow.batch_no,
+        created_at: mobileRow.created_at,
+        verified: true,
+      });
+    }
+    return res.status(404).json({ valid: false });
   } catch (e: any) {
     logger.error('verify:', e.message);
     res.status(500).json({ error: 'Verification failed' });
@@ -190,7 +210,7 @@ router.get('/list', async (_req: Request, res: Response) => {
 router.get('/sign-stats', async (_req: Request, res: Response) => {
   try {
     const data = await cacheWrap(STATS_KEY, STATS_TTL_MS, async () => {
-      const totalRow = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
+      const totalRow = await db.queryOne<{ count: number }>('SELECT signature_count::int AS count FROM petition_stats WHERE id = $1', ['global']);
       const totalNum = Number(totalRow?.count ?? 0);
       const places = await db.query<{ place: string; count: number }>(
         `SELECT village AS place, COUNT(*)::int AS count
@@ -203,7 +223,10 @@ router.get('/sign-stats', async (_req: Request, res: Response) => {
     res.json(data);
   } catch (e: any) {
     logger.error('sign-stats:', e.message);
-    res.json({ total: 0, places: [] });
+    // NEVER answer 200 {total: 0} on a DB outage — clients would overwrite a
+    // good snapshot count with zero (the "14 → 0" flicker). 503 makes every
+    // snapshot-first client keep the last good value instead.
+    res.status(503).json({ error: 'stats temporarily unavailable' });
   }
 });
 
@@ -213,7 +236,7 @@ router.get('/sign-stats', async (_req: Request, res: Response) => {
 router.get('/ledger', async (_req: Request, res: Response) => {
   try {
     const data = await cacheWrap(LEDGER_KEY, LEDGER_TTL_MS, async () => {
-      const total = await db.queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM petition_signs');
+      const total = await db.queryOne<{ count: number }>('SELECT signature_count::int AS count FROM petition_stats WHERE id = $1', ['global']);
       const rows = await db.query<{
         sign_hash: string; full_name: string; village: string; phone_last4: string | null;
         batch_no: number; created_at: string;
@@ -221,9 +244,21 @@ router.get('/ledger', async (_req: Request, res: Response) => {
         `SELECT sign_hash, full_name, village, phone_last4, batch_no, created_at
          FROM petition_signs ORDER BY created_at DESC LIMIT 500`,
       );
+      // Public Name+Mobile signatures (petition-only launch) share the ledger —
+      // same masked privacy posture; village is empty for public signs.
+      const mobileRows = await db.query<{
+        sign_hash: string; full_name: string; phone_last4: string | null;
+        batch_no: number; created_at: string;
+      }>(
+        `SELECT sign_hash, full_name, '' AS village, phone_last4, batch_no, created_at
+         FROM petition_mobile_signs ORDER BY created_at DESC LIMIT 500`,
+      );
+      const combined = [...rows.rows, ...mobileRows.rows.map((r) => ({ ...r, village: '' }))]
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+        .slice(0, 500);
       return {
         total: Number(total?.count ?? 0),
-        signs: rows.rows.map((r) => ({
+        signs: combined.map((r) => ({
           hash: r.sign_hash,
           name: r.full_name,
           village: r.village,

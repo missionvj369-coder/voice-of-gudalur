@@ -49,15 +49,26 @@ const AdminRoutes: React.FC = () => (
 );
 
 const AppContent: React.FC = () => {
-  const { lang, setLang } = useLanguage();
+  const { setLang } = useLanguage();
   const location = useLocation();
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [location.pathname]);
   const [showOpening, setShowOpening] = useState(true);
-  const handleLanguageChange = (l: Language) => { setLang(l); };
   return (
     <>
-      <OpeningAnimation onChoose={() => setShowOpening(false)} />
-      <Shell>
+      {/* The opening overlay MUST unmount when chosen — otherwise it keeps
+          covering the whole app (fixed inset-0 z-[100]) and the "Open Voice of
+          Gudalur" button appears dead. Applying the chosen language here also
+          makes the intro selection stick app-wide. */}
+      {showOpening && (
+        <OpeningAnimation
+          onChoose={(l: Language) => {
+            try { localStorage.setItem('VoiceOfGudalur_lang_chosen', '1'); } catch { /* private mode */ }
+            setLang(l);
+            setShowOpening(false);
+          }}
+        />
+      )}
+      <Shell petitionOnly={PETITION_ONLY}>
         {PETITION_ONLY ? (
           <PetitionOnlyRoutes />
         ) : (

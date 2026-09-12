@@ -7,13 +7,15 @@
  * 'full' to reactivate the full product unchanged.
  *
  *   VITE_APP_MODE=petition   → production shows ONLY the petition page
- *   VITE_APP_MODE=full       → the complete app (default for development)
+ *   VITE_APP_MODE=full       → the complete app (explicit developer opt-in)
+ *   (unset)                  → petition — the clean public campaign launch
+ *
  *   VITE_AI_VOG_ENABLED=false → the AI VOG greeter never mounts (no LLM spend)
  */
 export const APP_MODE: 'petition' | 'full' =
-  (import.meta.env?.VITE_APP_MODE as 'petition' | 'full' | undefined) === 'petition'
-    ? 'petition'
-    : 'full';
+  (import.meta.env?.VITE_APP_MODE as 'petition' | 'full' | undefined) === 'full'
+    ? 'full'
+    : 'petition';
 
 /** True for the current production launch: petition signing ONLY. */
 export const PETITION_ONLY = APP_MODE === 'petition';

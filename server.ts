@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
@@ -21,6 +21,8 @@ import cookieParser from 'cookie-parser';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import authRoutes from './server/routes/auth';
 import petitionRoutes from './server/routes/petitions';
+import petitionPublicRoutes from './server/routes/petitionPublic';
+import civicRoutes from './server/routes/civic';
 import manifestoRoutes from './server/routes/manifesto';
 import wildlifeRoutes from './server/routes/wildlife';
 import officialsRoutes from './server/routes/officials';
@@ -33,6 +35,13 @@ import configRoutes from './server/routes/config';
 import { db } from './server/db/client';
 import { clusterPlaces } from './server/utils/placeCluster';
 import { logger } from './server/utils/logger';
+import { cacheWrap } from './server/utils/ttlCache';
+import { getPetitionStats } from './server/db/repositories/petitionRepository';
+import { requestIdMiddleware } from './server/middleware/requestId';
+import { csrfProtection } from './server/middleware/auth';
+import { emergencyModeHandler, emergencyOnly, isEmergencyMode } from './server/middleware/emergencyMode';
+import { circuitBreaker, withTimeout } from './server/middleware/circuitBreaker';
+import { productionBoundary } from './server/middleware/productionBoundary';
 
 // ─ Open-source AI clients (no proprietary API keys) ─
 interface ChatMessage { role: 'system' | 'user' | 'assistant'; content: string; }
@@ -69,8 +78,23 @@ export async function createApp() {
   // 2 = Netlify proxy → Cloud Run LB; 1 = direct Cloud Run / single proxy.
   app.set('trust proxy', 2);
 
-    app.use(express.json());
+    // ─── Request correlation ID (Phase 33) ───────────────────────────────
+  // Mounts first so every downstream handler and log line carries a trace ID.
+  app.use(requestIdMiddleware);
+
+  // ─── Emergency mode (Phase 27) ──────────────────────────────────────
+  // Sheds non-essential endpoints when EMERGENCY_MODE=1. Must come AFTER
+  // requestId so the 503 response still carries the correlation ID.
+  app.use(emergencyModeHandler);
+
+  app.use(express.json());
   app.use(cookieParser());
+
+  // ─── Global CSRF guard (Phase 39) ──────────────────────────────────
+  // Double-submit cookie pattern. MUST be AFTER cookieParser (to read csrf_token
+  // cookie) and AFTER express.json() (to read JSON body for non-multipart POSTs).
+  // State-changing methods (POST/PUT/DELETE/PATCH) require X-CSRF-Token header.
+  app.use(csrfProtection);
 
   // ─── Response compression ───────────────────────────────────────────────────
   // gzip JSON/HTML before it leaves the function — cuts payload size ~70% and
@@ -115,13 +139,28 @@ export async function createApp() {
       return 'anonymous';
     }
   };
+  // Retry-After header on 429 responses — tells clients how long to wait.
+  // Without this, clients may retry in tight loops and create a retry storm.
   const limiterOpts = { validate: { xForwardedForHeader: false, ip: false } as any };
-  const authRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts });
-  const publicRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts });
-  const writeRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts });
+  const retryAfterSecs = 60; // seconds to wait before retrying
+  const rateLimitHeaders = { standardHeaders: 'draft-7' as const, legacyHeaders: false };
+  const authRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts, ...rateLimitHeaders });
+  const publicRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts, ...rateLimitHeaders });
+  const writeRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: 'Too many requests', keyGenerator: clientKey, ...limiterOpts, ...rateLimitHeaders });
   // Stricter limiter for the civic chat endpoint — it calls an external LLM which
   // is expensive and slow; a burst here is both a cost and a hang vector.
   const aiRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many AI requests', keyGenerator: clientKey, ...limiterOpts });
+
+  // AI VOG feature flag (petition-only launch): set AI_VOG_ENABLED=false to
+  // switch every /api/ai/* endpoint off with a stable 503. The AI code stays
+  // in the codebase untouched — flip the flag to reactivate it later. No
+  // petition-signing path calls AI, so signing never depends on an LLM.
+  const aiGate = (_req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (process.env.AI_VOG_ENABLED === 'false') {
+      return res.status(503).json({ error: 'AI_VOG_DISABLED', fallback: true });
+    }
+    next();
+  };
 
   // Security headers (CSP updated â€” no *.supabase.co, no Realtime websocket)
   app.use((req, res, next) => {
@@ -150,9 +189,38 @@ export async function createApp() {
     next();
   });
 
-  // Health route — also reports DB reachability + required env config so a
-  // broken deployment is diagnosable straight from the browser.
-  app.get('/api/health', async (req, res) => {
+  // ─── Health & readiness endpoints (Phase 34) ─────────────────────────
+  // /api/health — cheap process health, no DB dependency. Load balancers and
+  // monitoring hit this. Must NEVER depend on external systems.
+  app.get('/api/health', async (_req, res) => {
+    res.json({
+      status: 'ok',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      emergency: isEmergencyMode(),
+    });
+  });
+
+  // /api/ready — dependency readiness (DB, storage). More expensive than health.
+  // Used by deployment orchestration to verify the function can serve traffic.
+  app.get('/api/ready', async (_req, res) => {
+    let dbUp = false;
+    try {
+      const { ping } = await import('./server/db/client');
+      dbUp = await ping();
+    } catch { /* dbUp stays false */ }
+    res.status(dbUp ? 200 : 503).json({
+      status: dbUp ? 'ready' : 'degraded',
+      db: dbUp,
+      emergency: isEmergencyMode(),
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Legacy /api/health with DB reachability (kept for backward compat with
+  // existing monitoring — the new /api/ready is the authoritative probe).
+  app.get('/api/health/deep', async (req, res) => {
     let dbUp = false;
     let dbError: string | undefined;
     let poolClients = 0;
@@ -269,7 +337,7 @@ export async function createApp() {
   });
 
   // AI Civic Guide & Crop Doctor API
-  app.post('/api/ai/chat', async (req, res) => {
+  app.post('/api/ai/chat', aiGate, async (req, res) => {
     try {
       const { message, lang = 'en', category = 'general' } = req.body;
       if (!message || typeof message !== 'string') {
@@ -389,7 +457,7 @@ YOUR MANTRA (end every reply with a variation of):
   }
 
   // Lightweight health probe — is the brain reachable right now?
-  app.get('/api/ai/health', async (_req, res) => {
+  app.get('/api/ai/health', aiGate, async (_req, res) => {
     try {
       if (process.env.AI_API_KEY) {
         const base = process.env.AI_BASE_URL || (process.env.AI_PROVIDER === 'groq' ? 'https://api.groq.com/openai/v1' : 'https://api.openai.com/v1');
@@ -407,7 +475,7 @@ YOUR MANTRA (end every reply with a variation of):
     }
   })
 
-  app.post('/api/ai/brain', async (req, res) => {
+  app.post('/api/ai/brain', aiGate, async (req, res) => {
     try {
       const { message = '', lang = 'en', history = [], context = {} } = req.body || {};
       const langName = LANG_NAME[lang] || 'English';
@@ -604,12 +672,25 @@ YOUR MANTRA (end every reply with a variation of):
     }
     res.json({ success: true, push_sent: delivered, push_total: sent });
   });
+  // Production boundary: when PETITION_ONLY_MODE=true, Layer A routes (legacy
+  // registration, Aadhaar, admin, full-app) return 404. Layer B (Civic Signature
+  // Protocol) remains accessible. Layer A code is preserved but inaccessible.
+  app.use(productionBoundary);
+
+  // Mount the new CockroachDB-backed routers (replaces Supabase facades).
+  app.use('/api/auth', authRateLimiter, authRoutes);
 
   // Mount the new CockroachDB-backed routers (replaces Supabase facades).
   app.use('/api/auth', authRateLimiter, authRoutes);
   // Public polled endpoints get the public limiter (120/15min) so a crowd can't
   // hammer the DB; writes are bounded by the write limiter where mounted.
   app.use('/api/petitions', publicRateLimiter, petitionRoutes);
+  // PUBLIC Name+Mobile petition signing (petition-only launch) — its own
+  // stricter limiters are inside the router; global public limiter + CSRF
+  // still apply as outer layers. Mounted at /api/petition (singular) to keep
+  // the resident flow under /api/petitions (plural) completely unchanged.
+  app.use('/api/petition', publicRateLimiter, petitionPublicRoutes);
+  app.use('/api/civic', publicRateLimiter, civicRoutes);
   app.use('/api/manifesto', publicRateLimiter, manifestoRoutes);
   app.use('/api/wildlife', publicRateLimiter, wildlifeRoutes);
   app.use('/api/offline', publicRateLimiter, wildlifeRoutes);
@@ -620,9 +701,78 @@ YOUR MANTRA (end every reply with a variation of):
   app.use('/api/admin', adminOfficialActionsRoutes);
   app.use('/api/admin', adminStatsRoutes);
 
-  app.use('/api/config', publicRateLimiter, configRoutes);
+    app.use('/api/config', publicRateLimiter, configRoutes);
   // Media storage: using CockroachDB only (Storj object storage removed).
   app.use('/api/media', publicRateLimiter, mediaRoutes);
+
+  // ─── PUBLIC READ endpoint — live campaign stats for the view-only dashboard ───
+  // Served at /stats.json (root, NOT /api/*) so the client polls a clean URL.
+  // Reads ONLY from the maintained petition_stats aggregate (DB-trigger
+  // incremented on every signature — never COUNT(*) on the hot path) plus the
+  // external_supports table. 6 s in-process TTL cache collapses a synchronized
+  // crowd into a single DB hit per refresh. The frontend NEVER touches
+  // CockroachDB directly — it only reads this JSON via HTTP.
+  app.get('/stats.json', publicRateLimiter, async (_req, res) => {
+    try {
+      const data = await cacheWrap('petition:dashboard-stats', 6 * 1000, async () => {
+        // Authoritative signature total from the maintained aggregate row.
+        const { total, updatedAt: _ts } = await getPetitionStats();
+
+        // External (non-resident) supporters — table may not be migrated yet.
+        let external = 0;
+        try {
+          const ext = await db.queryOne<{ count: number }>(
+            'SELECT COUNT(*)::int AS count FROM external_supports',
+          );
+          external = Number(ext?.count ?? 0);
+        } catch { /* table absent — treat as 0 */ }
+
+        // Gudalur vs Outside split via pincode prefix (64* = The Nilgiris).
+        // RESILIENT: the mobile-signs table may not be migrated yet - it is
+        // counted in its own try/catch so one missing table can never blank
+        // the whole split (a failing UNION reported 0/0 with total=14).
+        let gudalur = 0;
+        let outsideGudalur = 0;
+        try {
+          const row = await db.queryOne<{ g: number; o: number }>(
+            `SELECT
+               SUM(CASE WHEN pincode ~ '^64' THEN 1 ELSE 0 END)::int AS g,
+               SUM(CASE WHEN pincode IS NULL OR pincode NOT LIKE '64%' THEN 1 ELSE 0 END)::int AS o
+             FROM petition_signs`,
+          );
+          gudalur = Number(row?.g ?? 0);
+          outsideGudalur = Number(row?.o ?? 0);
+        } catch { /* signs table absent - split stays 0 */ }
+        try {
+          const m = await db.queryOne<{ count: number }>(
+            'SELECT COUNT(*)::int AS count FROM petition_mobile_signs',
+          );
+          outsideGudalur += Number(m?.count ?? 0);
+        } catch { /* mobile table not migrated yet - resident split only */ }
+
+        return {
+          total,
+          validations: total,
+          communityReach: total + external,
+          gudalur,
+          outsideGudalur,
+          external,
+          places: [
+            { place: 'Gudalur', count: gudalur },
+            { place: 'Outside Gudalur', count: outsideGudalur },
+          ],
+          updatedAt: new Date().toISOString(),
+        };
+      });
+      res.json(data);
+    } catch (e: any) {
+      logger.error('dashboard-stats:', e?.message);
+      // NEVER answer 200 with zeros on a DB outage - the client would overwrite
+      // its good snapshot count with 0 (the "14 -> 0" flicker). 503 tells every
+      // snapshot-first client to keep the last good value instead.
+      res.status(503).json({ error: 'stats temporarily unavailable' });
+    }
+  });
 
   return app;
 }

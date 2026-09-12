@@ -76,10 +76,14 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
   useEffect(() => {
     let alive = true;
     petitionApi.signStats()
-      .then((s) => { if (alive && s) setLiveCount(Number(s.total) || 0); })
+      .then((s) => {
+        const n = Number(s?.total) || 0;
+        // A signature counter never goes DOWN: a live-API hiccup (e.g. a 503
+        // during a DB blip) must never overwrite a good count with 0.
+        if (alive && n > 0) setLiveCount((prev) => (prev === null || n > prev ? n : prev));
+      })
       .catch(() => {});
-    const t = setTimeout(() => { if (alive) setLiveCount(0); }, 4200);
-    return () => { alive = false; clearTimeout(t); };
+    return () => { alive = false; };
   }, []);
 
   const handleChoose = useCallback((code: Language) => {

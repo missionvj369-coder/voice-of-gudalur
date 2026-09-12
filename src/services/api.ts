@@ -243,12 +243,24 @@ export const petitionApi = {
       `/api/petitions/verify/${encodeURIComponent(hash)}`,
     ),
 
-  /** GET /api/petitions/sign-stats — CDN-snapshot first, live API fallback. */
+  /** GET /api/petitions/sign-stats — CDN-snapshot first, live API fallback.
+   *  The deploy-time snapshot is accepted as fresh for 24 hours (regenerated
+   *  on every write + cron), so the crowd always sees the real count without
+   *  a single DB hit. Shape mirrors the full dashboard stat set. */
   signStats: () =>
-    snapshotOrLive<{ total: number; places: Array<{ place: string; count: number }> }>(
+    snapshotOrLive<{
+      total: number;
+      validations?: number;
+      communityReach?: number;
+      external?: number;
+      gudalur?: number;
+      outsideGudalur?: number;
+      places: Array<{ place: string; count: number }>;
+      updatedAt?: string;
+    }>(
       '/data/stats.json',
       () => request<{ total: number; places: Array<{ place: string; count: number }> }>('/api/petitions/sign-stats'),
-      { acceptStaleMs: 20_000 },
+      { acceptStaleMs: 24 * 60 * 60 * 1000 }, // 24h — deploy snapshots stay fresh for the deploy lifetime
     ),
 
   /** GET /api/petitions/ledger — CDN-snapshot first, live API fallback.

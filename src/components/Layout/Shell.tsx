@@ -1,5 +1,5 @@
 ﻿import React, { createContext, useContext, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { useLanguage, type Language } from '../../context/LanguageContext';
 import { useAuth, readLocalSignature } from '../../context/AuthContext';
@@ -10,6 +10,7 @@ import {
 import { OPEN_REGISTER_EVENT, OPEN_LOGIN_EVENT } from '../../pages/about_helpers';
 import { GudalurIdModal } from '../GudalurIdModal';
 import AIPresenter from '../AIPresenter/AIPresenter';
+import { AI_VOG_ENABLED } from '../../config/productionMode';
 
 import { LoginResidentModal } from '../Auth/LoginResidentModal';
 import { RegisterResidentModal } from '../Auth/RegisterResidentModal';
@@ -53,9 +54,10 @@ const DrawerLink: React.FC<{
   </NavLink>
 );
 
-export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const Shell: React.FC<{ children: React.ReactNode; petitionOnly?: boolean }> = ({ children, petitionOnly = false }) => {
   const { lang, setLang, t } = useLanguage();
   const { profile, logout } = useAuth();
+  const navigate = useNavigate();
   const [idModalOpen, setIdModalOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
@@ -81,6 +83,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const [readyQueue, setReadyQueue] = useState<{ id: number; fn: () => void }[]>([]);
 
   const openIdModal = () => {
+    if (petitionOnly) return; // no profile/ID flows in the petition-only launch
     if (profile?.gudalurId) setIdModalOpen(true);
     else setRegisterModalOpen(true); // no profile → one-step Aadhaar scan registration
   };
@@ -148,7 +151,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         </div>
         <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-gradient-to-r from-[#8DC63F] via-[#A9C84B] to-[#C9D84E] border-b border-[#1B5E20]/25 shadow-sm flex items-center">
           <div className="max-w-5xl mx-auto w-full px-4 flex items-center justify-between">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={openIdModal}>
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => { if (!petitionOnly) openIdModal(); else navigate('/'); }}>
               <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-[#1B5E20] to-[#2E7D32] flex items-center justify-center shrink-0">
                 <Flame size={12} className="text-[#F5F5F5]" />
               </div>
@@ -156,6 +159,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             </div>
 
             <div className="flex items-center gap-2">
+              {!petitionOnly && (
               <button
                 type="button"
                 onClick={openIdModal}
@@ -177,6 +181,7 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                   </span>
                 )}
               </button>
+              )}
               <button
                 type="button"
                 onClick={() => setMenuOpen(true)}
@@ -254,14 +259,18 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
                 <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
                   <DrawerLink to="/" icon={<PenLine size={16} />} label={t('mnu.sign_petition')} onNavigate={() => setMenuOpen(false)} end />
-                  {supportRecorded && (
+                  {supportRecorded && !petitionOnly && (
                     <div className="flex items-center gap-2 rounded-xl border border-[#AED581]/30 bg-[#AED581]/15 px-3 py-2 text-[10px] font-bold leading-snug text-[#AED581]">
                       🌿 {t('mnu.support')}
                     </div>
                   )}
-                  <DrawerLink to="/about" icon={<BookOpen size={16} />} label={t('mnu.about')} onNavigate={() => setMenuOpen(false)} />
-                  <DrawerLink to="/corridors" icon={<MapIcon size={16} />} label={t('mnu.corridors')} onNavigate={() => setMenuOpen(false)} />
-                  <DrawerLink to="/sightings" icon={<PawPrint size={16} />} label={t('mnu.sightings')} onNavigate={() => setMenuOpen(false)} />
+                  {!petitionOnly && (
+                    <>
+                      <DrawerLink to="/about" icon={<BookOpen size={16} />} label={t('mnu.about')} onNavigate={() => setMenuOpen(false)} />
+                      <DrawerLink to="/corridors" icon={<MapIcon size={16} />} label={t('mnu.corridors')} onNavigate={() => setMenuOpen(false)} />
+                      <DrawerLink to="/sightings" icon={<PawPrint size={16} />} label={t('mnu.sightings')} onNavigate={() => setMenuOpen(false)} />
+                    </>
+                  )}
                 </nav>
 
                 <div className="border-t border-[#AED581]/20 px-3 py-4 space-y-3 shrink-0">
@@ -297,43 +306,45 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     ))}
                   </div>
 
-                  {profile ? (
-                    <div className="space-y-2">
-                      <div className="text-[10px] text-[#AED581]/80 font-mono truncate">
-                        {profile.name} · {profile.gudalurId}
+                  {!petitionOnly && (
+                    profile ? (
+                      <div className="space-y-2">
+                        <div className="text-[10px] text-[#AED581]/80 font-mono truncate">
+                          {profile.name} · {profile.gudalurId}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setMenuOpen(false); openIdModal(); }}
+                          className="w-full py-2.5 rounded-xl bg-[#AED581] text-[#1B5E20] font-bold text-xs flex items-center justify-center gap-2"
+                        >
+                          <IdCard size={14} /> {t('mnu.my_card')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => { setMenuOpen(false); await logout(); }}
+                          className="w-full py-2.5 rounded-xl border border-[#AED581]/40 text-[#F5F5F5] font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#388E3C]/40 transition"
+                        >
+                          <LogOut size={14} /> {t('mnu.logout')}
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => { setMenuOpen(false); openIdModal(); }}
-                        className="w-full py-2.5 rounded-xl bg-[#AED581] text-[#1B5E20] font-bold text-xs flex items-center justify-center gap-2"
-                      >
-                        <IdCard size={14} /> {t('mnu.my_card')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => { setMenuOpen(false); await logout(); }}
-                        className="w-full py-2.5 rounded-xl border border-[#AED581]/40 text-[#F5F5F5] font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#388E3C]/40 transition"
-                      >
-                        <LogOut size={14} /> {t('mnu.logout')}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <button
-                        type="button"
-                        onClick={() => { setMenuOpen(false); setRegisterModalOpen(true); }}
-                        className="w-full py-2.5 rounded-xl bg-[#AED581] text-[#1B5E20] font-bold text-xs flex items-center justify-center gap-2"
-                      >
-                        <UserPlus size={14} /> {t('mnu.register')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setMenuOpen(false); setLoginModalOpen(true); }}
-                        className="w-full py-2.5 rounded-xl border border-[#AED581]/40 text-[#F5F5F5] font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#388E3C]/40 transition"
-                      >
-                        <LogIn size={14} /> {t('mnu.login')}
-                      </button>
-                    </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => { setMenuOpen(false); setRegisterModalOpen(true); }}
+                          className="w-full py-2.5 rounded-xl bg-[#AED581] text-[#1B5E20] font-bold text-xs flex items-center justify-center gap-2"
+                        >
+                          <UserPlus size={14} /> {t('mnu.register')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setMenuOpen(false); setLoginModalOpen(true); }}
+                          className="w-full py-2.5 rounded-xl border border-[#AED581]/40 text-[#F5F5F5] font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#388E3C]/40 transition"
+                        >
+                          <LogIn size={14} /> {t('mnu.login')}
+                        </button>
+                      </div>
+                    )
                   )}
                 </div>
               </motion.aside>
@@ -341,12 +352,19 @@ export const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           )}
         </AnimatePresence>
 
-        <GudalurIdModal isOpen={idModalOpen} onClose={() => setIdModalOpen(false)} />
-                <LoginResidentModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onNeedRegister={() => { setLoginModalOpen(false); setRegisterModalOpen(true); }} />
+        {!petitionOnly && <GudalurIdModal isOpen={idModalOpen} onClose={() => setIdModalOpen(false)} />}
+        {!petitionOnly && (
+          <LoginResidentModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onNeedRegister={() => { setLoginModalOpen(false); setRegisterModalOpen(true); }} />
+        )}
 
-        {/* Living-intelligence VOG greeter - global, everywhere, speak-only */}
-        <AIPresenter language={lang} />
-        <RegisterResidentModal isOpen={registerModalOpen} onClose={() => setRegisterModalOpen(false)} onSuccess={() => { setRegisterModalOpen(false); }} onNeedLogin={() => { setRegisterModalOpen(false); setLoginModalOpen(true); }} />
+        {/* Living-intelligence VOG greeter - global, everywhere, speak-only.
+            Flag-gated: never mounts when AI_VOG_ENABLED=false (petition-only
+            launch default) so no AI/LLM resource is spent. Reactivate by
+            setting VITE_AI_VOG_ENABLED=true + VITE_APP_MODE=full. */}
+        {AI_VOG_ENABLED && <AIPresenter language={lang} />}
+        {!petitionOnly && (
+          <RegisterResidentModal isOpen={registerModalOpen} onClose={() => setRegisterModalOpen(false)} onSuccess={() => { setRegisterModalOpen(false); }} onNeedLogin={() => { setRegisterModalOpen(false); setLoginModalOpen(true); }} />
+        )}
       </div>
     </IdModalContext.Provider>
   );

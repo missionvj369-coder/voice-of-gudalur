@@ -6,6 +6,7 @@
  */
 import { Router } from 'express';
 import { db } from '../db/client';
+import { isEmergencyMode } from '../middleware/emergencyMode';
 
 const router = Router();
 
@@ -24,6 +25,11 @@ router.get('/localities', async (_req, res) => {
 router.get('/health', async (_req, res) => {
   const ok = await import('../db/client').then((m) => m.ping());
   res.status(ok ? 200 : 503).json({ status: ok ? 'ok' : 'degraded', db: ok });
+});
+
+/** GET /api/config/emergency — public check whether emergency mode is active. */
+router.get('/emergency', async (_req, res) => {
+  res.json({ emergency: isEmergencyMode() });
 });
 
 export default router;

@@ -53,8 +53,22 @@
     status = 200
     force = true
 
+# Public data snapshots (dist/data/*.json) — MUST come BEFORE the SPA fallback
+# so the crowd's live-counter polls are served as static JSON, not HTML.
+[[redirects]]
+  from = "/data/*"
+  to = "/data/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/stats.json"
+  to = "/data/stats.json"
+  status = 200
+  force = true
+
 # SPA fallback — lets /verify-docket and other client routes work on Netlify.
-# Function routes (/.netlify/functions/*) always take precedence over redirects.
+# Static-file redirects above take priority; this only catches unrecognised paths.
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -112,10 +126,6 @@
   for = "/data/*.json"
   [headers.values]
     Cache-Control = "public, max-age=30, stale-while-revalidate=30"
-# These are public, non-personal aggregate reads already TTL-cached in-process.
-# The CDN edge absorbs a synchronized crowd before it reaches a serverless
-# function (mirrors /api/media). Writes invalidate in-process; the edge TTL is
-# short enough that counters stay fresh.
 [[headers]]
   for = "/stats.json"
   [headers.values]
