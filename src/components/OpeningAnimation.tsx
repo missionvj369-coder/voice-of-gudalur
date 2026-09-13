@@ -5,7 +5,7 @@
  * No animation load, no auto-close. User must tap to continue.
  */
 import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { Flame } from "lucide-react";
 import { motion } from "motion/react";
 import type { Language } from "../context/LanguageContext";
 import { petitionApi } from "../services/api";
@@ -150,11 +150,25 @@ function concernCopy(lang: Language): ConcernCopy {
   return c[lang] || c.en;
 }
 
+/** The exact main-app header bar — peacock green-to-yellow gradient with the brand mark. */
+function OpeningHeader() {
+  return (
+    <header className="absolute top-0 left-0 right-0 z-10 h-14 bg-gradient-to-r from-[#8DC63F] via-[#A9C84B] to-[#C9D84E] border-b border-[#1B5E20]/25 shadow-sm flex items-center">
+      <div className="w-full px-4 flex items-center gap-2">
+        <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-[#1B5E20] to-[#2E7D32] flex items-center justify-center shrink-0">
+          <Flame size={12} className="text-[#F5F5F5]" />
+        </div>
+        <span className="font-black text-xs text-[#123B0D] tracking-wider whitespace-nowrap">VOICE OF GUDALUR</span>
+      </div>
+    </header>
+  );
+}
+
 /** A compact stat tile used on the cost-of-conflict page. */
 function StatTile({ value, caption, sub, className = "" }: { value: string; caption: string; sub?: string; className?: string }) {
   return (
     <div className={`rounded-2xl border border-[#AED581]/30 bg-[#0A3D0A]/60 px-2 py-2 text-center ${className}`}>
-      <p className="text-lg font-black text-white leading-none">{value}</p>
+            <p className="text-lg font-black text-[#8DC63F] leading-none">{value}</p>
       <p className="mt-1 text-[9.5px] leading-tight text-[#C8E6C9]">{caption}</p>
       {sub && <p className="mt-0.5 text-[9.5px] leading-tight text-[#AED581]/85">{sub}</p>}
     </div>
@@ -175,7 +189,6 @@ interface CostCopy {
   natCaption: string;
   demandHeading: string;
   demandSub: string;
-  sign: string;
   open: string;
 }
 
@@ -196,7 +209,6 @@ function costCopy(lang: Language): CostCopy {
       natCaption: "human deaths nationally in 12 years",
       demandHeading: "Demand a Permanent Solution",
       demandSub: "Protect people. Protect wildlife. End repeated deaths.",
-      sign: "Sign the Petition: Gudalur Safety Plan",
       open: "Open Voice of Gudalur",
     },
     ta: {
@@ -214,7 +226,6 @@ function costCopy(lang: Language): CostCopy {
       natCaption: "12 ஆண்டுகளில் நாடு முழுவதும் மனித உயிரிழப்புகள்",
       demandHeading: "நிரந்தர தீர்வைக் கோருங்கள்",
       demandSub: "மக்களைப் பாதுகாப்போம். வனவிலங்குகளைப் பாதுகாப்போம். தொடர் உயிரிழப்புகளை முடிவுக்குக் கொண்டுவருவோம்.",
-      sign: "கூடலூர் பாதுகாப்புத் திட்டம் — மனுவில் கையெழுத்திடுங்கள்",
       open: "Voice of Gudalur ஐத் திறக்கவும்",
     },
     ml: {
@@ -232,7 +243,6 @@ function costCopy(lang: Language): CostCopy {
       natCaption: "12 വർഷത്തിൽ രാജ്യവ്യാപകമായി മനുഷ്യ മരണങ്ങൾ",
       demandHeading: "സ്ഥിരമായ പരിഹാരം ആവശ്യപ്പെടുക",
       demandSub: "ജനങ്ങളെ സംരക്ഷിക്കുക. വന്യജീവികളെ സംരക്ഷിക്കുക. ആവർത്തിക്കുന്ന മരണങ്ങൾ അവസാനിപ്പിക്കുക.",
-      sign: "ഗൂഡല്ലൂർ സുരക്ഷാ പദ്ധതി — പരാതിയിൽ ഒപ്പിടുക",
       open: "Voice of Gudalur തുറക്കുക",
     },
     kn: {
@@ -250,7 +260,6 @@ function costCopy(lang: Language): CostCopy {
       natCaption: "12 ವರ್ಷಗಳಲ್ಲಿ ದೇಶಾದ್ಯಂತ ಮಾನವ ಸಾವುಗಳು",
       demandHeading: "ಶಾಶ್ವತ ಪರಿಹಾರ ಕೋರಿ",
       demandSub: "ಜನರನ್ನು ರಕ್ಷಿಸಿ. ವನ್ಯಜೀವಿಗಳನ್ನು ರಕ್ಷಿಸಿ. ಪುನರಾವರ್ತಿತ ಸಾವುಗಳನ್ನು ನಿಲ್ಲಿಸಿ.",
-      sign: "ಗೂಡಲೂರು ಸುರಕ್ಷತಾ ಯೋಜನೆ — ಅರ್ಜಿಗೆ ಸಹಿ ಹಾಕಿ",
       open: "Voice of Gudalur ತೆರೆಯಿರಿ",
     },
   };
@@ -258,7 +267,6 @@ function costCopy(lang: Language): CostCopy {
 }
 
 export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
-  const navigate = useNavigate();
   const [phase, setPhase] = useState<"languages" | "concern" | "intro" | "cost">("languages");
   const [chosenLang, setChosenLang] = useState<Language | null>(null);
   const [liveCount, setLiveCount] = useState<number | null>(null);
@@ -287,13 +295,10 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
     setPhase("cost");
   }, []);
 
-  const openApp = useCallback((toSign: boolean) => {
+  const openApp = useCallback(() => {
     if (!chosenLang) return;
     onChoose(chosenLang);
-    if (toSign) {
-      setTimeout(() => { try { navigate("/sign-petition"); } catch { /* route unavailable */ } }, 0);
-    }
-  }, [onChoose, chosenLang, navigate]);
+  }, [onChoose, chosenLang]);
 
   const intro = chosenLang ? introCopy(chosenLang, liveCount) : null;
   const concern = chosenLang ? concernCopy(chosenLang) : null;
@@ -301,12 +306,14 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
 
   return (
     <div className="fixed inset-0 z-[100] overflow-y-auto bg-[#1B5E20]" role="dialog" aria-modal="true" aria-label="Welcome">
+      <OpeningHeader />
 
       {/* 1. LANGUAGE SELECTION — Voice of Gudalur title + subtitle first. */}
       {phase === "languages" && (
         <div className="absolute inset-0 overflow-y-auto">
-          <div className="min-h-full flex flex-col items-center justify-center px-4 py-6">
-            <div className="text-center w-full max-w-md">
+                <div className="min-h-screen flex flex-col items-center justify-start px-4 pt-6 pb-4 max-h-screen overflow-y-hidden">
+        <OpeningHeader />
+        <div className="text-center w-full max-w-md mt-2">
               <h1 className="text-white text-3xl font-black tracking-tight">Voice of Gudalur</h1>
               <p className="mt-2 text-[#AED581] text-base font-semibold leading-snug">United for Justice, Safety and the Future of Gudalur</p>
               <div className="mx-auto mt-5 h-0.5 w-24 bg-[#FDE047]/40" />
@@ -326,18 +333,18 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
         </div>
       )}
       {/* 2. THE CONCERN — topic on header, subtitle, mission heading + action. */}
-      {phase === "concern" && concern && (
+            {phase === "concern" && concern && (
         <div className="absolute inset-0 overflow-y-auto">
-          <div className="min-h-full flex flex-col items-center px-4 pt-2 pb-5">
-            {/* Animated coexistence scene */}
-            <div className="relative w-full max-w-sm h-24 mb-3">
+          <div className="min-h-screen flex flex-col items-center px-4 pt-10 pb-3 max-h-screen overflow-y-hidden">
+            {/* Coexistence scene — icons on TOP */}
+            <div className="relative w-full max-w-sm h-18 mb-1.5">
               {/* Elephant — gentle float left, facing inward */}
               <motion.div
                 className="absolute left-2 bottom-0"
                 animate={{ y: [0, -7, 0], rotate: [0, 2, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               >
-                <ElephantIcon size={44} className="text-[#AED581] drop-shadow-lg" />
+                <ElephantIcon size={40} className="text-[#AED581] drop-shadow-lg" />
               </motion.div>
               {/* Tiger — gentle float right, facing inward */}
               <motion.div
@@ -345,7 +352,7 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
                 animate={{ y: [0, -5, 0], rotate: [0, -2, 0] }}
                 transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
               >
-                <TigerIcon size={40} className="text-[#FDE047] drop-shadow-lg" />
+                <TigerIcon size={36} className="text-[#FDE047] drop-shadow-lg" />
               </motion.div>
               {/* Human — stands peacefully center */}
               <motion.div
@@ -353,7 +360,7 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
                 animate={{ y: [0, -4, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }}
               >
-                <HumanIcon size={30} className="text-[#E8F5E9] drop-shadow-lg" />
+                <HumanIcon size={26} className="text-[#E8F5E9] drop-shadow-lg" />
               </motion.div>
               {/* Subtle ground shadow */}
               <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-40 h-2 rounded-full bg-black/20 blur-sm" />
@@ -389,7 +396,7 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
               <button
                 type="button"
                 onClick={handleConcernContinue}
-                className="mt-3 w-full py-2.5 rounded-xl bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] border border-[#AED581]/30 text-white font-bold text-[13px] tracking-wide active:scale-95 transition hover:from-[#388E3C] hover:to-[#2E7D32]"
+                                className="mt-3 w-full py-2.5 rounded-xl bg-gradient-to-r from-[#8DC63F] via-[#A9C84B] to-[#C9D84E] border border-[#FDE047]/20 text-[#123B0D] font-black text-[13px] tracking-wide active:scale-95 transition hover:from-[#9BD047] hover:via-[#B4D052] hover:to-[#D2E056] shadow-md"
               >
                 Continue • தொடரவும் • തുടരുക • ಮುಂದುವರಿಯಿರಿ
               </button>
@@ -399,14 +406,15 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
       )}
       {/* 3. VOG LIVING INTRO — the assistant introduces the movement. */}
       {phase === "intro" && intro && (
-        <div className="absolute inset-0 overflow-y-auto">
-          <div className="min-h-full flex flex-col items-center justify-center px-4 py-6">
-            <div className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/90 border border-[#FDE047]/30 shadow-2xl p-4 sm:p-5 text-center">
-              <p className="text-[#FDE047] font-black tracking-[0.2em] text-[10px]">VOG - VOICE OF GUDALUR</p>
-              <p className="mt-3 text-white font-bold text-sm sm:text-base leading-snug">{intro.self}</p>
-              <p className="mt-2 text-[#FDE047] font-bold text-sm leading-snug">{intro.live}</p>
-              <p className="mt-2 text-[12px] sm:text-[13px] leading-snug text-[#AED581]/95">{intro.cta}</p>
-              <button type="button" onClick={handleIntroContinue} className="mt-4 w-full py-2.5 rounded-xl bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-[#F5F5F5] font-black text-[13px] tracking-wide active:scale-95 transition">
+              <div className="absolute inset-0 overflow-y-auto">
+          <div className="min-h-screen flex flex-col items-center justify-start px-4 pt-10 pb-3 max-h-screen overflow-y-hidden">
+            <OpeningHeader />
+            <div className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/90 border border-[#FDE047]/30 shadow-2xl p-3 text-center">
+              <p className="text-[#FDE047] font-black tracking-[0.2em] text-[9px]">VOG - VOICE OF GUDALUR</p>
+              <p className="mt-2 text-white font-bold text-sm leading-snug">{intro.self}</p>
+              <p className="mt-1.5 text-[#FDE047] font-bold text-sm leading-snug">{intro.live}</p>
+              <p className="mt-1.5 text-[11px] sm:text-[12px] leading-snug text-[#AED581]/95">{intro.cta}</p>
+              <button type="button" onClick={handleIntroContinue} className="mt-3 w-full py-2.5 rounded-xl bg-gradient-to-r from-[#8DC63F] via-[#A9C84B] to-[#C9D84E] text-[#123B0D] font-black text-[13px] tracking-wide active:scale-95 transition hover:from-[#9BD047] hover:via-[#B4D052] hover:to-[#D2E056] shadow-md">
                 {intro.next}
               </button>
             </div>
@@ -415,53 +423,47 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
       )}
 
       {/* 4. COST OF HUMAN–WILDLIFE CONFLICT — the data behind the grievance. */}
-      {phase === "cost" && cost && (
+            {phase === "cost" && cost && (
         <div className="absolute inset-0 overflow-y-auto">
-          <div className="min-h-full flex flex-col items-center px-4 pt-2 pb-5">
+          <div className="min-h-screen flex flex-col items-center px-4 pt-10 pb-4 max-h-screen overflow-y-hidden">
+            <OpeningHeader />
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7 }}
-              className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/30 p-4 sm:p-5"
+              className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/30 p-3"
             >
               <p className="text-[#FDE047] text-[10px] font-black tracking-[0.2em] uppercase text-center">Voice of Gudalur</p>
-              <h1 className="mt-1 text-white text-lg sm:text-xl font-black tracking-tight text-center">{cost.title}</h1>
+              <h1 className="mt-0.5 text-white text-base sm:text-lg font-black tracking-tight text-center">{cost.title}</h1>
 
-              <p className="mt-2.5 text-[#AED581] text-[11px] font-bold">{cost.gudalurLabel}</p>
-              <div className="grid grid-cols-3 gap-1.5 mt-1">
+              <p className="mt-1.5 text-[#AED581] text-[10px] font-bold">{cost.gudalurLabel}</p>
+              <div className="grid grid-cols-3 gap-1">
                 <StatTile value="18" caption={cost.c2023} />
                 <StatTile value="61+" caption={cost.c612023} />
                 <StatTile value="300+" caption={cost.c50y} />
               </div>
 
-              <p className="mt-2.5 text-[#AED581] text-[11px] font-bold">{cost.tnLabel}</p>
-              <div className="mt-1">
+              <p className="mt-1.5 text-[#AED581] text-[10px] font-bold">{cost.tnLabel}</p>
+              <div className="mt-0.5">
                 <StatTile value="685" caption={cost.tnCaption} />
               </div>
 
-              <p className="mt-2.5 text-[#AED581] text-[11px] font-bold">{cost.natLabel}</p>
-              <div className="mt-1">
+              <p className="mt-1.5 text-[#AED581] text-[10px] font-bold">{cost.natLabel}</p>
+              <div className="mt-0.5">
                 <StatTile value="1,160+" caption={cost.eleCaption} sub={cost.eleBreakdown} />
               </div>
-              <div className="grid grid-cols-2 gap-1.5 mt-1.5">
+              <div className="grid grid-cols-2 gap-1 mt-1">
                 <StatTile value="1,300+" caption={cost.fencesCaption} />
                 <StatTile value="5,000+" caption={cost.natCaption} />
               </div>
 
-              <div className="mt-3 border-t border-[#FDE047]/25" />
-              <h2 className="mt-2 text-white text-base sm:text-lg font-black text-center">{cost.demandHeading}</h2>
-              <p className="mt-1 text-[#E6F7E6] text-[12px] text-center leading-snug">{cost.demandSub}</p>
+                            <div className="mt-2 border-t border-[#FDE047]/25" />
+              <h2 className="mt-2 text-white text-sm sm:text-base font-black text-center">{cost.demandHeading}</h2>
+              <p className="mt-1 text-[#E6F7E6] text-[10px] text-center leading-snug">{cost.demandSub}</p>
               <button
                 type="button"
-                onClick={() => openApp(true)}
-                className="mt-3 w-full py-2.5 rounded-xl bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] text-[#F5F5F5] font-black text-[13px] tracking-wide active:scale-95 transition"
-              >
-                {cost.sign}
-              </button>
-              <button
-                type="button"
-                onClick={() => openApp(false)}
-                className="mt-2 w-full py-2 rounded-xl border border-[#AED581]/40 text-[#AED581] font-bold text-[13px] active:scale-95 transition"
+                onClick={openApp}
+                className="mt-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-[#8DC63F] via-[#A9C84B] to-[#C9D84E] text-[#123B0D] font-black text-[12px] tracking-wide active:scale-95 transition hover:from-[#9BD047] hover:via-[#B4D052] hover:to-[#D2E056] shadow-md"
               >
                 {cost.open}
               </button>
