@@ -151,7 +151,7 @@ export const CampaignDashboard: React.FC = () => {
       </div>
 
        {/* ── Metrics grid: live counters ── */}
-       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
          <MetricCard
            icon={<BarChart3 size={22} className="text-[#AED581]" />}
            label={t('home.title')}
@@ -265,17 +265,17 @@ function MetricCard({
   sub: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
-      <div className="flex items-center justify-center gap-1.5 mb-2">
+    <div className="rounded-xl border border-[#AED581]/30 bg-[#0A3D0A]/60 p-2.5 text-center">
+      <div className="flex items-center justify-center gap-1 mb-1">
         {icon}
-        <span className="text-xs font-bold text-[#9CA3AF] uppercase tracking-widest">
+        <span className="text-[10px] font-bold text-[#AED581] uppercase tracking-widest">
           {label}
         </span>
       </div>
-      <div className="text-2xl font-black text-[#E8F5E9] tracking-tight">
+      <div className="text-xl font-black text-[#FDE047] tracking-tight">
         {fmt(value)}
       </div>
-      <p className="text-xs text-[#6B7280] mt-1">{sub}</p>
+      <p className="text-[10px] text-[#C8E6C9] mt-0.5">{sub}</p>
     </div>
   );
 }

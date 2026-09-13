@@ -384,7 +384,7 @@ return (
 {/* 4. COST OF HUMAN–WILDLIFE CONFLICT — the data behind the grievance. */}
       {phase === "cost" && cost && (
         <div className="min-h-[calc(100vh-56px)] flex flex-col items-center justify-center px-4">
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/60 p-3 ">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/60 p-3 pt-6">
             <p className="text-[#FDE047] text-[10px] font-black tracking-[0.2em] uppercase text-center">Voice of Gudalur</p>
             <h1 className="mt-0.5 text-[#FDE047] text-sm sm:text-base font-black tracking-tight text-center">{cost.title}</h1>
             <p className="mt-1 text-[#9CE5AD] text-[10px] font-bold">{cost.gudalurLabel}</p>
