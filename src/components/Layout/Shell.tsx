@@ -58,8 +58,10 @@ const DrawerLink: React.FC<{
     end={end}
     onClick={onNavigate}
     className={({ isActive }) =>
-      `flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition ${
-        isActive ? 'bg-[#AED581] text-[#1B5E20]' : 'text-[#F5F5F5]/85 hover:text-[#F5F5F5] hover:bg-[#388E3C]/40'
+      `flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${
+        isActive
+          ? 'bg-[var(--color-accent-400)] text-[var(--color-primary-900)] shadow-md'
+          : 'text-[var(--color-neutral-100)]/85 hover:text-[var(--color-neutral-100)] hover:bg-[var(--color-primary-600)]/40'
       }`
     }
   >
