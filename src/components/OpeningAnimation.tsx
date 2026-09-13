@@ -71,6 +71,7 @@ function introCopy(lang: Language, count: number | null): IntroCopy {
 interface ConcernCopy {
   subtitle: string;
   heading: string;
+  executedBy: string;
   org: string;
   orgName: string;
   orgTail: string;
@@ -92,6 +93,7 @@ function concernCopy(lang: Language): ConcernCopy {
       org: "Organized by",
       orgName: "Universal Guard Trust (UGT)",
       orgTail: " — a non-political, citizen-led initiative documenting human–wildlife conflict in Gudalur taluk.",
+      executedBy: "Executed by Voice of Gudalur",
       actionLabel: "Our Action:",
       action: "Grievance #18982473 filed with the Chief Minister's Grievance Cell on 03 Sep 2026 — assigned to the Gudalur District Forest Officer, pending action.",
       demandLabel: "Our Demand:",
@@ -107,6 +109,7 @@ function concernCopy(lang: Language): ConcernCopy {
       org: "ஏற்பாடு:",
       orgName: "Universal Guard Trust (UGT)",
       orgTail: " — கூடலூர் வட்டாரத்தில் மனித–வனவிலங்கு மோதலை ஆவணப்படுத்தும் அரசியல் சாராத குடிமக்கள் அமைப்பு.",
+      executedBy: "Voice of Gudalur ஆல் நடத்தப்படுகிறது",
       actionLabel: "எங்கள் செயல்:",
       action: "03 செப் 2026 அன்று முதல்வர் முகவரியில் குறை #18982473 பதிவு செய்யப்பட்டது — கூடலூர் வனத்துறை அதிகாரிக்கு ஒதுக்கப்பட்டு நடவடிக்கை நிலுவையில் உள்ளது.",
       demandLabel: "எங்கள் கோரிக்கை:",
@@ -122,6 +125,7 @@ function concernCopy(lang: Language): ConcernCopy {
       org: "സംഘടിപ്പിക്കുന്നത്:",
       orgName: "Universal Guard Trust (UGT)",
       orgTail: " — ഗൂഡല്ലൂർ താലൂക്കിലെ മനുഷ്യ–വന്യജീവി സംഘർഷം രേഖപ്പെടുത്തുന്ന രാഷ്ട്രീയമില്ലാത്ത പൗര സംഘടന.",
+      executedBy: "Voice of Gudalur ന് നടത്തപ്പെടുന്നു",
       actionLabel: "ഞങ്ങളുടെ പ്രവർത്തനം:",
       action: "03 സെപ്റ്റംബർ 2026-ന് മുഖ്യമന്ത്രിയുടെ മുഖവുരയിൽ പരാതി #18982473 സമർപ്പിച്ചു — ഗൂഡല്ലൂർ വനമേഖലാ ഉദ്യോഗസ്ഥനു കൈമാറി, നടപടി നിലവിലുണ്ട്.",
       demandLabel: "ഞങ്ങളുടെ ആവശ്യം:",
@@ -137,6 +141,7 @@ function concernCopy(lang: Language): ConcernCopy {
       org: "ಸಂಘಟನೆ:",
       orgName: "Universal Guard Trust (UGT)",
       orgTail: " — ಗೂಡಲೂರು ತಾಲೂಕಿನ ಮಾನವ–ವನ್ಯಜೀವಿ ಸಂಘರ್ಷವನ್ನು ದಾಖಲಿಸುವ ರಾಜಕೀಯೇತರ ನಾಗರಿಕ ಸಂಸ್ಥೆ.",
+      executedBy: "Voice of Gudalur ಯಿಂದ ನಿರ್ವಹಿಸಲ್ಪಡುತ್ತದೆ",
       actionLabel: "ನಮ್ಮ ಕ್ರಮ:",
       action: "03 ಸೆಪ್ಟೆಂಬರ್ 2026 ರಂದು ಮುಖ್ಯಮಂತ್ರಿಗಳ ಮುಖವರಿಯಲ್ಲಿ ದೂರು #18982473 ದಾಖಲಾಗಿದೆ — ಗೂಡಲೂರು ಅರಣ್ಯ ಇಲಾಖೆ ಅಧಿಕಾರಿಗೆ ನಿಯೋಜಿಸಲಾಗಿದ್ದು, ಕ್ರಮ ಬಾಕಿ ಇದೆ.",
       demandLabel: "ನಮ್ಮ ಬೇಡಿಕೆ:",
@@ -304,175 +309,118 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
   const concern = chosenLang ? concernCopy(chosenLang) : null;
   const cost = chosenLang ? costCopy(chosenLang) : null;
 
-  return (
+return (
     <div className="fixed inset-0 z-[100] overflow-y-auto bg-[#1B5E20]" role="dialog" aria-modal="true" aria-label="Welcome">
       <OpeningHeader />
 
       {/* 1. LANGUAGE SELECTION — Voice of Gudalur title + subtitle first. */}
       {phase === "languages" && (
-                <div className="absolute inset-0 overflow-y-auto">
-          <div className="min-h-screen flex flex-col items-center justify-center px-4 pt-[60px] pb-4 max-h-screen overflow-y-hidden">
-            <OpeningHeader />
-            <div className="text-center w-full max-w-md">
-              <h1 className="text-white text-3xl font-black tracking-tight">Voice of Gudalur</h1>
-              <p className="mt-2 text-[#AED581] text-base font-semibold leading-snug">United for Justice, Safety and the Future of Gudalur</p>
-              <div className="mx-auto mt-5 h-0.5 w-24 bg-[#FDE047]/40" />
-              <p className="text-[#FDE047] text-xs font-black tracking-[0.22em] uppercase mt-5">Select Your Language</p>
-              <p className="text-[#C8E6C9] text-xs mt-1">Choose your language to continue</p>
-            </div>
-            <div className="mt-6 w-full max-w-md grid grid-cols-2 gap-3">
-              {OPTIONS.map((o) => (
-                <button key={o.code} type="button" onClick={() => handleChoose(o.code)} className="rounded-2xl border border-[#AED581]/35 bg-[#AED581]/10 hover:bg-[#AED581]/25 active:scale-[0.97] transition p-5 text-center focus:outline-none focus:ring-2 focus:ring-[#F59E0B]" lang={o.code}>
-                  <span className="block text-2xl font-black text-white">{o.native}</span>
-                  <span className="block text-xs font-bold text-[#C8E6C9] mt-1">{o.greeting}</span>
-                  <span className="block text-[11px] text-[#FDE047] mt-1 font-semibold">{o.cta}</span>
-                </button>
-              ))}
-            </div>
+        <div className="min-h-screen flex flex-col items-center px-4 pt-[60px] pb-4">
+          <OpeningHeader />
+          <div className="text-center w-full max-w-md mt-[-10px]">
+            <h1 className="text-white text-3xl font-black tracking-tight">Voice of Gudalur</h1>
+            <p className="mt-2 text-[#AED581] text-base font-semibold leading-snug">United for Justice, Safety and the Future of Gudalur</p>
+            <div className="mx-auto mt-5 h-0.5 w-24 bg-[#FDE047]/40" />
+            <p className="text-[#FDE047] text-xs font-black tracking-[0.22em] uppercase mt-5">Select Your Language</p>
+            <p className="text-[#C8E6C9] text-xs mt-1">Choose your language to continue</p>
+          </div>
+          <div className="mt-5 w-full max-w-md grid grid-cols-2 gap-3">
+            {OPTIONS.map((o) => (
+              <button key={o.code} type="button" onClick={() => handleChoose(o.code)} className="rounded-2xl border border-[#AED581]/35 bg-[#AED581]/10 hover:bg-[#AED581]/25 active:scale-[0.97] transition p-4 text-center focus:outline-none focus:ring-2 focus:ring-[#F59E0B]" lang={o.code}>
+                <span className="block text-2xl font-black text-white">{o.native}</span>
+                <span className="block text-xs font-bold text-[#C8E6C9] mt-1">{o.greeting}</span>
+                <span className="block text-[11px] text-[#FDE047] mt-1 font-semibold">{o.cta}</span>
+              </button>
+            ))}
           </div>
         </div>
       )}
-      {/* 2. THE CONCERN — topic on header, subtitle, mission heading + action. */}
-            {phase === "concern" && concern && (
-        <div className="absolute inset-0 overflow-y-auto">
-          <div className="min-h-screen flex flex-col items-center px-4 pt-[60px] pb-2 max-h-screen overflow-y-hidden">
-            <OpeningHeader />
-            {/* Coexistence scene — icons integrated into the header/top area */}
-            <div className="relative w-full max-w-sm h-16 mb-1 -mt-[22px]">
-              {/* Elephant — gentle float left, facing inward */}
-              <motion.div
-                className="absolute left-2 bottom-0"
-                animate={{ y: [0, -7, 0], rotate: [0, 2, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <ElephantIcon size={40} className="text-[#AED581] drop-shadow-lg" />
-              </motion.div>
-              {/* Tiger — gentle float right, facing inward */}
-              <motion.div
-                className="absolute right-2 bottom-0"
-                animate={{ y: [0, -5, 0], rotate: [0, -2, 0] }}
-                transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-              >
-                <TigerIcon size={36} className="text-[#FDE047] drop-shadow-lg" />
-              </motion.div>
-              {/* Human — stands peacefully center */}
-              <motion.div
-                className="absolute left-1/2 -translate-x-1/2 bottom-0"
-                animate={{ y: [0, -4, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-              >
-                <HumanIcon size={26} className="text-[#E8F5E9] drop-shadow-lg" />
-              </motion.div>
-              {/* Subtle ground shadow */}
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-40 h-2 rounded-full bg-black/20 blur-sm" />
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-              className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/30 p-4 text-center"
-            >
-              {/* Topic on header */}
-              <h1 className="text-[#FDE047] text-lg sm:text-xl font-black tracking-wide">Voice of Gudalur</h1>
-              <p className="mt-0.5 text-[#C8E6C9] text-[12px] sm:text-[13px] font-semibold leading-snug">{concern.subtitle}</p>
-              <div className="mx-auto mt-2 h-0.5 w-14 bg-[#FDE047]/40" />
-              {/* Second main heading */}
-              <h2 className="text-white mt-2 text-base sm:text-lg font-black leading-snug">{concern.heading}</h2>
-              <p className="mt-2 text-[#AED581] text-[12px] leading-snug">
-                {concern.org} <span className="font-bold text-[#FDE047]">{concern.orgName}</span>{concern.orgTail}
-              </p>
-              <p className="mt-1.5 text-[#E6F7E6] text-[12px] leading-snug">
-                <span className="font-bold text-[#FDE047]">{concern.actionLabel}</span> {concern.action}
-              </p>
-              <p className="mt-1.5 text-[#E6F7E6] text-[12px] leading-snug">
-                <span className="font-bold text-[#FDE047]">{concern.demandLabel}</span> {concern.demand}
-              </p>
-              <p className="mt-1.5 text-[#E6F7E6] text-[12px] leading-snug">
-                <span className="font-bold text-[#FDE047]">{concern.approachLabel}</span> {concern.approach}
-              </p>
-              <p className="mt-1.5 text-[#C8E6C9] text-[11px] leading-snug">
-                <span className="font-bold">{concern.consentLabel}</span> {concern.consent}
-              </p>
-              <button
-                type="button"
-                onClick={handleConcernContinue}
-                className="mt-3 w-full py-2.5 rounded-xl bg-gradient-to-r from-[#8DC63F] via-[#A9C84B] to-[#C9D84E] border border-[#FDE047]/20 text-[#123B0D] font-black text-[13px] tracking-wide active:scale-95 transition hover:from-[#9BD047] hover:via-[#B4D052] hover:to-[#D2E056] shadow-md"
-              >
-                Continue • தொடரவும் • തുടരുക • ಮುಂದುವರಿಯಿರಿ
-              </button>
+{/* 2. THE CONCERN — topic on header, subtitle, mission heading + action. */}
+      {phase === "concern" && concern && (
+        <div className="min-h-screen flex flex-col items-center px-4 pt-[60px] pb-2">
+          <OpeningHeader />
+          {/* Coexistence scene — icons on top */}
+          <div className="relative w-full max-w-sm h-12 mb-0.5 -mt-[14px]">
+            <motion.div className="absolute left-1 bottom-0" animate={{ y: [0, -5, 0] }} transition={{ duration: 4, repeat: Infinity }}>
+              <ElephantIcon size={32} className="text-[#8DC63F] drop-shadow-lg" />
             </motion.div>
+            <motion.div className="absolute right-1 bottom-0" animate={{ y: [0, -5, 0] }} transition={{ duration: 3.5, repeat: Infinity, delay: 0.5 }}>
+              <TigerIcon size={28} className="text-[#FDE047] drop-shadow-lg" />
+            </motion.div>
+            <motion.div className="absolute left-1/2 -translate-x-1/2 bottom-0" animate={{ y: [0, -3, 0] }} transition={{ duration: 3, repeat: Infinity, delay: 1 }}>
+              <HumanIcon size={20} className="text-[#E8F5E9] drop-shadow-lg" />
+            </motion.div>
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-1.5 rounded-full bg-black/20 blur-sm" />
           </div>
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }} className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/60 p-3 text-center">
+            <h1 className="text-[#FDE047] text-lg sm:text-xl font-black tracking-wide">Voice of Gudalur</h1>
+            <p className="mt-0.5 text-[#C8E6C9] text-[11px] sm:text-[12px] font-semibold leading-snug">{concern.subtitle}</p>
+            <div className="mx-auto mt-1.5 h-0.5 w-12 bg-[#FDE047]/40" />
+            <h2 className="text-[#FDE047] mt-1 text-base sm:text-lg font-black leading-snug">{concern.heading}</h2>
+            <p className="mt-1.5 text-[#E6F7E6] text-[12px] leading-snug">{concern.org} <span className="font-bold text-[#FDE047]">{concern.orgName}</span>{concern.orgTail}</p>
+            <p className="mt-0.5 text-[#FDE047] text-[12px] font-bold leading-snug">{concern.executedBy}</p>
+            <p className="mt-1 text-[#E6F7E6] text-[12px] leading-snug"><span className="font-bold text-[#FDE047]">{concern.actionLabel}</span> {concern.action}</p>
+            <p className="mt-1 text-[#E6F7E6] text-[12px] leading-snug"><span className="font-bold text-[#FDE047]">{concern.demandLabel}</span> {concern.demand}</p>
+            <p className="mt-1 text-[#E6F7E6] text-[12px] leading-snug"><span className="font-bold text-[#FDE047]">{concern.approachLabel}</span> {concern.approach}</p>
+            <p className="mt-1 text-[#C8E6C9] text-[11px] leading-snug"><span className="font-bold">{concern.consentLabel}</span> {concern.consent}</p>
+            <button type="button" onClick={handleConcernContinue} className="mt-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-[#8DC63F] via-[#A9C84B] to-[#C9D84E] border border-[#FDE047]/20 text-[#123B0D] font-black text-[13px] tracking-wide active:scale-95 transition shadow-md">
+              Continue • தொடரவும் • തുടരുക • ಮುಂದುವರಿಯಿರಿ
+            </button>
+          </motion.div>
         </div>
-            )}
-      {/* 3. VOG LIVING INTRO — the assistant introduces the movement. */}
+      )}
+{/* 3. VOG LIVING INTRO — the assistant introduces the movement. */}
       {phase === "intro" && intro && (
-                      <div className="absolute inset-0 overflow-y-auto">
-          <div className="min-h-screen flex flex-col items-center justify-center px-4 pt-[60px] pb-3 max-h-screen overflow-y-hidden">
-            <OpeningHeader />
-            <div className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/90 border border-[#FDE047]/30 shadow-2xl p-3 text-center">
-              <p className="text-[#FDE047] font-black tracking-[0.2em] text-[9px]">VOG - VOICE OF GUDALUR</p>
-              <p className="mt-2 text-white font-bold text-sm leading-snug">{intro.self}</p>
-              <p className="mt-1.5 text-[#FDE047] font-bold text-sm leading-snug">{intro.live}</p>
-              <p className="mt-1.5 text-[11px] sm:text-[12px] leading-snug text-[#AED581]/95">{intro.cta}</p>
-              <button type="button" onClick={handleIntroContinue} className="mt-3 w-full py-2.5 rounded-xl bg-gradient-to-r from-[#8DC63F] via-[#A9C84B] to-[#C9D84E] text-[#123B0D] font-black text-[13px] tracking-wide active:scale-95 transition hover:from-[#9BD047] hover:via-[#B4D052] hover:to-[#D2E056] shadow-md">
-                {intro.next}
-              </button>
-            </div>
+        <div className="min-h-screen flex flex-col items-center justify-center px-4 pt-[60px] pb-3">
+          <OpeningHeader />
+          <div className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/60 shadow-2xl p-4 text-center mt-[-14px]">
+            <p className="text-[#FDE047] font-black tracking-[0.2em] text-[9px]">VOG - VOICE OF GUDALUR</p>
+            <p className="mt-2 text-[#E6F7E6] font-bold text-base sm:text-lg leading-snug">{intro.self}</p>
+            <p className="mt-1.5 text-[#C8E6C9] font-bold text-base sm:text-lg leading-snug">{intro.live}</p>
+            <p className="mt-1.5 text-[12px] sm:text-[13px] leading-snug text-[#9CE5AD]/95">{intro.cta}</p>
+            <button type="button" onClick={handleIntroContinue} className="mt-3 w-full py-3 rounded-xl bg-gradient-to-r from-[#8DC63F] via-[#A9C84B] to-[#C9D84E] text-[#123B0D] font-black text-[13px] tracking-wide active:scale-95 transition shadow-md">
+              {intro.next}
+            </button>
           </div>
         </div>
       )}
-
-      {/* 4. COST OF HUMAN–WILDLIFE CONFLICT — the data behind the grievance. */}
-            {phase === "cost" && cost && (
-                <div className="absolute inset-0 overflow-y-auto">
-          <div className="min-h-screen flex flex-col items-center px-4 pt-[60px] pb-3 max-h-screen overflow-y-hidden">
-            <OpeningHeader />
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7 }}
-              className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/30 p-3 mt-[-8px]">
-              <p className="text-[#FDE047] text-[10px] font-black tracking-[0.2em] uppercase text-center">Voice of Gudalur</p>
-              <h1 className="mt-0.5 text-white text-base sm:text-lg font-black tracking-tight text-center">{cost.title}</h1>
-
-              <p className="mt-1.5 text-[#AED581] text-[10px] font-bold">{cost.gudalurLabel}</p>
-              <div className="grid grid-cols-3 gap-1">
-                <StatTile value="18" caption={cost.c2023} />
-                <StatTile value="61+" caption={cost.c612023} />
-                <StatTile value="300+" caption={cost.c50y} />
-              </div>
-
-              <p className="mt-1.5 text-[#AED581] text-[10px] font-bold">{cost.tnLabel}</p>
-              <div className="mt-0.5">
-                <StatTile value="685" caption={cost.tnCaption} />
-              </div>
-
-              <p className="mt-1.5 text-[#AED581] text-[10px] font-bold">{cost.natLabel}</p>
-              <div className="mt-0.5">
-                <StatTile value="1,160+" caption={cost.eleCaption} sub={cost.eleBreakdown} />
-              </div>
-              <div className="grid grid-cols-2 gap-1 mt-1">
-                <StatTile value="1,300+" caption={cost.fencesCaption} />
-                <StatTile value="5,000+" caption={cost.natCaption} />
-              </div>
-
-                            <div className="mt-2 border-t border-[#FDE047]/25" />
-              <h2 className="mt-2 text-white text-sm sm:text-base font-black text-center">{cost.demandHeading}</h2>
-              <p className="mt-1 text-[#E6F7E6] text-[10px] text-center leading-snug">{cost.demandSub}</p>
-              <button
-                type="button"
-                onClick={openApp}
-                className="mt-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-[#8DC63F] via-[#A9C84B] to-[#C9D84E] text-[#123B0D] font-black text-[12px] tracking-wide active:scale-95 transition hover:from-[#9BD047] hover:via-[#B4D052] hover:to-[#D2E056] shadow-md"
-              >
-                {cost.open}
-              </button>
-            </motion.div>
-          </div>
+{/* 4. COST OF HUMAN–WILDLIFE CONFLICT — the data behind the grievance. */}
+      {phase === "cost" && cost && (
+        <div className="min-h-screen flex flex-col items-center justify-center px-4 pt-[60px] pb-3">
+          <OpeningHeader />
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/60 p-3 mt-[-10px]">
+            <p className="text-[#FDE047] text-[10px] font-black tracking-[0.2em] uppercase text-center">Voice of Gudalur</p>
+            <h1 className="mt-0.5 text-[#FDE047] text-sm sm:text-base font-black tracking-tight text-center">{cost.title}</h1>
+            <p className="mt-1 text-[#9CE5AD] text-[10px] font-bold">{cost.gudalurLabel}</p>
+            <div className="grid grid-cols-3 gap-1">
+              <StatTile value="18" caption={cost.c2023} />
+              <StatTile value="61+" caption={cost.c612023} />
+              <StatTile value="300+" caption={cost.c50y} />
+            </div>
+            <p className="mt-1.5 text-[#9CE5AD] text-[10px] font-bold">{cost.tnLabel}</p>
+            <div className="mt-0.5">
+              <StatTile value="685" caption={cost.tnCaption} />
+            </div>
+            <p className="mt-1.5 text-[#9CE5AD] text-[10px] font-bold">{cost.natLabel}</p>
+            <div className="mt-0.5">
+              <StatTile value="1,160+" caption={cost.eleCaption} sub={cost.eleBreakdown} />
+            </div>
+            <div className="grid grid-cols-2 gap-1 mt-1">
+              <StatTile value="1,300+" caption={cost.fencesCaption} />
+              <StatTile value="5,000+" caption={cost.natCaption} />
+            </div>
+            <div className="mt-2 border-t border-[#FDE047]/25" />
+            <h2 className="mt-1.5 text-[#FDE047] text-sm sm:text-base font-black text-center">{cost.demandHeading}</h2>
+            <p className="mt-0.5 text-[#C8E6C9] text-[10px] text-center leading-snug">{cost.demandSub}</p>
+            <button type="button" onClick={openApp} className="mt-2 w-full py-3 rounded-xl bg-gradient-to-r from-[#8DC63F] via-[#A9C84B] to-[#C9D84E] text-[#123B0D] font-black text-[13px] tracking-wide active:scale-95 transition shadow-md">
+              {cost.open}
+            </button>
+          </motion.div>
         </div>
       )}
     </div>
   );
 };
+
 
 export default OpeningAnimation;
