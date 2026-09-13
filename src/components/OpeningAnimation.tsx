@@ -315,9 +315,8 @@ return (
 
       {/* 1. LANGUAGE SELECTION — Voice of Gudalur title + subtitle first. */}
       {phase === "languages" && (
-        <div className="min-h-screen flex flex-col items-center px-4 pt-[60px] pb-4">
-          <OpeningHeader />
-          <div className="text-center w-full max-w-md mt-[-10px]">
+        <div className="min-h-[calc(100vh-56px)] flex flex-col items-center justify-center px-4">
+          <div className="text-center w-full max-w-md ">
             <h1 className="text-white text-3xl font-black tracking-tight">Voice of Gudalur</h1>
             <p className="mt-2 text-[#AED581] text-base font-semibold leading-snug">United for Justice, Safety and the Future of Gudalur</p>
             <div className="mx-auto mt-5 h-0.5 w-24 bg-[#FDE047]/40" />
@@ -337,10 +336,9 @@ return (
       )}
 {/* 2. THE CONCERN — topic on header, subtitle, mission heading + action. */}
       {phase === "concern" && concern && (
-        <div className="min-h-screen flex flex-col items-center px-4 pt-[60px] pb-2">
-          <OpeningHeader />
+        <div className="min-h-[calc(100vh-56px)] flex flex-col items-center justify-center px-4">
           {/* Coexistence scene — icons on top */}
-          <div className="relative w-full max-w-sm h-12 mb-0.5 -mt-[14px]">
+          <div className="relative w-full max-w-sm h-12 mb-0.5">
             <motion.div className="absolute left-1 bottom-0" animate={{ y: [0, -5, 0] }} transition={{ duration: 4, repeat: Infinity }}>
               <ElephantIcon size={32} className="text-[#8DC63F] drop-shadow-lg" />
             </motion.div>
@@ -371,9 +369,8 @@ return (
       )}
 {/* 3. VOG LIVING INTRO — the assistant introduces the movement. */}
       {phase === "intro" && intro && (
-        <div className="min-h-screen flex flex-col items-center justify-center px-4 pt-[60px] pb-3">
-          <OpeningHeader />
-          <div className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/60 shadow-2xl p-4 text-center mt-[-14px]">
+        <div className="min-h-[calc(100vh-56px)] flex flex-col items-center justify-center px-4">
+          <div className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/60 shadow-2xl p-4 text-center ">
             <p className="text-[#FDE047] font-black tracking-[0.2em] text-[9px]">VOG - VOICE OF GUDALUR</p>
             <p className="mt-2 text-[#E6F7E6] font-bold text-base sm:text-lg leading-snug">{intro.self}</p>
             <p className="mt-1.5 text-[#C8E6C9] font-bold text-base sm:text-lg leading-snug">{intro.live}</p>
@@ -386,9 +383,8 @@ return (
       )}
 {/* 4. COST OF HUMAN–WILDLIFE CONFLICT — the data behind the grievance. */}
       {phase === "cost" && cost && (
-        <div className="min-h-screen flex flex-col items-center justify-center px-4 pt-[60px] pb-3">
-          <OpeningHeader />
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/60 p-3 mt-[-10px]">
+        <div className="min-h-[calc(100vh-56px)] flex flex-col items-center justify-center px-4">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/60 p-3 ">
             <p className="text-[#FDE047] text-[10px] font-black tracking-[0.2em] uppercase text-center">Voice of Gudalur</p>
             <h1 className="mt-0.5 text-[#FDE047] text-sm sm:text-base font-black tracking-tight text-center">{cost.title}</h1>
             <p className="mt-1 text-[#9CE5AD] text-[10px] font-bold">{cost.gudalurLabel}</p>
