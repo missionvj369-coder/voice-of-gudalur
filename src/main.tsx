@@ -45,7 +45,7 @@ if ('serviceWorker' in navigator) {
   let currentBuild: string | null = null;
   let reloading = false;
   const bootedAt = Date.now();
-  const GRACE_MS = 2 * 60 * 1000; // 2-minute no-reload grace window after boot
+  const GRACE_MS = 5 * 60 * 1000; // 5-minute no-reload grace window after boot
 
   const readVersion = async () => {
     try {

@@ -131,7 +131,7 @@ export const LocationGate: React.FC<LocationGateProps> = ({ children, onLocation
           );
         }
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
     );
   }, [onLocation, flashNotice]);
 

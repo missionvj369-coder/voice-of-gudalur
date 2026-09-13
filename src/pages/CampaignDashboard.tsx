@@ -123,9 +123,9 @@ export const CampaignDashboard: React.FC = () => {
   const external = stats?.external ?? 0;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 pb-16">
+    <div className="mx-auto max-w-4xl space-y-4 pb-16">
       {/* ── Hero: live signature counter ── */}
-      <div className="text-center space-y-6">
+      <div className="text-center space-y-3">
         <div>
           <p className="text-xs font-black uppercase tracking-widest text-[#9CA3AF]">
             {t('home.live').replace('{n}', fmt(total))}
@@ -138,20 +138,18 @@ export const CampaignDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Pulse dot + "live" indicator */}
-        <div className="flex justify-center items-center gap-2">
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+        {/* Pulse dot + LIVE indicator */}
+        <div className="flex items-center gap-2 mt-1">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8DC63F] opacity-60"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#AED581]"></span>
           </span>
-          <span className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest">
-            LIVE — updates every 15s
-          </span>
+          <span className="text-[10px] font-black text-[#AED581] uppercase tracking-widest">LIVE</span>
         </div>
       </div>
 
-       {/* ── Metrics grid: live counters ── */}
-       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+       {/* ── Metrics grid ── */}
+       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
          <MetricCard
            icon={<BarChart3 size={22} className="text-[#AED581]" />}
            label={t('home.title')}
