@@ -26,6 +26,8 @@ interface AuthContextType {
     lng?: number;
   }) => Promise<UserProfile>;
   loginResident: (phone?: string, gudalurId?: string) => Promise<UserProfile>;
+  loginWithGoogle: (idToken: string) => Promise<UserProfile>;
+  loginWithTelegram: (payload: Record<string, any>) => Promise<UserProfile>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateLocality: (localityId: string, customPlaceName?: string, pincode?: string) => Promise<void>;
@@ -56,6 +58,12 @@ const AuthContext = createContext<AuthContextType>({
     throw new Error('Not implemented');
   },
   loginResident: async () => {
+    throw new Error('Not implemented');
+  },
+  loginWithGoogle: async () => {
+    throw new Error('Not implemented');
+  },
+  loginWithTelegram: async () => {
     throw new Error('Not implemented');
   },
   logout: async () => {},
@@ -428,6 +436,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  /** POST /api/auth/google — sign in / register with a Google account. */
+  const loginWithGoogle = async (idToken: string): Promise<UserProfile> => {
+    try {
+      const res = await authApi.google(idToken);
+      if (!res?.resident) throw new Error('Google sign-in failed');
+      const prof = applyPlatformAdminOverride(toUserProfile(res.resident));
+      persistProfile(prof);
+      setUser(toAuthUser(prof));
+      void syncPetitionSignature(prof);
+      return prof;
+    } catch (e: any) {
+      const msg = String((e && e.message) || '');
+      if (e?.status === 503 || /not configured/i.test(msg)) {
+        throw new Error('Google sign-in is not available on this server yet.');
+      }
+      if (e?.status === 401 || /invalid/i.test(msg)) {
+        throw new Error('Google sign-in failed — please try again.');
+      }
+      throw e;
+    }
+  };
+
+  /** POST /api/auth/telegram — sign in / register with a Telegram account. */
+  const loginWithTelegram = async (payload: Record<string, any>): Promise<UserProfile> => {
+    try {
+      const res = await authApi.telegram(payload);
+      if (!res?.resident) throw new Error('Telegram sign-in failed');
+      const prof = applyPlatformAdminOverride(toUserProfile(res.resident));
+      persistProfile(prof);
+      setUser(toAuthUser(prof));
+      void syncPetitionSignature(prof);
+      return prof;
+    } catch (e: any) {
+      const msg = String((e && e.message) || '');
+      if (e?.status === 503 || /not configured/i.test(msg)) {
+        throw new Error('Telegram sign-in is not available on this server yet.');
+      }
+      if (e?.status === 401 || /invalid|expired/i.test(msg)) {
+        throw new Error('Telegram sign-in failed — please try again.');
+      }
+      throw e;
+    }
+  };
+
   const updateLocality = async (localityId: string, customPlaceName?: string, pincode?: string) => {
     const loc = GUDALUR_LOCALITIES.find((l) => l.id === localityId);
     if (!profile) return;
@@ -548,6 +600,8 @@ return (
       acquireLiveLocation,
       registerResident,
       loginResident,
+      loginWithGoogle,
+      loginWithTelegram,
       logout,
       refreshProfile,
       updateLocality,

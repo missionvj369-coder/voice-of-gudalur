@@ -1,6 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Phone, MapPin, User, CheckCircle2, Loader2, ShieldCheck, LogIn, CreditCard } from 'lucide-react';
+import { SiGoogle, SiTelegram } from 'react-icons/si';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { OPEN_LOGIN_EVENT } from '../../pages/about_helpers';
@@ -17,7 +18,7 @@ interface RegisterResidentModalProps {
 export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
   isOpen, onClose, onSuccess, onRegistered, onNeedLogin,
 }) => {
-  const { registerResident } = useAuth();
+  const { registerResident, loginWithGoogle, loginWithTelegram } = useAuth();
   const { t } = useLanguage();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -25,6 +26,7 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
   const [pincode, setPincode] = useState('');
   const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [socialBusy, setSocialBusy] = useState<'google' | 'telegram' | null>(null);
 
   if (!isOpen) return null;
 
@@ -74,6 +76,42 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
     } finally {
       setIsSubmitting(false);
       // Release the critical-flow guard
+      try { sessionStorage.removeItem('vog_user_active'); } catch { /* ignore */ }
+    }
+  };
+
+  const handleSocialGoogle = async () => {
+    setSocialBusy('google');
+    try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
+    try {
+      // Get the Google OAuth URL from the server and redirect
+      const res = await fetch('/api/auth/google/url');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || 'Google sign-in is not available');
+      }
+      const data = await res.json() as { url: string };
+      window.location.href = data.url;
+    } catch (err: any) {
+      toast.error(err?.message || 'Google sign-in failed');
+      setSocialBusy(null);
+      try { sessionStorage.removeItem('vog_user_active'); } catch { /* ignore */ }
+    }
+  };
+
+  const handleSocialTelegram = async () => {
+    setSocialBusy('telegram');
+    // CRITICAL-FLOW GUARD
+    try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
+    try {
+      // Telegram Login Widget requires a bot token configured on the server
+      // The widget opens a popup for the user to authorize
+      toast.info('Telegram sign-in requires server configuration (TELEGRAM_BOT_TOKEN). Please register with your phone number.');
+      setSocialBusy(null);
+    } catch (err: any) {
+      toast.error(err?.message || 'Telegram sign-in failed');
+      setSocialBusy(null);
+    } finally {
       try { sessionStorage.removeItem('vog_user_active'); } catch { /* ignore */ }
     }
   };
@@ -147,6 +185,22 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
                     {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
                     <span>{isSubmitting ? t('reg.submitting') : t('reg.submit')}</span>
                   </button>
+                  {/* Social sign-in: Google + Telegram */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-px bg-slate-200" />
+                    <span className="text-[10px] text-slate-400 uppercase tracking-widest">or continue with</span>
+                    <div className="flex-1 h-px bg-slate-200" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" disabled={socialBusy !== null} onClick={handleSocialGoogle}
+                      className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition disabled:opacity-50">
+                      {socialBusy === 'google' ? <Loader2 size={16} className="animate-spin" /> : <SiGoogle size={16} className="text-blue-500" />} Google
+                    </button>
+                    <button type="button" disabled={socialBusy !== null} onClick={handleSocialTelegram}
+                      className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition disabled:opacity-50">
+                      {socialBusy === 'telegram' ? <Loader2 size={16} className="animate-spin" /> : <SiTelegram size={16} className="text-sky-500" />} Telegram
+                    </button>
+                  </div>
                   <button type="button" onClick={handleNeedLogin}
                     className="w-full py-2.5 rounded-2xl border-2 border-emerald-600 text-emerald-700 font-bold text-xs hover:bg-emerald-50 transition flex items-center justify-center gap-2">
                     <LogIn size={14} /><span>{t('reg.login_cta')}</span>

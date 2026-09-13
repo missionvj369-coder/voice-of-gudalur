@@ -105,6 +105,20 @@ export const authApi = {
       body: JSON.stringify(input),
     }),
 
+  /** POST /api/auth/google — sign in / register with a Google ID token. */
+  google: (idToken: string) =>
+    request<{ resident: AuthUser; csrfToken: string }>('/api/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ idToken }),
+    }),
+
+  /** POST /api/auth/telegram — sign in / register with Telegram Login Widget payload. */
+  telegram: (payload: Record<string, any>) =>
+    request<{ resident: AuthUser; csrfToken: string }>('/api/auth/telegram', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
   // ─── Admin ─────────────────────────────────────────────────────────
 
   /** POST /api/admin/login — admin login with GDR ID + password. */

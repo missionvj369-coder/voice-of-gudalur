@@ -141,6 +141,250 @@ router.post('/lookup', async (req: Request, res: Response) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────
+// Google OAuth + Telegram Login Widget auth
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Verify a Google ID token. Returns the verified payload or null.
+ * Uses Google's public keys (JWKS) to validate the JWT signature.
+ */
+async function verifyGoogleIdToken(idToken: string): Promise<Record<string, any> | null> {
+  try {
+    const parts = idToken.split('.');
+    if (parts.length !== 3) return null;
+    const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString());
+    if (!header.kid) return null;
+    const certsRes = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+    if (!certsRes.ok) return null;
+    const certs = await certsRes.json() as { keys: Array<{ kid: string; n: string; e: string }> };
+    const key = certs.keys.find(k => k.kid === header.kid);
+    if (!key) return null;
+    const crypto = await import('crypto');
+    const publicKey = crypto.createPublicKey({ key: { kty: 'RSA', n: key.n, e: key.e, alg: 'RS256', kid: header.kid }, format: 'jwk' });
+    const verify = crypto.createVerify('RSA-SHA256');
+    verify.update(`${parts[0]}.${parts[1]}`);
+    const signature = Buffer.from(parts[2], 'base64url');
+    if (!verify.verify(publicKey, signature)) return null;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+    if (payload.aud !== process.env.GOOGLE_CLIENT_ID) return null;
+    if (!['accounts.google.com', 'https://accounts.google.com'].includes(payload.iss)) return null;
+    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) return null;
+    return payload;
+  } catch (e: any) {
+    logger.error('google id token verify:', e.message);
+    return null;
+  }
+}
+
+/** Verify Telegram Login Widget authentication hash. */
+function verifyTelegramHash(payload: Record<string, any>, botToken: string): boolean {
+  try {
+    const crypto = require('crypto');
+    const fields = Object.keys(payload).filter(k => k !== 'hash').sort().map(k => `${k}=${payload[k]}`).join('\n');
+    const secretKey = crypto.createHash('sha256').update(botToken).digest();
+    const computedHash = crypto.createHmac('sha256', secretKey).update(fields).digest('hex');
+    return computedHash === payload.hash;
+  } catch { return false; }
+}
+
+/** Find or create a resident from a Google/Telegram social identity. */
+async function findOrCreateSocialResident(provider: 'google' | 'telegram', identity: {
+  subject: string; name: string; email?: string; phone?: string; photoUrl?: string;
+}) {
+  // 1. Look up by provider + subject
+  let row = await db.queryOne<any>(
+    'SELECT uid FROM users WHERE provider = $1 AND provider_subject = $2',
+    [provider, identity.subject],
+  );
+  // 2. For Google, also try by email (user may have registered with same email before)
+  if (!row && provider === 'google' && identity.email) {
+    row = await db.queryOne<any>('SELECT uid FROM users WHERE email = $1', [identity.email]);
+  }
+  if (row) {
+    // Update provider link if not already set
+    await db.execute(
+      `UPDATE users SET
+        provider = CASE WHEN provider = '' THEN $1 ELSE provider END,
+        provider_subject = CASE WHEN provider_subject = '' THEN $2 ELSE provider_subject END,
+        provider_email = CASE WHEN provider_email = '' THEN $3 ELSE provider_email END,
+        avatar_url = COALESCE(avatar_url, $4),
+        updated_at = now()
+       WHERE uid = $5`,
+      [provider, identity.subject, identity.email ?? '', identity.photoUrl ?? null, row.uid],
+    );
+  } else {
+    // 3. Create new resident with a Gudalur ID
+    const uid = crypto.randomUUID();
+    const gudalurId = await allocateGudalurId();
+    const name = identity.name || (provider === 'google' ? 'Google User' : 'Telegram User');
+    await db.withTransaction(async (tx) => {
+      await tx.query(
+        `INSERT INTO users (uid, phone, gudalur_id, name, email, role, verification_level,
+           provider, provider_subject, provider_email, avatar_url)
+         VALUES ($1,$2,$3,$4,$5,'LOCAL_MEMBER','PHONE_VERIFIED',$6,$7,$8,$9)`,
+        [uid, identity.phone || null, gudalurId, name, identity.email || null,
+         provider, identity.subject, identity.email || '', identity.photoUrl || null],
+      );
+    });
+    row = { uid };
+  }
+  // Return the full resident profile
+  const full = await db.queryOne<any>(
+    `SELECT uid, phone, gudalur_id, name, email, locality_id, locality_name,
+            custom_place_name, pincode, role, verification_level, lat, lng,
+            created_at, updated_at, is_blood_donor, blood_group, avatar_url, bio
+     FROM users WHERE uid = $1`,
+    [row.uid],
+  );
+  if (!full) throw new Error('Failed to load resident after social auth');
+  return rowToResident(full);
+}
+
+/** POST /api/auth/google — sign in / register with a Google ID token. */
+router.post('/google', async (req: Request, res: Response) => {
+  try {
+    const idToken = req.body?.idToken;
+    if (!idToken || typeof idToken !== 'string') {
+      return res.status(400).json({ error: 'Google ID token is required' });
+    }
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      return res.status(503).json({ error: 'Google sign-in is not configured' });
+    }
+    const payload = await verifyGoogleIdToken(idToken);
+    if (!payload) return res.status(401).json({ error: 'Invalid Google ID token' });
+    const resident = await findOrCreateSocialResident('google', {
+      subject: payload.sub,
+      name: payload.name || payload.email?.split('@')[0] || 'Google User',
+      email: payload.email,
+      phone: payload.phone_number,
+      photoUrl: payload.picture,
+    });
+    const sessionUser = {
+      uid: resident.uid, phone: resident.phone, gudalurId: resident.gudalurId,
+      name: resident.name, role: resident.role, kind: 'user' as const, localityName: resident.localityName,
+    };
+    const session = await createSession(sessionUser, req.get('user-agent'), req.ip);
+    setSessionCookies(res, session);
+    res.json({ resident, csrfToken: session.csrfToken });
+  } catch (e: any) {
+    logger.error('google auth:', e.message);
+    res.status(500).json({ error: `Google sign-in failed — ${e.message}` });
+  }
+});
+
+/**
+ * GET /api/auth/google/url — returns the Google OAuth2 authorization URL.
+ * The frontend redirects the user here; Google redirects back to /api/auth/google/callback.
+ */
+router.get('/google/url', (_req: Request, res: Response) => {
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    return res.status(503).json({ error: 'Google sign-in is not configured' });
+  }
+  const redirectUri = `${process.env.SITE_URL || 'http://localhost:3000'}/api/auth/google/callback`;
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'openid email profile',
+    access_type: 'online',
+    prompt: 'consent',
+  });
+  res.json({ url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` });
+});
+
+/**
+ * GET /api/auth/google/callback — handles the Google OAuth2 callback.
+ * Exchanges the code for tokens, fetches user info, creates/looks up the resident,
+ * sets session cookies, and redirects back to the app.
+ */
+router.get('/google/callback', async (req: Request, res: Response) => {
+  try {
+    const code = req.query.code as string | undefined;
+    if (!code) return res.redirect('/?google_auth=error&reason=no_code');
+
+    const redirectUri = `${process.env.SITE_URL || 'http://localhost:3000'}/api/auth/google/callback`;
+
+    // Exchange authorization code for tokens
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID || '',
+        client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }).toString(),
+    });
+    if (!tokenRes.ok) return res.redirect('/?google_auth=error&reason=token_exchange_failed');
+    const tokens = await tokenRes.json() as { access_token: string; id_token?: string };
+
+    // Fetch user info
+    const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+    if (!userRes.ok) return res.redirect('/?google_auth=error&reason=userinfo_failed');
+    const userInfo = await userRes.json() as {
+      id: string; email: string; name: string; picture?: string; verified_email?: boolean;
+    };
+
+    const resident = await findOrCreateSocialResident('google', {
+      subject: userInfo.id,
+      name: userInfo.name || userInfo.email?.split('@')[0] || 'Google User',
+      email: userInfo.email,
+      photoUrl: userInfo.picture,
+    });
+
+    const sessionUser = {
+      uid: resident.uid, phone: resident.phone, gudalurId: resident.gudalurId,
+      name: resident.name, role: resident.role, kind: 'user' as const, localityName: resident.localityName,
+    };
+    const session = await createSession(sessionUser, req.get('user-agent'), req.ip);
+    setSessionCookies(res, session);
+    res.redirect('/?google_auth=success');
+  } catch (e: any) {
+    logger.error('google callback:', e.message);
+    res.redirect(`/?google_auth=error&reason=${encodeURIComponent(e.message)}`);
+  }
+});
+
+/** POST /api/auth/telegram — sign in / register with Telegram Login Widget payload. */
+router.post('/telegram', async (req: Request, res: Response) => {
+  try {
+    const p = req.body;
+    if (!p || !p.hash || !p.id || !p.auth_date) {
+      return res.status(400).json({ error: 'Telegram auth payload is required' });
+    }
+    if (!process.env.TELEGRAM_BOT_TOKEN) {
+      return res.status(503).json({ error: 'Telegram sign-in is not configured' });
+    }
+    if (!verifyTelegramHash(p, process.env.TELEGRAM_BOT_TOKEN)) {
+      return res.status(401).json({ error: 'Invalid Telegram authentication' });
+    }
+    // Replay protection: auth_date within 24 hours
+    const authAge = Math.floor(Date.now() / 1000) - Number(p.auth_date);
+    if (authAge < 0 || authAge > 86400) {
+      return res.status(401).json({ error: 'Telegram authentication expired' });
+    }
+    const tgId = String(p.id);
+    const name = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Telegram User';
+    const resident = await findOrCreateSocialResident('telegram', {
+      subject: tgId, name, photoUrl: p.photo_url,
+    });
+    const sessionUser = {
+      uid: resident.uid, phone: resident.phone, gudalurId: resident.gudalurId,
+      name: resident.name, role: resident.role, kind: 'user' as const, localityName: resident.localityName,
+    };
+    const session = await createSession(sessionUser, req.get('user-agent'), req.ip);
+    setSessionCookies(res, session);
+    res.json({ resident, csrfToken: session.csrfToken });
+  } catch (e: any) {
+    logger.error('telegram auth:', e.message);
+    res.status(500).json({ error: `Telegram sign-in failed — ${e.message}` });
+  }
+});
+
 /** PATCH /api/auth/me — update the authenticated resident's profile fields. */
 router.patch('/me', requireAuth, async (req: Request, res: Response) => {
   try {

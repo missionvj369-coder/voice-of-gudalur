@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Phone, IdCard, LogIn, Loader2, ShieldCheck } from 'lucide-react';
+import { SiGoogle, SiTelegram } from 'react-icons/si';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import toast from 'react-hot-toast';
@@ -23,12 +24,13 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
   onSuccess,
   onNeedRegister,
 }) => {
-  const { loginResident } = useAuth();
+  const { loginResident, loginWithGoogle, loginWithTelegram } = useAuth();
   const { lang } = useLanguage();
 
   const [phone, setPhone] = useState('');
   const [gudalurId, setGudalurId] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [socialBusy, setSocialBusy] = useState<'google' | 'telegram' | null>(null);
 
   if (!isOpen) return null;
 
@@ -62,6 +64,38 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
     } finally {
       setIsLoggingIn(false);
       // Release the critical-flow guard
+      try { sessionStorage.removeItem('vog_user_active'); } catch { /* ignore */ }
+    }
+  };
+
+  const handleSocialGoogle = async () => {
+    setSocialBusy('google');
+    try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
+    try {
+      const res = await fetch('/api/auth/google/url');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || 'Google sign-in is not available');
+      }
+      const data = await res.json() as { url: string };
+      window.location.href = data.url;
+    } catch (err: any) {
+      toast.error(err?.message || 'Google sign-in failed');
+      setSocialBusy(null);
+      try { sessionStorage.removeItem('vog_user_active'); } catch { /* ignore */ }
+    }
+  };
+
+  const handleSocialTelegram = async () => {
+    setSocialBusy('telegram');
+    try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
+    try {
+      toast.info('Telegram sign-in requires server configuration (TELEGRAM_BOT_TOKEN). Please login with your phone number.');
+      setSocialBusy(null);
+    } catch (err: any) {
+      toast.error(err?.message || 'Telegram sign-in failed');
+      setSocialBusy(null);
+    } finally {
       try { sessionStorage.removeItem('vog_user_active'); } catch { /* ignore */ }
     }
   };
@@ -160,7 +194,7 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
                 <div className="shrink-0 space-y-3 border-t border-slate-100 bg-white px-5 py-4 sm:px-6">
                   <button
                     type="submit"
-                    disabled={isLoggingIn}
+                    disabled={isLoggingIn || socialBusy !== null}
                     className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2 disabled:opacity-60"
                   >
                     {isLoggingIn ? (
@@ -172,7 +206,22 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
                       </>
                     )}
                   </button>
-
+                  {/* Social sign-in: Google + Telegram */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-px bg-slate-200" />
+                    <span className="text-[10px] text-slate-400 uppercase tracking-widest">or</span>
+                    <div className="flex-1 h-px bg-slate-200" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" disabled={socialBusy !== null || isLoggingIn} onClick={handleSocialGoogle}
+                      className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition disabled:opacity-50">
+                      {socialBusy === 'google' ? <Loader2 size={16} className="animate-spin" /> : <SiGoogle size={16} className="text-blue-500" />} Google
+                    </button>
+                    <button type="button" disabled={socialBusy !== null || isLoggingIn} onClick={handleSocialTelegram}
+                      className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition disabled:opacity-50">
+                      {socialBusy === 'telegram' ? <Loader2 size={16} className="animate-spin" /> : <SiTelegram size={16} className="text-sky-500" />} Telegram
+                    </button>
+                  </div>
                   {onNeedRegister && (
                     <button
                       type="button"

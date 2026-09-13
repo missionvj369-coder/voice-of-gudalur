@@ -10,7 +10,7 @@ import ShareSocialModal from "../components/ShareSocial/ShareSocialModal";
 import MediaGallery from "../components/ShareSocial/MediaGallery";
 import MediaViewer from "../components/ShareSocial/MediaViewer";
 import { PlatformIcon } from '../components/ShareSocial/PlatformIcon';
-import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2, ImageIcon, Video, Sparkles, Hash, CreditCard, Mail } from "lucide-react";
+import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2, ImageIcon, Video, Sparkles, Hash, CreditCard } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface PlaceCount {
@@ -287,27 +287,6 @@ export const SignPetitionPage: React.FC = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
   }, [result]);
 
-  const forwardViaTelegram = useCallback(() => {
-    if (!result) return;
-    const txt =
-      `📜 *Voice of Gudalur — Verified Signature*\n\n` +
-      `I have digitally signed the Right to Life Grievance Petition.\n\n` +
-      `🔎 Verify: ${result.verifyUrl}\n\n` +
-      `Batch #${result.batchNo} · Verified Resident`;
-    window.open(`https://t.me/share/url?url=${encodeURIComponent(result.verifyUrl)}&text=${encodeURIComponent(txt)}`, "_blank", "noopener");
-  }, [result]);
-
-  const forwardViaGmail = useCallback(() => {
-    if (!result) return;
-    const subject = encodeURIComponent('Voice of Gudalur — Verified Petition Signature');
-    const body = encodeURIComponent(
-      `I have digitally signed the Right to Life / Mudhalvan Mugavari Grievance Petition.\n\n` +
-      `Verify my signature: ${result.verifyUrl}\n\n` +
-      `Batch #${result.batchNo} · Verified Resident`
-    );
-    window.open(`https://mail.google.com/mail/?view=cm&su=${subject}&body=${body}`, "_blank", "noopener");
-  }, [result]);
-
   const copyLink = useCallback(async () => {
     if (!result) return;
     try {
@@ -534,18 +513,18 @@ export const SignPetitionPage: React.FC = () => {
             <p className="text-[11px] text-emerald-700 mt-1 break-all font-mono">{result.hash}</p>
             <p className="text-[11px] text-emerald-600 mt-1">{t("home.batch").replace("{n}", String(result.batchNo))}</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button onClick={copyLink} className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5">
               <Link2 size={13} /> {t("home.copy_link")}
             </button>
             <button onClick={forwardViaWhatsApp} className="py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5">
               <PlatformIcon platform="whatsapp" size={14} className="brightness-0 invert" /> {t("home.share_wa")}
             </button>
-            <button onClick={forwardViaTelegram} className="py-2.5 rounded-xl bg-[#26A5E4] text-white font-bold text-xs flex items-center justify-center gap-1.5">
-              <PlatformIcon platform="telegram" size={14} className="brightness-0 invert" /> {t("home.share_telegram")}
-            </button>
-            <button onClick={forwardViaGmail} className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5">
-              <Mail size={13} /> {t("home.share_gmail")}
+            <button
+              onClick={() => { void downloadReceipt(); }}
+              className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5"
+            >
+              <Download size={13} /> {t("home.download")}
             </button>
           </div>
           <p className="text-[10px] text-emerald-700 break-all">{result.verifyUrl}</p>

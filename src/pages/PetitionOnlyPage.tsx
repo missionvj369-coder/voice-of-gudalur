@@ -4,7 +4,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { petitionPublicApi, petitionApi } from '../services/api';
 import { PlatformIcon } from '../components/ShareSocial/PlatformIcon';
 import {
-  PenLine, CheckCircle2, Loader2, Phone, User, Link2, BadgeCheck, Mail,
+  PenLine, CheckCircle2, Loader2, Phone, User, Link2, BadgeCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -114,25 +114,6 @@ export const PetitionOnlyPage: React.FC = () => {
       `\n\n🔍 Verify my signature here:\n${r.verifyUrl}` +
       `\n\nBatch #${r.batchNo}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
-  }, []);
-
-  const shareTelegram = useCallback((r: SignResult) => {
-    const txt =
-      `📜 *Voice of Gudalur — Petition Signed*\n\n` +
-      `I have signed the Right to Life petition.\n\n` +
-      `🔍 Verify: ${r.verifyUrl}\n\n` +
-      `Batch #${r.batchNo}`;
-    window.open(`https://t.me/share/url?url=${encodeURIComponent(r.verifyUrl)}&text=${encodeURIComponent(txt)}`, '_blank', 'noopener');
-  }, []);
-
-  const shareGmail = useCallback((r: SignResult) => {
-    const subject = encodeURIComponent('Voice of Gudalur — Verified Petition Signature');
-    const body = encodeURIComponent(
-      `I have signed the Right to Life petition.\n\n` +
-      `Verify my signature: ${r.verifyUrl}\n\n` +
-      `Batch #${r.batchNo}`
-    );
-    window.open(`https://mail.google.com/mail/?view=cm&su=${subject}&body=${body}`, '_blank', 'noopener');
   }, []);
 
   const copyLink = useCallback(async (r: SignResult) => {
@@ -263,7 +244,7 @@ export const PetitionOnlyPage: React.FC = () => {
             <p className="text-[11px] text-emerald-800 mt-2 break-all font-mono">{result.hash}</p>
             <p className="text-[11px] text-emerald-600 mt-1">{t('home.batch').replace('{n}', String(result.batchNo))}</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               onClick={() => copyLink(result)}
               className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5"
@@ -276,18 +257,12 @@ export const PetitionOnlyPage: React.FC = () => {
             >
               <PlatformIcon platform="whatsapp" size={14} className="brightness-0 invert" /> {t('home.share_wa')}
             </button>
-            <button
-              onClick={() => shareTelegram(result)}
-              className="py-2.5 rounded-xl bg-[#26A5E4] text-white font-bold text-xs flex items-center justify-center gap-1.5"
-            >
-              <PlatformIcon platform="telegram" size={14} className="brightness-0 invert" /> {t('home.share_telegram')}
-            </button>
-            <button
-              onClick={() => shareGmail(result)}
+            <Link
+              to="/verify-sign"
               className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5"
             >
-              <Mail size={13} /> {t('home.share_gmail')}
-            </button>
+              <CheckCircle2 size={13} /> Verify
+            </Link>
           </div>
           <p className="text-[10px] text-emerald-700 break-all">{result.verifyUrl}</p>
           <p className="text-[10px] text-emerald-600 max-w-md mx-auto leading-relaxed">{t('psign.privacy_note')}</p>
