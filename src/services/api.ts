@@ -563,6 +563,70 @@ export const mediaApi = {
     request<{ ok: boolean }>(`/api/media/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 };
 
+// ─────────────────────────────────────────────────────────────
+// Validation (petition witness validation)
+// ─────────────────────────────────────────────────────────────
+
+export const validationApi = {
+  /** GET /api/validation/verify/:token — public: fetch signature + link details. */
+  verify: (token: string) =>
+    request<{
+      valid: boolean;
+      validationToken?: string;
+      signature?: {
+        publicReference: string;
+        displayName: string;
+        area?: string;
+        status: string;
+        signedAt: string;
+      };
+      expiresAt?: string;
+      error?: string;
+      used?: boolean;
+      revoked?: boolean;
+      expired?: boolean;
+    }>(`/api/validation/verify/${encodeURIComponent(token)}`),
+
+  /** POST /api/validation/accept — accept a validation link (requires session). */
+  accept: (body: { validationToken: string; idempotencyKey: string }) =>
+    request<{ success: boolean; message?: string; replay?: boolean }>(
+      '/api/validation/accept',
+      { method: 'POST', body: JSON.stringify(body) }
+    ),
+
+  /** POST /api/validation/reject — reject a validation link (requires session). */
+  reject: (body: { validationToken: string }) =>
+    request<{ success: boolean; message?: string }>(
+      '/api/validation/reject',
+      { method: 'POST', body: JSON.stringify(body) }
+    ),
+
+  /** GET /api/validation/my-validations — this identity's signature validation summary. */
+  myValidations: () =>
+    request<{
+      success: boolean;
+      identityId: string;
+      summary: {
+        totalSignatures: number;
+        validatedCount: number;
+        reviewRequiredCount: number;
+        pendingCount: number;
+      };
+      activeLinkCount: number;
+      recentValidations: Array<{
+        linkId: string;
+        tokenHash: string;
+        status: string;
+        createdAt: string;
+        displayName: string;
+        area: string;
+        signatureStatus: string;
+        petitionId: string;
+        publicReference: string;
+      }>;
+    }>('/api/validation/my-validations'),
+};
+
 export default {
   auth: authApi,
   petitions: petitionApi,
@@ -571,4 +635,5 @@ export default {
   officials: officialsApi,
   config: configApi,
   media: mediaApi,
+  validation: validationApi,
 };

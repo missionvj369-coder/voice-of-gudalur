@@ -1,4 +1,4 @@
-ï»¿# VOU Integration Summary
+# VOU Integration Summary
 
 ## What Has Been Done
 
@@ -28,18 +28,13 @@
 - server/auth/vouAuthTypes.ts - Auth type definitions
 - server/db/prisma.ts - Prisma client
 
-#### API Routes:
-- vou-api/auth/phone-request - OTP request endpoint
-- vou-api/auth/session - Session creation endpoint
-- vou-api/petition/sign - Petition signing
-- vou-api/petition/count - Signature count
-- vou-api/petition/public - Public petition info
-- vou-api/petition/signatures - Public signatures
-- vou-api/admin/session - Admin login
-- vou-api/validation/accept - Witness validation
-- vou-api/validation/create - Create validation link
-- vou-api/validation/reject - Reject validation
-- vou-api/report/abuse - Abuse reporting
+#### API Routes (Express — active implementation):
+- server/routes/auth.ts - Auth routes (register, login, session)
+- server/routes/petitions.ts - Petition signing + management
+- server/routes/petitionPublic.ts - Public petition endpoints
+- server/routes/validation.ts - Witness validation (verify, create, accept, reject)
+- server/routes/admin.ts - Admin operations
+- server/routes/civic.ts - Civic grievance tracking
 
 #### Database:
 - prisma/schema.prisma - Full Prisma schema (CockroachDB)
@@ -142,19 +137,19 @@ The integrated app now has TWO petition systems:
 
 Both systems share the same CockroachDB database and can coexist.
 
-## New API Endpoints
+## Active API Endpoints (Express)
 
-- POST /api/vou/auth/phone-request - Request OTP
-- POST /api/vou/auth/session - Create session
-- POST /api/vou/petition/sign - Sign petition
-- GET /api/vou/petition/count - Get signature count
-- GET /api/vou/petition/public - Get petition info
-- GET /api/vou/petition/signatures - Get public signatures
-- POST /api/vou/admin/session - Admin login
-- POST /api/vou/validation/accept - Accept validation
-- POST /api/vou/validation/create - Create validation link
-- POST /api/vou/validation/reject - Reject validation
-- POST /api/vou/report/abuse - Report abuse
+- POST /api/auth/register - Register resident
+- POST /api/auth/login - Login
+- GET /api/auth/me - Current user profile
+- POST /api/petitions/sign - Sign petition
+- GET /api/petitions - List petitions
+- GET /api/petition-public/:id - Public petition info
+- GET /api/validation/verify/:token - Verify validation link (public)
+- POST /api/validation/create - Create validation link (auth)
+- POST /api/validation/accept - Accept/witness validation (auth)
+- POST /api/validation/reject - Reject validation (auth)
+- GET /api/validation/my-validations - Validation summary (auth)
 
 ## New Pages
 

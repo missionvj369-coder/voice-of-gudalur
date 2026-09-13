@@ -21,6 +21,10 @@ const PetitionOnlyPage = lazy(() => import('./pages/PetitionOnlyPage').then((m) 
 const TrustPage = lazy(() => import('./pages/TrustPage').then((m) => ({ default: m.TrustPage })));
 const VoiceSoundboardPage = lazy(() => import('./pages/VoiceSoundboardPage').then((m) => ({ default: m.VoiceSoundboardPage })));
 
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+
+const ValidatePage = lazy(() => import('./pages/ValidatePage').then((m) => ({ default: m.default })));
+
 const RouteFallback: React.FC = () => (
   <div className="min-h-[60vh] flex items-center justify-center" role="status" aria-label="Loading page">
     <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
@@ -87,6 +91,9 @@ const AppContent: React.FC = () => {
                   <Route path="/verify-sign" element={<VerifySignPage />} />
                   <Route path="/officials" element={<OfficialsPortalPage />} />
                   <Route path="/trust" element={<TrustPage />} />
+                  <Route path="/validate/:token" element={<ValidatePage />} />
+                  <Route path="/validate/done" element={<ValidatePage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
                   <Route path="*" element={<CampaignDashboard />} />
                 </Routes>
               </Suspense>
