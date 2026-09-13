@@ -31,7 +31,10 @@ const fmtDateTime = (iso?: string) =>
 export const VerifySignPage: React.FC = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const hash = (params.get("id") || "").trim();
+    // Accept BOTH ?id= and ?hash= — the server returns ?hash= (from
+  // recordPetitionSign / recordMobileSign) while the ledger/admin endpoints
+  // historically used ?id=. Supporting both keeps every link alive.
+  const hash = (params.get("id") || params.get("hash") || "").trim();
   const [data, setData] = useState<VerifyResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [manualHash, setManualHash] = useState("");
@@ -70,7 +73,7 @@ export const VerifySignPage: React.FC = () => {
     };
   }, [hash]);
 
-  const verifyUrl = `${window.location.origin}/verify-sign?id=${encodeURIComponent(hash)}`;
+    const verifyUrl = `${window.location.origin}/verify-sign?hash=${encodeURIComponent(hash)}`;
 
   const copyHash = useCallback(async () => {
     if (!data?.sign_hash) return;
@@ -159,13 +162,13 @@ export const VerifySignPage: React.FC = () => {
           </div>
           <p className="text-sm text-slate-600 leading-relaxed">
             Paste a signature hash to confirm a petition signature, or open a verification link
-            (<code className="text-slate-800 font-mono text-xs">/verify-sign?id=HASH</code>).
+            (<code className="text-slate-800 font-mono text-xs">/verify-sign?hash=HASH</code>).
           </p>
           <form
             className="flex gap-2"
             onSubmit={(e) => {
               e.preventDefault();
-              if (manualHash.trim()) navigate(`/verify-sign?id=${encodeURIComponent(manualHash.trim())}`);
+              if (manualHash.trim()) navigate(`/verify-sign?hash=${encodeURIComponent(manualHash.trim())}`);
             }}
           >
             <input

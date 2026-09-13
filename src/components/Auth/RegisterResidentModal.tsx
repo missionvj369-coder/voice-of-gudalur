@@ -42,6 +42,8 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
     if (address.trim().length < 3) { toast.error(t('reg.address_required') || 'Please enter your full address / place'); return; }
     if (!/^[0-9]{6}$/.test(pincode.trim())) { toast.error(t('reg.pincode_required') || 'Please enter a valid 6-digit pincode'); return; }
     setIsSubmitting(true);
+    // CRITICAL-FLOW GUARD: prevent version-poll auto-reload while we submit
+    try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
     try {
       try {
         const checkResponse = await fetch(`/api/auth/check-phone?phone=${digits}`);
@@ -69,7 +71,11 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
       if ((err && err.code === 'DUPLICATE_PHONE') || /duplicate|already registered|unique key|phone.*exist|mobile.*registered/i.test(msg)) {
         toast.error('Mobile number already registered! Please login instead.', { duration: 6000, icon: '📱' });
       } else { toast.error(msg || t('reg.fail')); }
-    } finally { setIsSubmitting(false); }
+    } finally {
+      setIsSubmitting(false);
+      // Release the critical-flow guard
+      try { sessionStorage.removeItem('vog_user_active'); } catch { /* ignore */ }
+    }
   };
 
   return (

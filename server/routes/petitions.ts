@@ -265,7 +265,7 @@ router.get('/ledger', async (_req: Request, res: Response) => {
           phoneLast4: r.phone_last4,
           batchNo: r.batch_no,
           signedAt: r.created_at,
-          verifyUrl: `/verify-sign?id=${encodeURIComponent(r.sign_hash)}`,
+                    verifyUrl: `/verify-sign?hash=${encodeURIComponent(r.sign_hash)}`,
         })),
       };
     });

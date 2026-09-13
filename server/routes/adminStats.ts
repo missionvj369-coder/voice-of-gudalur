@@ -56,7 +56,7 @@ router.get('/signs', requireAuth, requireRole('ADMIN', 'PLATFORM_ADMIN'), async 
         aadhaarLast4: r.aadhaar_last4,
         batchNo: r.batch_no,
         signedAt: r.created_at,
-        verifyUrl: `/verify-sign?id=${encodeURIComponent(r.sign_hash)}`,
+                verifyUrl: `/verify-sign?hash=${encodeURIComponent(r.sign_hash)}`,
       })),
       total: rows.rowCount,
     });

@@ -45,6 +45,8 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
       return;
     }
     setIsLoggingIn(true);
+    // CRITICAL-FLOW GUARD: prevent version-poll auto-reload while we log in
+    try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
     try {
       const resident = await loginResident(digits.length === 10 ? phone : '', gudalurId.trim().toUpperCase());
       toast.success(
@@ -59,6 +61,8 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
       toast.error(err?.message || 'Login failed. Check your details and try again.');
     } finally {
       setIsLoggingIn(false);
+      // Release the critical-flow guard
+      try { sessionStorage.removeItem('vog_user_active'); } catch { /* ignore */ }
     }
   };
 

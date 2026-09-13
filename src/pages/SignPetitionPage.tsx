@@ -10,7 +10,7 @@ import ShareSocialModal from "../components/ShareSocial/ShareSocialModal";
 import MediaGallery from "../components/ShareSocial/MediaGallery";
 import MediaViewer from "../components/ShareSocial/MediaViewer";
 import { PlatformIcon } from '../components/ShareSocial/PlatformIcon';
-import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2, ImageIcon, Video, Sparkles, Hash, CreditCard } from "lucide-react";
+import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2, ImageIcon, Video, Sparkles, Hash, CreditCard, Mail } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface PlaceCount {
@@ -212,6 +212,8 @@ export const SignPetitionPage: React.FC = () => {
       return;
     }
     setBusy(true);
+    // CRITICAL-FLOW GUARD: prevent version-poll auto-reload while we sign
+    try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
     const signedAt = new Date().toISOString();
     const resultData = {
       hash: "",
@@ -235,7 +237,7 @@ export const SignPetitionPage: React.FC = () => {
       const verifyUrl =
         res.verifyUrl
           ? new URL(res.verifyUrl, window.location.origin).toString()
-          : `${window.location.origin}/verify-sign?id=${encodeURIComponent(res.signHash)}`;
+                  : `${window.location.origin}/verify-sign?hash=${encodeURIComponent(res.signHash)}`;
       resultData.hash = res.signHash;
       resultData.verifyUrl = verifyUrl;
       resultData.batchNo = res.batchNo ?? 1;
@@ -270,6 +272,8 @@ export const SignPetitionPage: React.FC = () => {
     // Let other screens (e.g. About â†’ "Petition Signed") update instantly.
     window.dispatchEvent(new Event("vog:petition-signed"));
     setBusy(false);
+    // Release the critical-flow guard
+    try { sessionStorage.removeItem('vog_user_active'); } catch { /* ignore */ }
     void loadStats();
   }, [profile, loadStats, hasSigned, t]);
 
@@ -281,6 +285,27 @@ export const SignPetitionPage: React.FC = () => {
       `ðŸ”Ž Verify my verified sign here:\n${result.verifyUrl}\n\n` +
       `Batch #${result.batchNo} Â· Verified Resident`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+  }, [result]);
+
+  const forwardViaTelegram = useCallback(() => {
+    if (!result) return;
+    const txt =
+      `📜 *Voice of Gudalur — Verified Signature*\n\n` +
+      `I have digitally signed the Right to Life Grievance Petition.\n\n` +
+      `🔎 Verify: ${result.verifyUrl}\n\n` +
+      `Batch #${result.batchNo} · Verified Resident`;
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(result.verifyUrl)}&text=${encodeURIComponent(txt)}`, "_blank", "noopener");
+  }, [result]);
+
+  const forwardViaGmail = useCallback(() => {
+    if (!result) return;
+    const subject = encodeURIComponent('Voice of Gudalur — Verified Petition Signature');
+    const body = encodeURIComponent(
+      `I have digitally signed the Right to Life / Mudhalvan Mugavari Grievance Petition.\n\n` +
+      `Verify my signature: ${result.verifyUrl}\n\n` +
+      `Batch #${result.batchNo} · Verified Resident`
+    );
+    window.open(`https://mail.google.com/mail/?view=cm&su=${subject}&body=${body}`, "_blank", "noopener");
   }, [result]);
 
   const copyLink = useCallback(async () => {
@@ -509,18 +534,18 @@ export const SignPetitionPage: React.FC = () => {
             <p className="text-[11px] text-emerald-700 mt-1 break-all font-mono">{result.hash}</p>
             <p className="text-[11px] text-emerald-600 mt-1">{t("home.batch").replace("{n}", String(result.batchNo))}</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <button onClick={copyLink} className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5">
               <Link2 size={13} /> {t("home.copy_link")}
             </button>
             <button onClick={forwardViaWhatsApp} className="py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5">
               <PlatformIcon platform="whatsapp" size={14} className="brightness-0 invert" /> {t("home.share_wa")}
             </button>
-            <button
-              onClick={() => { void downloadReceipt(); }}
-              className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5"
-            >
-              <Download size={13} /> {t("home.download")}
+            <button onClick={forwardViaTelegram} className="py-2.5 rounded-xl bg-[#26A5E4] text-white font-bold text-xs flex items-center justify-center gap-1.5">
+              <PlatformIcon platform="telegram" size={14} className="brightness-0 invert" /> {t("home.share_telegram")}
+            </button>
+            <button onClick={forwardViaGmail} className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5">
+              <Mail size={13} /> {t("home.share_gmail")}
             </button>
           </div>
           <p className="text-[10px] text-emerald-700 break-all">{result.verifyUrl}</p>
@@ -568,7 +593,7 @@ export const SignPetitionPage: React.FC = () => {
               {ledger.map((s) => (
                 <Link
                   key={s.hash}
-                  to={`/verify-sign?id=${encodeURIComponent(s.hash)}`}
+                                    to={`/verify-sign?hash=${encodeURIComponent(s.hash)}`}
                   className="flex items-center gap-3 px-4 py-2.5 hover:bg-emerald-50 transition group"
                 >
                   <span className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">

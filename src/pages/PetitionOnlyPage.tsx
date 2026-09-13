@@ -4,7 +4,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { petitionPublicApi, petitionApi } from '../services/api';
 import { PlatformIcon } from '../components/ShareSocial/PlatformIcon';
 import {
-  PenLine, CheckCircle2, Loader2, Phone, User, Link2, BadgeCheck,
+  PenLine, CheckCircle2, Loader2, Phone, User, Link2, BadgeCheck, Mail,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -116,6 +116,25 @@ export const PetitionOnlyPage: React.FC = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
   }, []);
 
+  const shareTelegram = useCallback((r: SignResult) => {
+    const txt =
+      `📜 *Voice of Gudalur — Petition Signed*\n\n` +
+      `I have signed the Right to Life petition.\n\n` +
+      `🔍 Verify: ${r.verifyUrl}\n\n` +
+      `Batch #${r.batchNo}`;
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(r.verifyUrl)}&text=${encodeURIComponent(txt)}`, '_blank', 'noopener');
+  }, []);
+
+  const shareGmail = useCallback((r: SignResult) => {
+    const subject = encodeURIComponent('Voice of Gudalur — Verified Petition Signature');
+    const body = encodeURIComponent(
+      `I have signed the Right to Life petition.\n\n` +
+      `Verify my signature: ${r.verifyUrl}\n\n` +
+      `Batch #${r.batchNo}`
+    );
+    window.open(`https://mail.google.com/mail/?view=cm&su=${subject}&body=${body}`, '_blank', 'noopener');
+  }, []);
+
   const copyLink = useCallback(async (r: SignResult) => {
     try {
       await navigator.clipboard.writeText(r.verifyUrl);
@@ -144,6 +163,8 @@ export const PetitionOnlyPage: React.FC = () => {
     if (!human) { toast.error(t('psign.err_challenge')); return; }
 
     setBusy(true);
+    // CRITICAL-FLOW GUARD: prevent version-poll auto-reload while we sign
+    try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
     try {
       // Fresh challenge per submission (challenges are single-use).
       const c = await petitionPublicApi.challenge();
@@ -167,7 +188,7 @@ export const PetitionOnlyPage: React.FC = () => {
       });
       const verifyUrl = res.verifyUrl
         ? new URL(res.verifyUrl, window.location.origin).toString()
-        : `${window.location.origin}/verify-sign?id=${encodeURIComponent(res.signHash)}`;
+              : `${window.location.origin}/verify-sign?hash=${encodeURIComponent(res.signHash)}`;
       const r: SignResult = {
         hash: res.signHash,
         verifyUrl,
@@ -199,6 +220,8 @@ export const PetitionOnlyPage: React.FC = () => {
       }
     } finally {
       setBusy(false);
+      // Release the critical-flow guard
+      try { sessionStorage.removeItem('vog_user_active'); } catch { /* ignore */ }
     }
   }, [busy, name, mobile, human, hp, t, loadCount, persist]);
 
@@ -240,7 +263,7 @@ export const PetitionOnlyPage: React.FC = () => {
             <p className="text-[11px] text-emerald-800 mt-2 break-all font-mono">{result.hash}</p>
             <p className="text-[11px] text-emerald-600 mt-1">{t('home.batch').replace('{n}', String(result.batchNo))}</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <button
               onClick={() => copyLink(result)}
               className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5"
@@ -253,12 +276,18 @@ export const PetitionOnlyPage: React.FC = () => {
             >
               <PlatformIcon platform="whatsapp" size={14} className="brightness-0 invert" /> {t('home.share_wa')}
             </button>
-            <Link
-              to="/verify-sign"
+            <button
+              onClick={() => shareTelegram(result)}
+              className="py-2.5 rounded-xl bg-[#26A5E4] text-white font-bold text-xs flex items-center justify-center gap-1.5"
+            >
+              <PlatformIcon platform="telegram" size={14} className="brightness-0 invert" /> {t('home.share_telegram')}
+            </button>
+            <button
+              onClick={() => shareGmail(result)}
               className="py-2.5 rounded-xl bg-white border border-emerald-300 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5"
             >
-              <CheckCircle2 size={13} /> Verify
-            </Link>
+              <Mail size={13} /> {t('home.share_gmail')}
+            </button>
           </div>
           <p className="text-[10px] text-emerald-700 break-all">{result.verifyUrl}</p>
           <p className="text-[10px] text-emerald-600 max-w-md mx-auto leading-relaxed">{t('psign.privacy_note')}</p>

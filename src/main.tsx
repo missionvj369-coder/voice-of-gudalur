@@ -61,6 +61,11 @@ if ('serviceWorker' in navigator) {
   const checkVersion = async () => {
     if (reloading || document.visibilityState === 'hidden') return;
     if (Date.now() - bootedAt < GRACE_MS) return;   // grace window — never interrupt a fresh visit
+    // CRITICAL-FLOW GUARD: if the user is mid-registration / mid-signing / has a
+    // modal open, DEFER the reload until they finish. Components set
+    // sessionStorage['vog_user_active']='1' while a critical interaction is in
+    // progress — never yank the page out from under them.
+    try { if (sessionStorage.getItem('vog_user_active') === '1') return; } catch { /* ignore */ }
     const build = await readVersion();
     if (!build) return;
     if (currentBuild === null) { currentBuild = build; return; }   // first read — baseline
