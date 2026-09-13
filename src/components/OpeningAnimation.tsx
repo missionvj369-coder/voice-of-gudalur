@@ -310,10 +310,10 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
 
       {/* 1. LANGUAGE SELECTION — Voice of Gudalur title + subtitle first. */}
       {phase === "languages" && (
-        <div className="absolute inset-0 overflow-y-auto">
-                <div className="min-h-screen flex flex-col items-center justify-start px-4 pt-6 pb-4 max-h-screen overflow-y-hidden">
-        <OpeningHeader />
-        <div className="text-center w-full max-w-md mt-2">
+                <div className="absolute inset-0 overflow-y-auto">
+          <div className="min-h-screen flex flex-col items-center justify-center px-4 pt-[60px] pb-4 max-h-screen overflow-y-hidden">
+            <OpeningHeader />
+            <div className="text-center w-full max-w-md">
               <h1 className="text-white text-3xl font-black tracking-tight">Voice of Gudalur</h1>
               <p className="mt-2 text-[#AED581] text-base font-semibold leading-snug">United for Justice, Safety and the Future of Gudalur</p>
               <div className="mx-auto mt-5 h-0.5 w-24 bg-[#FDE047]/40" />
@@ -335,9 +335,10 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
       {/* 2. THE CONCERN — topic on header, subtitle, mission heading + action. */}
             {phase === "concern" && concern && (
         <div className="absolute inset-0 overflow-y-auto">
-          <div className="min-h-screen flex flex-col items-center px-4 pt-10 pb-3 max-h-screen overflow-y-hidden">
-            {/* Coexistence scene — icons on TOP */}
-            <div className="relative w-full max-w-sm h-18 mb-1.5">
+          <div className="min-h-screen flex flex-col items-center px-4 pt-[60px] pb-2 max-h-screen overflow-y-hidden">
+            <OpeningHeader />
+            {/* Coexistence scene — icons integrated into the header/top area */}
+            <div className="relative w-full max-w-sm h-16 mb-1 -mt-[22px]">
               {/* Elephant — gentle float left, facing inward */}
               <motion.div
                 className="absolute left-2 bottom-0"
@@ -396,18 +397,18 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
               <button
                 type="button"
                 onClick={handleConcernContinue}
-                                className="mt-3 w-full py-2.5 rounded-xl bg-gradient-to-r from-[#8DC63F] via-[#A9C84B] to-[#C9D84E] border border-[#FDE047]/20 text-[#123B0D] font-black text-[13px] tracking-wide active:scale-95 transition hover:from-[#9BD047] hover:via-[#B4D052] hover:to-[#D2E056] shadow-md"
+                className="mt-3 w-full py-2.5 rounded-xl bg-gradient-to-r from-[#8DC63F] via-[#A9C84B] to-[#C9D84E] border border-[#FDE047]/20 text-[#123B0D] font-black text-[13px] tracking-wide active:scale-95 transition hover:from-[#9BD047] hover:via-[#B4D052] hover:to-[#D2E056] shadow-md"
               >
                 Continue • தொடரவும் • തുടരുക • ಮುಂದುವರಿಯಿರಿ
               </button>
             </motion.div>
           </div>
         </div>
-      )}
+            )}
       {/* 3. VOG LIVING INTRO — the assistant introduces the movement. */}
       {phase === "intro" && intro && (
-              <div className="absolute inset-0 overflow-y-auto">
-          <div className="min-h-screen flex flex-col items-center justify-start px-4 pt-10 pb-3 max-h-screen overflow-y-hidden">
+                      <div className="absolute inset-0 overflow-y-auto">
+          <div className="min-h-screen flex flex-col items-center justify-center px-4 pt-[60px] pb-3 max-h-screen overflow-y-hidden">
             <OpeningHeader />
             <div className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/90 border border-[#FDE047]/30 shadow-2xl p-3 text-center">
               <p className="text-[#FDE047] font-black tracking-[0.2em] text-[9px]">VOG - VOICE OF GUDALUR</p>
@@ -424,15 +425,14 @@ export const OpeningAnimation: React.FC<Props> = ({ onChoose }) => {
 
       {/* 4. COST OF HUMAN–WILDLIFE CONFLICT — the data behind the grievance. */}
             {phase === "cost" && cost && (
-        <div className="absolute inset-0 overflow-y-auto">
-          <div className="min-h-screen flex flex-col items-center px-4 pt-10 pb-4 max-h-screen overflow-y-hidden">
+                <div className="absolute inset-0 overflow-y-auto">
+          <div className="min-h-screen flex flex-col items-center px-4 pt-[60px] pb-3 max-h-screen overflow-y-hidden">
             <OpeningHeader />
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7 }}
-              className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/30 p-3"
-            >
+              className="w-full max-w-md rounded-3xl bg-[#0A3D0A]/95 border border-[#FDE047]/30 p-3 mt-[-8px]">
               <p className="text-[#FDE047] text-[10px] font-black tracking-[0.2em] uppercase text-center">Voice of Gudalur</p>
               <h1 className="mt-0.5 text-white text-base sm:text-lg font-black tracking-tight text-center">{cost.title}</h1>
 
