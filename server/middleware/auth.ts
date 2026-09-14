@@ -45,6 +45,16 @@ interface AccessTokenPayload {
 }
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-insecure-secret-change-me';
+// PRODUCTION SAFETY: fail closed. A missing or default SESSION_SECRET in
+// production would let anyone forge session JWTs. Refuse to run rather than
+// silently degrade — the deployment MUST set the real secret.
+const DEV_DEFAULT_SECRET = 'dev-insecure-secret-change-me';
+if (process.env.NODE_ENV === 'production' && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === DEV_DEFAULT_SECRET)) {
+  throw new Error(
+    'SESSION_SECRET is not configured. Refusing to start in production with a missing or default secret — ' +
+    'set SESSION_SECRET in your hosting environment (Netlify: Site configuration → Environment variables).',
+  );
+}
 const ACCESS_TTL_SECONDS = 15 * 60;
 const REFRESH_TTL_SECONDS = Number(process.env.SESSION_TTL_SECONDS ?? 86400);
 
