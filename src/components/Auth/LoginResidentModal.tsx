@@ -83,7 +83,11 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
       const msg = err?.message || '';
       // NO_ACCOUNT = user must register first
       if (/NO_ACCOUNT/i.test(msg)) {
-        toast.error('No account found with this Google. Please register first with your mobile number.', { duration: 6000 });
+        toast.error(
+          'This Google account is not linked to any resident. ' +
+          'Please register with your mobile number first to get your Gudalur ID.',
+          { duration: 7000 }
+        );
         setSocialBusy(null);
         // Open registration modal after a short delay
         setTimeout(() => {
@@ -102,7 +106,7 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
     setSocialBusy('telegram');
     try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
     try {
-      toast.info('Telegram sign-in requires server configuration (TELEGRAM_BOT_TOKEN). Please login with your phone number.');
+      toast.info('Telegram sign-in requires server configuration. Please use phone registration.');
       setSocialBusy(null);
     } catch (err: any) {
       toast.error(err?.message || 'Telegram sign-in failed');
