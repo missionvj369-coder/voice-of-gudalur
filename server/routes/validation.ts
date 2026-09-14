@@ -242,6 +242,15 @@ router.post('/accept', requireAuth, writeLimiter, async (req: Request, res: Resp
     }
 
     await db.executeWithRetry(async (tx) => {
+      // Check validation limit (max 3 validations per signature)
+      const sig = await tx.queryOne<{ validation_count: number; max_validations: number }>(
+        'SELECT validation_count, max_validations FROM signatures WHERE id = $1',
+        [link.signature_id],
+      );
+      if (sig && sig.validation_count >= sig.max_validations) {
+        throw Object.assign(new Error('Maximum validations reached for this signature'), { code: 'MAX_VALIDATIONS_REACHED' });
+      }
+
       // Mark link used + signature COMMUNITY_VALIDATED.
       await tx.execute(
         `UPDATE validation_links SET status = 'used', used_at = NOW()
@@ -257,17 +266,43 @@ router.post('/accept', requireAuth, writeLimiter, async (req: Request, res: Resp
       // Record the witness.
       await tx.execute(
         `INSERT INTO validation_witnesses (validation_link_id, signature_id, witness_identity_id, created_at)
-         VALUES ($1, $2, $3, NOW())`,
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT DO NOTHING`,
         [link.id, link.signature_id, ownerId],
       );
 
       if (idempotencyKey) {
         await tx.execute(
           `INSERT INTO validation_witnesses (validation_link_id, signature_id, witness_identity_id, created_at, idempotency_key)
-           VALUES ($1, $2, $3, NOW(), $4)`,
+           VALUES ($1, $2, $3, NOW(), $4)
+           ON CONFLICT (idempotency_key) DO NOTHING`,
           [link.id, link.signature_id, ownerId, idempotencyKey],
         );
       }
+
+      // Increment validation count on signatures table
+      await tx.execute(
+        `UPDATE signatures
+         SET validation_count = validation_count + 1
+         WHERE id = $1 AND validation_count < max_validations`,
+        [link.signature_id],
+      );
+
+      // Recalculate unicode_sort_key based on method + validation status
+      await tx.execute(
+        `UPDATE signatures
+         SET unicode_sort_key =
+           CASE
+             WHEN sign_method = 'TELEGRAM' AND validation_count > 0 THEN 1000
+             WHEN sign_method = 'GOOGLE' AND validation_count > 0 THEN 800
+             WHEN sign_method = 'TELEGRAM' THEN 500
+             WHEN sign_method = 'GOOGLE' THEN 300
+             WHEN validation_count > 0 THEN 200
+             ELSE 100
+           END
+         WHERE id = $1`,
+        [link.signature_id],
+      );
 
       await appendAuditEvent({
         actorId: ownerId,

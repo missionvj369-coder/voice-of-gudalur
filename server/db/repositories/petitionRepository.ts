@@ -30,6 +30,12 @@ export interface PetitionSignInput {
   userAgentHash?: string; // sha256 of User-Agent (never store raw UA)
   assignBatch?: boolean;
   idempotencyKey?: string;
+  /** How the signature was made: 'GD_ID' | 'PHONE' | 'GOOGLE' | 'TELEGRAM'.
+   *  Defaults to 'GD_ID'. Stored on petition_signs.sign_method. */
+  signMethod?: 'GD_ID' | 'PHONE' | 'GOOGLE' | 'TELEGRAM';
+  /** When the user gave explicit consent to sign via the selected method.
+   *  Defaults to current timestamp. Stored on petition_signs.consent_timestamp. */
+  consentTimestamp?: string;
 }
 
 export interface PetitionSignResult {
@@ -137,15 +143,19 @@ export async function recordPetitionSign(input: PetitionSignInput): Promise<Peti
     // 5. Insert the signature row (phone_last4 only).
     const uaHash = input.userAgentHash ?? sha256('');
     const phone4 = input.phone ? phoneLast4(input.phone) : undefined;
+    const signMethod = input.signMethod ?? 'GD_ID';
+    const consentTs = input.consentTimestamp ?? new Date().toISOString();
     const inserted = await tx.queryOne<{ id: number; created_at: string }>(
       `INSERT INTO petition_signs
          (sign_hash, user_uid, gdr_id, full_name, village, pincode, phone_last4,
-          aadhaar_last4, aadhaar_ref, latitude, longitude, user_agent_hash, batch_no)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          aadhaar_last4, aadhaar_ref, latitude, longitude, user_agent_hash, batch_no,
+          sign_method, consent_timestamp)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING id, created_at`,
       [signHash, input.userUid ?? null, input.gdrId, input.fullName, input.village ?? null, input.pincode ?? null,
        phone4, input.aadhaarLast4 ?? null, input.aadhaarRef ?? null,
-       input.lat ?? null, input.lng ?? null, uaHash, batchNo],
+       input.lat ?? null, input.lng ?? null, uaHash, batchNo,
+       signMethod, consentTs],
     );
 
     // Record idempotency response if a key was supplied.
@@ -239,6 +249,10 @@ export interface PetitionSignListResult {
   rows: Array<{
     sign_hash: string; gdr_id: string; full_name: string;
     village: string | null; batch_no: number; created_at: string;
+    /** How the signature was made: 'GD_ID' | 'PHONE' | 'GOOGLE' | 'TELEGRAM'. */
+    sign_method: string;
+    /** Number of validations received (max 3). */
+    validation_count: number;
   }>;
   hasMore: boolean;
   cursor: string | null; // pass this to the next call for the next page
@@ -250,7 +264,7 @@ export async function listPetitionSignsCursor(
 ): Promise<PetitionSignListResult> {
   const safeLimit = Math.min(Math.max(limit, 1), 200);
   const params: any[] = [safeLimit];
-  let sql = 'SELECT sign_hash, gdr_id, full_name, village, batch_no, created_at FROM petition_signs';
+  let sql = 'SELECT sign_hash, gdr_id, full_name, village, batch_no, created_at, sign_method, validation_count FROM petition_signs';
 
   if (cursor) {
     params.push(cursor);
