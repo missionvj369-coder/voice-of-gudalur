@@ -106,7 +106,7 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
     setSocialBusy('telegram');
     try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
     try {
-      toast.info('Telegram sign-in requires server configuration. Please use phone registration.');
+      toast('Telegram sign-in requires server configuration. Please use phone registration.', { icon: 'ℹ️' });
       setSocialBusy(null);
     } catch (err: any) {
       toast.error(err?.message || 'Telegram sign-in failed');

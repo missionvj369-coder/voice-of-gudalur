@@ -464,6 +464,8 @@ export const SignPetitionPage: React.FC = () => {
           <button
             onClick={handleSign}
             disabled={busy || hasSigned}
+            aria-label={hasSigned ? 'You have already signed the petition' : 'Sign the Right to Life petition'}
+            aria-disabled={busy || hasSigned}
             className={`w-full py-3.5 rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition ${
               hasSigned
                 ? 'bg-emerald-100 text-emerald-700 border border-emerald-300 cursor-default'

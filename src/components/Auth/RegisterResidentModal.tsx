@@ -106,7 +106,7 @@ export const RegisterResidentModal: React.FC<RegisterResidentModalProps> = ({
     try {
       // Telegram Login Widget requires a bot token configured on the server
       // The widget opens a popup for the user to authorize
-      toast.info('Telegram sign-in requires server configuration (TELEGRAM_BOT_TOKEN). Please register with your phone number.');
+      toast('Telegram sign-in requires server configuration (TELEGRAM_BOT_TOKEN). Please register with your phone number.', { icon: 'ℹ️' });
       setSocialBusy(null);
     } catch (err: any) {
       toast.error(err?.message || 'Telegram sign-in failed');

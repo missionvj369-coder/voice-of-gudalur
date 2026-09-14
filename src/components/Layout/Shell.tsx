@@ -1,12 +1,13 @@
 ﻿import React, { createContext, useContext, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { useLanguage, type Language } from '../../context/LanguageContext';
 import { useAuth, readLocalSignature } from '../../context/AuthContext';
 import {
   Flame, User, LogIn, LogOut, Menu, X, PenLine, BookOpen,
-  Map as MapIcon, PawPrint, IdCard, UserPlus,
+  Map as MapIcon, PawPrint, IdCard, UserPlus, Mic, MicOff, Type,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const InstagramIcon = ({ size = 15 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -78,6 +79,17 @@ export const Shell: React.FC<{ children: React.ReactNode; petitionOnly?: boolean
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // === ACCESSIBILITY: Large-text mode (for low-vision users), persisted across visits. ===
+  const [largeText, setLargeText] = useState<boolean>(() => {
+    try { return localStorage.getItem('vog_large_text') === '1'; } catch { return false; }
+  });
+  React.useEffect(() => {
+    document.body.classList.toggle('large-text', largeText);
+    try { localStorage.setItem('vog_large_text', largeText ? '1' : '0'); } catch { /* private mode */ }
+  }, [largeText]);
+  // === ACCESSIBILITY: Voice navigation (Web Speech API) for low-literacy users. ===
+  const [listening, setListening] = useState(false);
+  const recognitionRef = React.useRef<any>(null);
   // "Once signed, everywhere shows it" — only a REAL server-issued (VG-*) sign.
   // Re-render on sign events too (AuthContext dispatches 'vog:petition-signed'
   // after its server-authoritative sync on every login/register/boot), so the
@@ -96,6 +108,20 @@ export const Shell: React.FC<{ children: React.ReactNode; petitionOnly?: boolean
       window.removeEventListener('storage', bump);
     };
   }, []);
+  // ACCESSIBILITY: Escape closes the menu drawer (keyboard users).
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
+  // ACCESSIBILITY: announce route changes to screen readers (aria-live region below).
+  const location = useLocation();
+  const [announce, setAnnounce] = useState('');
+  React.useEffect(() => {
+    const t = setTimeout(() => setAnnounce(document.title || 'Page loaded'), 300);
+    return () => clearTimeout(t);
+  }, [location.pathname]);
   const [readyQueue, setReadyQueue] = useState<{ id: number; fn: () => void }[]>([]);
 
   const openIdModal = () => {
@@ -119,6 +145,40 @@ export const Shell: React.FC<{ children: React.ReactNode; petitionOnly?: boolean
     },
     [profile]
   );
+
+  // Voice command vocabulary — must live after openIdModal is declared.
+  const VOICE_COMMANDS: { patterns: string[]; action: () => void; label: string }[] = React.useMemo(() => [
+    { patterns: ['petition', 'sign', 'பேட்ஷன்', 'பிரார்த்தனை'], action: () => navigate('/sign-petition'), label: 'Sign petition' },
+    { patterns: ['sighting', 'sightings', 'elephant', 'யானை'], action: () => navigate('/sightings'), label: 'Elephant sightings' },
+    { patterns: ['voice', 'sound', 'record', 'குரல்'], action: () => navigate('/voices'), label: 'Community voices' },
+    { patterns: ['about', 'movement', 'manifesto', 'இயக்கம்'], action: () => navigate('/about'), label: 'About movement' },
+    { patterns: ['corridor', 'பாதை'], action: () => navigate('/corridors'), label: 'Corridors' },
+    { patterns: ['profile', 'my card', 'id card', 'அட்டை'], action: () => { if (!petitionOnly) openIdModal(); }, label: 'My ID card' },
+    { patterns: ['home', 'முகப்பு'], action: () => navigate('/'), label: 'Go home' },
+  ], [navigate, petitionOnly, openIdModal]);
+
+  const startVoiceNav = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { toast.error('Voice navigation is not supported on this browser.'); return; }
+    if (listening) { recognitionRef.current?.stop(); return; }
+    const rec = new SR();
+    rec.lang = lang === 'ta' ? 'ta-IN' : 'en-IN';
+    rec.interimResults = false;
+    rec.maxAlternatives = 3;
+    rec.onresult = (e: any) => {
+      const said = Array.from(e.results as ArrayLike<any>)
+        .flatMap((r: any) => Array.from(r as ArrayLike<any>).map((alt: any) => String(alt.transcript || '').toLowerCase()))
+        .join(' | ');
+      const match = VOICE_COMMANDS.find((c) => c.patterns.some((p) => said.includes(p.toLowerCase())));
+      if (match) { toast.success(match.label); match.action(); }
+      else { toast.error('Command not recognised — try "sign petition", "sightings" or "voices".'); }
+    };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    recognitionRef.current = rec;
+    setListening(true);
+    try { rec.start(); } catch { setListening(false); }
+  };
 
   React.useEffect(() => {
     const onOpenRegister = () => setRegisterModalOpen(true);
@@ -198,11 +258,38 @@ export const Shell: React.FC<{ children: React.ReactNode; petitionOnly?: boolean
                 )}
               </button>
               )}
+              {/* ACCESSIBILITY: voice navigation — speak a command instead of reading menus. */}
+              <button
+                type="button"
+                onClick={startVoiceNav}
+                title={listening ? 'Listening… tap to stop' : 'Voice command — say "sign petition", "sightings", "voices"'}
+                aria-label={listening ? 'Voice command listening, tap to stop' : 'Start voice command'}
+                aria-pressed={listening}
+                className={`rounded-lg p-1.5 border transition shrink-0 ${listening
+                  ? 'bg-[#1B5E20] border-[#1B5E20] text-[#AED581] animate-pulse'
+                  : 'bg-[#1B5E20]/10 border-[#1B5E20]/30 hover:bg-[#1B5E20]/20 text-[#123B0D]'}`}
+              >
+                {listening ? <MicOff size={14} /> : <Mic size={14} />}
+              </button>
+              {/* ACCESSIBILITY: large-text mode toggle for low-vision users. */}
+              <button
+                type="button"
+                onClick={() => setLargeText((v) => !v)}
+                title={largeText ? 'Switch to normal text size' : 'Switch to large text (easy reading)'}
+                aria-label={largeText ? 'Switch to normal text size' : 'Switch to large text size'}
+                aria-pressed={largeText}
+                className={`rounded-lg p-1.5 border transition shrink-0 ${largeText
+                  ? 'bg-[#1B5E20] border-[#1B5E20] text-[#AED581]'
+                  : 'bg-[#1B5E20]/10 border-[#1B5E20]/30 hover:bg-[#1B5E20]/20 text-[#123B0D]'}`}
+              >
+                <Type size={14} />
+              </button>
               <button
                 type="button"
                 onClick={() => setMenuOpen(true)}
                 title="Menu"
                 aria-label="Open menu"
+                aria-expanded={menuOpen}
                 className="rounded-lg p-1.5 bg-[#1B5E20]/10 border border-[#1B5E20]/30 hover:bg-[#1B5E20]/20 text-[#123B0D] transition shrink-0"
               >
                 <Menu size={14} />
@@ -212,6 +299,8 @@ export const Shell: React.FC<{ children: React.ReactNode; petitionOnly?: boolean
         </header>
 
         <main id="main-content" className="pt-16 pb-6 flex-1">
+          {/* ACCESSIBILITY: screen-reader announcer for route changes. */}
+          <div aria-live="polite" aria-atomic="true" className="sr-only">{announce}</div>
           {children}
         </main>
 
