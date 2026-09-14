@@ -313,8 +313,9 @@ export const Shell: React.FC<{ children: React.ReactNode; petitionOnly?: boolean
                           setMenuOpen(false);
                           // Update <html lang> for screen readers
                           document.documentElement.lang = l.code;
-                          // Reload same URL to apply new language everywhere
-                          setTimeout(() => window.location.reload(), 100);
+                          // Reload current URL (preserve pathname + hash) to apply
+                          // new language everywhere WITHOUT navigating to home
+                          setTimeout(() => window.location.assign(window.location.href), 100);
                         }}
                         title={l.label}
                         className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
