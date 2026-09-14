@@ -18,14 +18,6 @@
   NEXT_TELEMETRY_DISABLED = "1"
   # Force fresh install
   NPM_CONFIG_FROZEN_LOCKFILE = "false"
-# ── Build environment ───────────────────────────────────────────────
-# Force npm to always install devDependencies (vite, vite-plugin-pwa,
-# @vitejs/plugin-react, etc.) — they are required by the build step but
-# Netlify may run with NODE_ENV=production which skips them.
-# This fixes the "vite: not found" error.
-[build.environment]
-  NPM_FLAGS = "--include=dev"
-  NODE_ENV = "production"
   # FULL-APP (post free-tier upgrade) knobs:
   #   DATABASE_POOL_MAX   20 — paid tier allows a real pool per serverless
   #                        instance (was 2 on free tier).
