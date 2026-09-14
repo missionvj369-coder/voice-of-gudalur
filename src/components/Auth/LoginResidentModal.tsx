@@ -177,14 +177,14 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
                     type="text"
                     value={gudalurId}
                     onChange={(e) => setGudalurId(e.target.value)}
-                    placeholder="GDR000000"
+                    placeholder="GD-2025-000000"
                     className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-sm outline-none transition font-mono uppercase text-slate-900 bg-white placeholder:text-slate-400"
                   />
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1.5">
                   {lang === 'ta'
-                    ? 'பதிவு செய்யும் போது பெற்ற ஐடியை உள்ளிடவும் (எ.கா. GDR000001)'
-                    : 'Enter the ID issued when you registered (e.g. GDR000001)'}
+                    ? 'பதிவு செய்யும் போது பெற்ற ஐடியை உள்ளிடவும் (எ.கா. GD-2025-000001)'
+                    : 'Enter the ID issued when you registered (e.g. GD-2025-000001)'}
                 </p>
               </div>
 

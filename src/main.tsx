@@ -1,3 +1,6 @@
+// Record boot time early for controlling when service worker reloads happen
+window.__vogBootTime = window.__vogBootTime || Date.now();
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
@@ -25,7 +28,12 @@ if ('serviceWorker' in navigator) {
     } catch { /* ignore */ }
     swReloaded = true;
     try { sessionStorage.setItem('vog_sw_reloaded', '1'); } catch { /* ignore */ }
-    window.location.reload();
+    // Only reload during initial app load (within first 3 seconds)
+    // This prevents reloads after the user has interacted with the app
+    const isInitialLoad = Date.now() - window.__vogBootTime < 3000;
+    if (isInitialLoad) {
+      window.location.reload();
+    }
   });
 }
 
@@ -45,7 +53,7 @@ if ('serviceWorker' in navigator) {
   let currentBuild: string | null = null;
   let reloading = false;
   const bootedAt = Date.now();
-  const GRACE_MS = 5 * 60 * 1000; // 5-minute no-reload grace window after boot
+    const GRACE_MS = 60 * 60 * 1000; // 1-hour no-reload grace window after boot
 
   const readVersion = async () => {
     try {

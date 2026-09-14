@@ -409,8 +409,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const res = await authApi.lookup({ phone: hasPhone ? p : undefined, gudalurId: hasId ? gid : undefined });
-      if (!res?.resident) {
-        throw new Error('No resident found for these details. Check your mobile number / Gudalur ID, or register first.');
+                  if (!res?.resident) {
+        throw new Error('No resident found for these details. Check your mobile number / Gudalur ID format (GD-YYYY-XXXXXX), or register first.');
       }
       const prof = applyPlatformAdminOverride(toUserProfile(res.resident));
       persistProfile(prof);
