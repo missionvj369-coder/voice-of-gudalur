@@ -243,6 +243,9 @@ export interface PetitionSignResult {
   message: string;
   /** The authoritative signature time (their ORIGINAL sign time on a duplicate). */
   signedAt?: string;
+  /** The civic `signatures` row id for this signature's witness-validation
+   *  lifecycle. Pass it to validationApi.create() to mint a validation link. */
+  signatureId?: string | null;
 }
 
 export const petitionApi = {
@@ -586,6 +589,18 @@ export const validationApi = {
       revoked?: boolean;
       expired?: boolean;
     }>(`/api/validation/verify/${encodeURIComponent(token)}`),
+
+  /** POST /api/validation/create — mint a single-use witness link for OWN
+   *  signature (requires session). `signatureId` comes from the sign response;
+   *  `signHash` is the fallback when the result was restored from local
+   *  storage. The server scopes both to the authenticated identity. */
+  create: (input: { signatureId?: string; signHash?: string }) =>
+    ensureCsrf().then(() =>
+      request<{ success: boolean; validationToken: string; message?: string }>(
+        '/api/validation/create',
+        { method: 'POST', body: JSON.stringify(input) }
+      ),
+    ),
 
   /** POST /api/validation/accept — accept a validation link (requires session). */
   accept: (body: { validationToken: string; idempotencyKey: string }) =>

@@ -139,16 +139,26 @@ router.post('/create', requireAuth, writeLimiter, async (req: Request, res: Resp
     }
 
     const raw = req.body && typeof req.body === 'object' ? req.body : {};
+    // The caller may identify its own signature by row id (from the sign
+    // response) or by the public sign hash (a result restored from local
+    // storage). Both are scoped to the authenticated identity below — the
+    // client value is never trusted on its own.
     const signatureId = (raw.signatureId || '').trim();
-    if (!signatureId) {
-      return res.status(400).json({ success: false, error: 'signatureId is required' });
+    const signHash = (raw.signHash || '').trim();
+    if (!signatureId && !signHash) {
+      return res.status(400).json({ success: false, error: 'signatureId or signHash is required' });
     }
 
     // Verify ownership + one-shot rule (1 validation per signature).
-    const sig = await db.queryOne<{ id: string; status: string; validation_count: number; max_validations: number }>(
-      'SELECT id, status, validation_count, max_validations FROM signatures WHERE id = $1 AND identity_id = $2',
-      [signatureId, ownerId],
-    );
+    const sig = signatureId
+      ? await db.queryOne<{ id: string; status: string; validation_count: number; max_validations: number }>(
+          'SELECT id, status, validation_count, max_validations FROM signatures WHERE id = $1 AND identity_id = $2',
+          [signatureId, ownerId],
+        )
+      : await db.queryOne<{ id: string; status: string; validation_count: number; max_validations: number }>(
+          'SELECT id, status, validation_count, max_validations FROM signatures WHERE public_reference = $1 AND identity_id = $2',
+          [signHash, ownerId],
+        );
     if (!sig) {
       return res.status(404).json({ success: false, error: 'Signature not found or not owned by you' });
     }
@@ -166,22 +176,22 @@ router.post('/create', requireAuth, writeLimiter, async (req: Request, res: Resp
     await db.execute(
       `UPDATE validation_links SET status = 'revoked', revoked_at = NOW()
        WHERE signature_id = $1 AND status = 'active'`,
-      [signatureId],
+      [sig.id],
     );
 
     const { rawToken, tokenHash } = generateSecureToken();
     await db.execute(
       `INSERT INTO validation_links (signature_id, token_hash, expires_at, status)
        VALUES ($1, $2, NOW() + INTERVAL '7 days', 'active')`,
-      [signatureId, tokenHash],
+      [sig.id, tokenHash],
     );
 
     await logAudit({
       actorId: ownerId,
       actorKind: 'user',
       action: 'validation_link.created',
-      target: signatureId,
-      detail: { signature_id: signatureId, validation_token: rawToken },
+      target: sig.id,
+      detail: { signature_id: sig.id, validation_token: rawToken },
       ip: req.ip,
     });
 

@@ -46,6 +46,10 @@ export interface PetitionSignResult {
   /** The authoritative signature time from petition_signs.created_at
    *  (their ORIGINAL sign time on a duplicate attempt — never Date.now()). */
   signedAt?: string;
+  /** The signatures-table row id (uuid) for this signature's civic-validation
+   *  lifecycle. The client passes this as `signatureId` to
+   *  POST /api/validation/create to mint the witness link. */
+  signatureId?: string;
 }
 
 function generateSignHash(): string {
@@ -88,12 +92,17 @@ export async function recordPetitionSign(input: PetitionSignInput): Promise<Peti
           'SELECT created_at FROM petition_signs WHERE sign_hash = $1',
           [parsed.signHash],
         );
+        const mirror = await tx.queryOne<{ id: string }>(
+          'SELECT id FROM signatures WHERE public_reference = $1',
+          [parsed.signHash],
+        );
         return {
           signHash: parsed.signHash,
           batchNo: parsed.batchNo,
           isDuplicate: false,
           verifyUrl: `/verify-sign?hash=${parsed.signHash}`,
           signedAt: original?.created_at,
+          signatureId: mirror?.id,
         };
       }
     }
@@ -113,12 +122,20 @@ export async function recordPetitionSign(input: PetitionSignInput): Promise<Peti
     }
     if (dupHash) {
       const row = await tx.queryOne<{ batch_no: number }>('SELECT batch_no FROM petition_signs WHERE sign_hash = $1', [dupHash]);
+      // The mirrored civic row (if this signature was recorded after the
+      // validation mirror landed, or backfilled by migration 022) — returned so
+      // a returning signer can still mint a witness validation link.
+      const mirror = await tx.queryOne<{ id: string }>(
+        'SELECT id FROM signatures WHERE public_reference = $1',
+        [dupHash],
+      );
       return {
         signHash: dupHash,
         batchNo: row?.batch_no ?? 1,
         isDuplicate: true,
         verifyUrl: `/verify-sign?hash=${dupHash}`,
         signedAt: dupCreatedAt ?? undefined,
+        signatureId: mirror?.id,
       };
     }
 
@@ -145,6 +162,9 @@ export async function recordPetitionSign(input: PetitionSignInput): Promise<Peti
     const phone4 = input.phone ? phoneLast4(input.phone) : undefined;
     const signMethod = input.signMethod ?? 'GD_ID';
     const consentTs = input.consentTimestamp ?? new Date().toISOString();
+    // The civic identity that owns this signature — the same uid the session
+    // carries, so /api/validation/create can prove ownership by identity_id.
+    const identityId = input.userUid || input.gdrId || signHash;
     const inserted = await tx.queryOne<{ id: number; created_at: string }>(
       `INSERT INTO petition_signs
          (sign_hash, user_uid, gdr_id, full_name, village, pincode, phone_last4,
@@ -158,6 +178,26 @@ export async function recordPetitionSign(input: PetitionSignInput): Promise<Peti
        signMethod, consentTs],
     );
 
+    // 5b. Mirror the signature into the civic `signatures` table so the Open
+    // Validation (witness) flow has a row to attach validation links to. The
+    // returned `signatureId` is what the client passes to
+    // POST /api/validation/create. ON CONFLICT keeps this idempotent: a retry
+    // (or a row already backfilled by migration 022) returns the ORIGINAL id.
+    const mirrored = await tx.queryOne<{ id: string }>(
+      `INSERT INTO signatures
+         (petition_id, identity_id, public_reference, public_display_mode,
+          display_name, area, status, signed_at, sign_method, unicode_sort_key)
+       VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, $8, $9)
+       ON CONFLICT (public_reference) DO UPDATE SET
+         display_name = excluded.display_name,
+         area = excluded.area,
+         sign_method = excluded.sign_method
+       RETURNING id`,
+      ['global', identityId, signHash, 'community', input.fullName,
+        input.village ?? null, inserted?.created_at ?? new Date().toISOString(),
+        signMethod, 100],
+    );
+
     // Record idempotency response if a key was supplied.
     if (input.idempotencyKey) {
       const response = JSON.stringify({ signHash, batchNo });
@@ -168,12 +208,13 @@ export async function recordPetitionSign(input: PetitionSignInput): Promise<Peti
     }
 
     // 6. Commit happens via db.withTransaction.
-        return {
+    return {
       signHash,
       batchNo,
       isDuplicate: false,
       verifyUrl: `/verify-sign?hash=${signHash}`,
       signedAt: inserted?.created_at,
+      signatureId: mirrored?.id,
     };
   });
 }

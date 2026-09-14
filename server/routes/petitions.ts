@@ -109,6 +109,9 @@ router.post('/sign', writeLimiter, requireAuth, async (req: Request, res: Respon
     });
     res.status(result.isDuplicate ? 200 : 201).json({
       signHash: result.signHash,
+      // The civic `signatures` row id — the client passes it (or the signHash
+      // above) to POST /api/validation/create to mint a witness link.
+      signatureId: result.signatureId ?? null,
       batchNo: result.batchNo,
       verifyUrl: result.verifyUrl,
       isDuplicate: result.isDuplicate,

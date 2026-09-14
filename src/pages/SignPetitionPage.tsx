@@ -18,6 +18,20 @@ interface PlaceCount {
   count: number;
 }
 
+/** The signed-signature view state, persisted to localStorage so an
+ *  "already signed" result survives a reload. `signatureId` is the civic
+ *  `signatures` row id required to mint a witness validation link. */
+interface SignResultView {
+  hash: string;
+  verifyUrl: string;
+  batchNo: number;
+  signedAt: string;
+  name: string;
+  gudalurId: string;
+  locality: string;
+  signatureId?: string;
+}
+
 /**
  * HOMEPAGE â€” clean, with only the Right to Life petition sign-in.
  * Live total counter, per-place leaderboard (highest first), WhatsApp share
@@ -27,15 +41,7 @@ export const SignPetitionPage: React.FC = () => {
   const { profile } = useAuth();
   const { lang, t } = useLanguage();
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{
-    hash: string;
-    verifyUrl: string;
-    batchNo: number;
-    signedAt: string;
-    name: string;
-    gudalurId: string;
-    locality: string;
-  } | null>(null);
+  const [result, setResult] = useState<SignResultView | null>(null);
   const [showRegister, setShowRegister] = useState(false);
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -219,7 +225,7 @@ export const SignPetitionPage: React.FC = () => {
     // CRITICAL-FLOW GUARD: prevent version-poll auto-reload while we sign
     try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
     const signedAt = new Date().toISOString();
-    const resultData = {
+    const resultData: SignResultView = {
       hash: "",
       verifyUrl: `${window.location.origin}/verify-sign`,
       batchNo: 1,
@@ -247,6 +253,8 @@ export const SignPetitionPage: React.FC = () => {
       resultData.batchNo = res.batchNo ?? 1;
       // Server is authoritative: on a duplicate this is the ORIGINAL sign time.
       if (res.signedAt) resultData.signedAt = res.signedAt;
+      // The civic signatures row id — required to mint a witness link later.
+      if (res.signatureId) resultData.signatureId = res.signatureId;
 
       if (res.isDuplicate) {
         toast.success(t("home.dup_toast"), { duration: 5000 });
@@ -324,18 +332,24 @@ export const SignPetitionPage: React.FC = () => {
 
   // Create validation link for witness verification
   const handleCreateValidationLink = useCallback(async () => {
+    if (!result) return;
     setValidationLoading(true);
     try {
-      const res = await validationApi.create();
-      const link = `${window.location.origin}/validate/${res.token}`;
+      // Identify the signature by row id when we have it, and always by the
+      // public sign hash (the fallback for a result restored from storage).
+      const res = await validationApi.create({
+        signatureId: result.signatureId,
+        signHash: result.hash,
+      });
+      const link = `${window.location.origin}/validate/${res.validationToken}`;
       setValidationLink(link);
       toast.success('Validation link created! Share with a witness to verify your signature.');
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to create validation link');
+      toast.error(err?.error || err?.message || 'Failed to create validation link');
     } finally {
       setValidationLoading(false);
     }
-  }, []);
+  }, [result]);
 
   const handleCopyValidationLink = useCallback(async () => {
     if (!validationLink) return;

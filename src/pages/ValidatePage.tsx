@@ -15,7 +15,7 @@ export default function ValidatePage() {
   const { token } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile, setProfile } = useAuth();
+  const { profile } = useAuth();
 
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -183,8 +183,8 @@ export default function ValidatePage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Signature to validate</p>
-                  <p className="font-semibold text-gray-800">{details.signature.name}</p>
-                  <p className="text-sm text-gray-500">{details.signature.address}</p>
+                  <p className="font-semibold text-gray-800">{details.signature.displayName || details.signature.publicReference}</p>
+                  <p className="text-sm text-gray-500">{details.signature.area || '—'}</p>
                 </div>
               </div>
             ) : (
@@ -198,15 +198,17 @@ export default function ValidatePage() {
 
               {showRegister ? (
                 <RegisterResidentModal
+                  isOpen
                   onClose={() => { setShowRegister(false); setAuthSpin(false); }}
-                  onSignUp={() => afterAuth()}
-                  loading={authSpin}
+                  onSuccess={() => afterAuth()}
+                  onNeedLogin={() => { setShowRegister(false); setShowLogin(true); }}
                 />
               ) : showLogin ? (
                 <LoginResidentModal
+                  isOpen
                   onClose={() => { setShowLogin(false); setAuthSpin(false); }}
-                  onLogin={() => afterAuth()}
-                  loading={authSpin}
+                  onSuccess={() => afterAuth()}
+                  onNeedRegister={() => { setShowLogin(false); setShowRegister(true); }}
                 />
               ) : (
                 <>
@@ -294,7 +296,7 @@ export default function ValidatePage() {
                 <p className="font-semibold text-gray-800">{details.signature.displayName || details.signature.publicReference}</p>
                 <p className="text-sm text-gray-500">{details.signature.area || '—'}</p>
                 <p className="mt-1 text-xs text-gray-400">
-                  Submitted {fmtDateTime(details.signature.createdAt)}
+                  Submitted {fmtDateTime(details.signature.signedAt)}
                 </p>
               </div>
             </div>
@@ -305,15 +307,17 @@ export default function ValidatePage() {
           <div className="mt-4 flex flex-col gap-2">
             {showRegister ? (
               <RegisterResidentModal
+                isOpen
                 onClose={() => { setShowRegister(false); setAuthSpin(false); }}
-                onSignUp={() => afterAuth()}
-                loading={authSpin}
+                onSuccess={() => afterAuth()}
+                onNeedLogin={() => { setShowRegister(false); setShowLogin(true); }}
               />
             ) : showLogin ? (
               <LoginResidentModal
+                isOpen
                 onClose={() => { setShowLogin(false); setAuthSpin(false); }}
-                onLogin={() => afterAuth()}
-                loading={authSpin}
+                onSuccess={() => afterAuth()}
+                onNeedRegister={() => { setShowLogin(false); setShowRegister(true); }}
               />
             ) : (
               <>

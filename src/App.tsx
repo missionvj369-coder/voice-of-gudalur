@@ -39,6 +39,12 @@ const PetitionOnlyRoutes: React.FC = () => (
       <Route path="/" element={<CampaignDashboard />} />
       <Route path="/sign-petition" element={<PetitionOnlyPage />} />
       <Route path="/verify-sign" element={<VerifySignPage />} />
+      {/* Witness validation — MUST be routed here too, otherwise a shared
+          /validate/<token> link falls through to "*" and drops the witness on
+          the campaign frontpage instead of the validation screen. */}
+      <Route path="/validate/:token" element={<ValidatePage />} />
+      <Route path="/validate/done" element={<ValidatePage />} />
+      <Route path="/profile" element={<ProfilePage />} />
       <Route path="/trust" element={<TrustPage />} />
       <Route path="*" element={<CampaignDashboard />} />
     </Routes>
