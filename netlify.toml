@@ -11,6 +11,26 @@
   #   command = "npm run build:with-db"
   #   build:with-db = "npm run db:check && npm run db:migrate && npm run db:seed && npm run build"
 
+# VOICE OF GUDALUR — Netlify configuration
+[build]
+  # Default deploy: build the PWA only. Migrations/seed are NOT run automatically
+  # so a frontend deploy never fails because the build sandbox cannot reach the DB.
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+# ─── Build environment ─────────────────────────────────────────
+# Force npm to always install devDependencies (vite, vite-plugin-pwa,
+# @vitejs/plugin-react, etc.) — they are required by the build step but
+# Netlify may run with NODE_ENV=production which skips them.
+# This fixes the "vite: not found" error.
+[build.environment]
+  NPM_FLAGS = "--include=dev"
+  NODE_ENV = "production"
+  # Disable Netlify's build cache for CSS/asset changes
+  NEXT_TELEMETRY_DISABLED = "1"
+  # Force fresh install
+  NPM_CONFIG_FROZEN_LOCKFILE = "false"
 # ── Build environment ───────────────────────────────────────────────
 # Force npm to always install devDependencies (vite, vite-plugin-pwa,
 # @vitejs/plugin-react, etc.) — they are required by the build step but
