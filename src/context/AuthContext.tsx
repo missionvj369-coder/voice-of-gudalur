@@ -454,11 +454,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (e?.status === 401 || /invalid/i.test(msg)) {
         throw new Error('Google sign-in failed — please try again.');
       }
+      // NO_ACCOUNT = user must register first with phone number
+      if (e?.status === 404 || /NO_ACCOUNT/i.test(msg)) {
+        throw new Error('NO_ACCOUNT:No resident found with this Google account. Please register first with your mobile number to get a Gudalur ID, then you can sign in with Google.');
+      }
       throw e;
     }
   };
 
-  /** POST /api/auth/telegram — sign in / register with a Telegram account. */
+  /** POST /api/auth/telegram — sign in with an EXISTING Telegram account. */
   const loginWithTelegram = async (payload: Record<string, any>): Promise<UserProfile> => {
     try {
       const res = await authApi.telegram(payload);
@@ -475,6 +479,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       if (e?.status === 401 || /invalid|expired/i.test(msg)) {
         throw new Error('Telegram sign-in failed — please try again.');
+      }
+      // NO_ACCOUNT = user must register first with phone number
+      if (e?.status === 404 || /NO_ACCOUNT/i.test(msg)) {
+        throw new Error('NO_ACCOUNT:No resident found with this Telegram account. Please register first with your mobile number to get a Gudalur ID, then you can sign in with Telegram.');
       }
       throw e;
     }

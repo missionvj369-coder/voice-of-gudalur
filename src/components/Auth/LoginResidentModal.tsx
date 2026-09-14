@@ -80,8 +80,20 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
       const data = await res.json() as { url: string };
       window.location.href = data.url;
     } catch (err: any) {
-      toast.error(err?.message || 'Google sign-in failed');
-      setSocialBusy(null);
+      const msg = err?.message || '';
+      // NO_ACCOUNT = user must register first
+      if (/NO_ACCOUNT/i.test(msg)) {
+        toast.error('No account found with this Google. Please register first with your mobile number.', { duration: 6000 });
+        setSocialBusy(null);
+        // Open registration modal after a short delay
+        setTimeout(() => {
+          onClose();
+          onNeedRegister?.();
+        }, 2000);
+      } else {
+        toast.error(msg || 'Google sign-in failed');
+        setSocialBusy(null);
+      }
       try { sessionStorage.removeItem('vog_user_active'); } catch { /* ignore */ }
     }
   };

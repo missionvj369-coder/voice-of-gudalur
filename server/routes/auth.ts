@@ -188,8 +188,11 @@ function verifyTelegramHash(payload: Record<string, any>, botToken: string): boo
   } catch { return false; }
 }
 
-/** Find or create a resident from a Google/Telegram social identity. */
-async function findOrCreateSocialResident(provider: 'google' | 'telegram', identity: {
+/** Find an EXISTING resident from a Google/Telegram social identity.
+ *  IMPORTANT: Social sign-in is AUTHENTICATION ONLY — no new ID generation.
+ *  Users MUST first register through normal data filling to get a Gudalur ID.
+ *  Google/Telegram are used ONLY to sign in and sign the petition. */
+async function findSocialResident(provider: 'google' | 'telegram', identity: {
   subject: string; name: string; email?: string; phone?: string; photoUrl?: string;
 }) {
   // 1. Look up by provider + subject
@@ -201,34 +204,25 @@ async function findOrCreateSocialResident(provider: 'google' | 'telegram', ident
   if (!row && provider === 'google' && identity.email) {
     row = await db.queryOne<any>('SELECT uid FROM users WHERE email = $1', [identity.email]);
   }
-  if (row) {
-    // Update provider link if not already set
-    await db.execute(
-      `UPDATE users SET
-        provider = CASE WHEN provider = '' THEN $1 ELSE provider END,
-        provider_subject = CASE WHEN provider_subject = '' THEN $2 ELSE provider_subject END,
-        provider_email = CASE WHEN provider_email = '' THEN $3 ELSE provider_email END,
-        avatar_url = COALESCE(avatar_url, $4),
-        updated_at = now()
-       WHERE uid = $5`,
-      [provider, identity.subject, identity.email ?? '', identity.photoUrl ?? null, row.uid],
-    );
-  } else {
-    // 3. Create new resident with a Gudalur ID
-    const uid = crypto.randomUUID();
-    const gudalurId = await allocateGudalurId();
-    const name = identity.name || (provider === 'google' ? 'Google User' : 'Telegram User');
-    await db.withTransaction(async (tx) => {
-      await tx.query(
-        `INSERT INTO users (uid, phone, gudalur_id, name, email, role, verification_level,
-           provider, provider_subject, provider_email, avatar_url)
-         VALUES ($1,$2,$3,$4,$5,'LOCAL_MEMBER','PHONE_VERIFIED',$6,$7,$8,$9)`,
-        [uid, identity.phone || null, gudalurId, name, identity.email || null,
-         provider, identity.subject, identity.email || '', identity.photoUrl || null],
-      );
-    });
-    row = { uid };
+  // 3. For Google, also try by phone (user may have registered with same phone)
+  if (!row && identity.phone) {
+    row = await db.queryOne<any>('SELECT uid FROM users WHERE phone = $1', [identity.phone]);
   }
+  if (!row) {
+    // User not found — social sign-in is for EXISTING users only
+    throw new Error('NO_ACCOUNT');
+  }
+  // Update provider link if not already set (link social to existing account)
+  await db.execute(
+    `UPDATE users SET
+      provider = CASE WHEN provider = '' OR provider IS NULL THEN $1 ELSE provider END,
+      provider_subject = CASE WHEN provider_subject = '' OR provider_subject IS NULL THEN $2 ELSE provider_subject END,
+      provider_email = CASE WHEN provider_email = '' OR provider_email IS NULL THEN $3 ELSE provider_email END,
+      avatar_url = COALESCE(avatar_url, $4),
+      updated_at = now()
+     WHERE uid = $5`,
+    [provider, identity.subject, identity.email ?? '', identity.photoUrl ?? null, row.uid],
+  );
   // Return the full resident profile
   const full = await db.queryOne<any>(
     `SELECT uid, phone, gudalur_id, name, email, locality_id, locality_name,
@@ -253,7 +247,7 @@ router.post('/google', async (req: Request, res: Response) => {
     }
     const payload = await verifyGoogleIdToken(idToken);
     if (!payload) return res.status(401).json({ error: 'Invalid Google ID token' });
-    const resident = await findOrCreateSocialResident('google', {
+    const resident = await findSocialResident('google', {
       subject: payload.sub,
       name: payload.name || payload.email?.split('@')[0] || 'Google User',
       email: payload.email,
@@ -269,6 +263,12 @@ router.post('/google', async (req: Request, res: Response) => {
     res.json({ resident, csrfToken: session.csrfToken });
   } catch (e: any) {
     logger.error('google auth:', e.message);
+    if (e.message === 'NO_ACCOUNT') {
+      return res.status(404).json({
+        error: 'NO_ACCOUNT',
+        message: 'No resident found with this Google account. Please register first with your mobile number to get a Gudalur ID, then sign in with Google.',
+      });
+    }
     res.status(500).json({ error: `Google sign-in failed — ${e.message}` });
   }
 });
@@ -329,7 +329,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
       id: string; email: string; name: string; picture?: string; verified_email?: boolean;
     };
 
-    const resident = await findOrCreateSocialResident('google', {
+    const resident = await findSocialResident('google', {
       subject: userInfo.id,
       name: userInfo.name || userInfo.email?.split('@')[0] || 'Google User',
       email: userInfo.email,
@@ -345,7 +345,11 @@ router.get('/google/callback', async (req: Request, res: Response) => {
     res.redirect('/?google_auth=success');
   } catch (e: any) {
     logger.error('google callback:', e.message);
-    res.redirect(`/?google_auth=error&reason=${encodeURIComponent(e.message)}`);
+    if (e.message === 'NO_ACCOUNT') {
+      res.redirect('/?google_auth=error&reason=no_account&message=' + encodeURIComponent('Please register first with your mobile number to get a Gudalur ID, then sign in with Google.'));
+    } else {
+      res.redirect(`/?google_auth=error&reason=${encodeURIComponent(e.message)}`);
+    }
   }
 });
 
@@ -369,7 +373,7 @@ router.post('/telegram', async (req: Request, res: Response) => {
     }
     const tgId = String(p.id);
     const name = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Telegram User';
-    const resident = await findOrCreateSocialResident('telegram', {
+    const resident = await findSocialResident('telegram', {
       subject: tgId, name, photoUrl: p.photo_url,
     });
     const sessionUser = {
@@ -381,6 +385,12 @@ router.post('/telegram', async (req: Request, res: Response) => {
     res.json({ resident, csrfToken: session.csrfToken });
   } catch (e: any) {
     logger.error('telegram auth:', e.message);
+    if (e.message === 'NO_ACCOUNT') {
+      return res.status(404).json({
+        error: 'NO_ACCOUNT',
+        message: 'No resident found with this Telegram account. Please register first with your mobile number to get a Gudalur ID, then sign in with Telegram.',
+      });
+    }
     res.status(500).json({ error: `Telegram sign-in failed — ${e.message}` });
   }
 });
