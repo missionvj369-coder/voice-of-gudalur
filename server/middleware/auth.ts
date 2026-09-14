@@ -171,6 +171,14 @@ export function requireRole(...roles: string[]) {
 
 /** CSRF guard for state-changing requests (double-submit cookie pattern). */
 export function csrfProtection(req: Request, res: Response, next: NextFunction) {
+  // Auth bootstrap endpoints (/lookup, /register, /forgot) are CSRF-exempt
+  // because there is no existing session to protect — they ARE the login flow.
+  // Applying CSRF here blocks passwordless login entirely (403 before any
+  // user can authenticate).
+  const path = (req.path || '').toLowerCase();
+  if (path === '/lookup' || path === '/register' || path === '/forgot') {
+    return next();
+  }
   const method = req.method.toUpperCase();
   if (['GET', 'HEAD', 'OPTIONS'].includes(method)) return next();
   const header = (req.headers['x-csrf-token'] as string) ?? (req.headers['x-csrf-token'] as string);
