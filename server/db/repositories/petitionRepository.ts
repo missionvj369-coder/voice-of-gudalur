@@ -251,7 +251,7 @@ export interface PetitionSignListResult {
     village: string | null; batch_no: number; created_at: string;
     /** How the signature was made: 'GD_ID' | 'PHONE' | 'GOOGLE' | 'TELEGRAM'. */
     sign_method: string;
-    /** Number of validations received (max 3). */
+    /** Number of validations received (max 1 — one community validation suffices). */
     validation_count: number;
   }>;
   hasMore: boolean;

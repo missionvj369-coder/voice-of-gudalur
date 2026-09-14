@@ -20,9 +20,8 @@ import crypto from 'crypto';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { db } from '../db/client';
 import { logger } from '../utils/logger';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, logAudit } from '../middleware/auth';
 import { hashToken, generateSecureToken } from '../security/vouTokens';
-import { appendAuditEvent } from '../security/vouAudit';
 
 const router = Router();
 
@@ -145,13 +144,22 @@ router.post('/create', requireAuth, writeLimiter, async (req: Request, res: Resp
       return res.status(400).json({ success: false, error: 'signatureId is required' });
     }
 
-    // Verify ownership.
-    const sig = await db.queryOne<{ id: string; status: string }>(
-      'SELECT id, status FROM signatures WHERE id = $1 AND identity_id = $2',
+    // Verify ownership + one-shot rule (1 validation per signature).
+    const sig = await db.queryOne<{ id: string; status: string; validation_count: number; max_validations: number }>(
+      'SELECT id, status, validation_count, max_validations FROM signatures WHERE id = $1 AND identity_id = $2',
       [signatureId, ownerId],
     );
     if (!sig) {
       return res.status(404).json({ success: false, error: 'Signature not found or not owned by you' });
+    }
+    // Already fully validated → refuse new links (prevents orphaned
+    // validation_links rows and wasted DB writes).
+    if (sig.status === 'COMMUNITY_VALIDATED' || sig.validation_count >= sig.max_validations) {
+      return res.status(409).json({
+        success: false,
+        error: 'This signature has already been validated',
+        code: 'MAX_VALIDATIONS_REACHED',
+      });
     }
 
     // Revoke any existing active links for this signature.
@@ -168,7 +176,7 @@ router.post('/create', requireAuth, writeLimiter, async (req: Request, res: Resp
       [signatureId, tokenHash],
     );
 
-    await appendAuditEvent({
+    await logAudit({
       actorId: ownerId,
       actorKind: 'user',
       action: 'validation_link.created',
@@ -242,7 +250,7 @@ router.post('/accept', requireAuth, writeLimiter, async (req: Request, res: Resp
     }
 
     await db.executeWithRetry(async (tx) => {
-      // Check validation limit (max 3 validations per signature)
+      // Check validation limit (1 validation per signature)
       const sig = await tx.queryOne<{ validation_count: number; max_validations: number }>(
         'SELECT validation_count, max_validations FROM signatures WHERE id = $1',
         [link.signature_id],
@@ -275,7 +283,7 @@ router.post('/accept', requireAuth, writeLimiter, async (req: Request, res: Resp
         await tx.execute(
           `INSERT INTO validation_witnesses (validation_link_id, signature_id, witness_identity_id, created_at, idempotency_key)
            VALUES ($1, $2, $3, NOW(), $4)
-           ON CONFLICT (idempotency_key) DO NOTHING`,
+           ON CONFLICT DO NOTHING`,
           [link.id, link.signature_id, ownerId, idempotencyKey],
         );
       }
@@ -304,7 +312,7 @@ router.post('/accept', requireAuth, writeLimiter, async (req: Request, res: Resp
         [link.signature_id],
       );
 
-      await appendAuditEvent({
+      await logAudit({
         actorId: ownerId,
         actorKind: 'user',
         action: 'validation.accepted',
@@ -368,7 +376,7 @@ router.post('/reject', requireAuth, writeLimiter, async (req: Request, res: Resp
         [link.signature_id],
       );
 
-      await appendAuditEvent({
+      await logAudit({
         actorId: ownerId,
         actorKind: 'user',
         action: 'validation.rejected',
@@ -401,7 +409,7 @@ router.get('/my-validations', requireAuth, readLimiter, async (req: Request, res
 
     // Counts by signature status for this identity's signatures.
     const counts = await db.queryOne<{
-      total: string; validated: string; reviewRequired: string; pending: string;
+      total: string; validated: string; review_required: string; pending: string;
     }>(
       `SELECT
          COUNT(*)::int AS total,
@@ -423,7 +431,7 @@ router.get('/my-validations', requireAuth, readLimiter, async (req: Request, res
     );
 
     // Recent validation links (last 10) with signature details.
-    const recent = await db.queryMany<{
+    const recentResult = await db.query<{
       linkId: string; tokenHash: string; status: string; createdAt: string;
       displayName: string; area: string; statusSig: string;
       petitionId: string; publicReference: string;
@@ -445,6 +453,7 @@ router.get('/my-validations', requireAuth, readLimiter, async (req: Request, res
        LIMIT 10`,
       [ownerId],
     );
+    const recent = recentResult.rows;
 
     return res.json({
       success: true,
