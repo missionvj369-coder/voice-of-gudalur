@@ -147,19 +147,24 @@ export const Manifesto: React.FC = () => {
         <p className="text-sm text-slate-700 max-w-md mx-auto">{t('abt.support_sub')}</p>
         {hasSigned ? (
           /* After a successful sign — locked, untouchable "Petition Signed" state */
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            title="You have already signed the petition"
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-lg cursor-not-allowed select-none opacity-95"
-          >
-            <BadgeCheck size={16} /> {t('abt.signed_cta')}
-          </button>
+          <div className="space-y-3">
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              title="You have already signed the petition"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-lg cursor-not-allowed select-none opacity-95"
+            >
+              <BadgeCheck size={16} /> {t('abt.signed_cta')}
+            </button>
+            <p className="text-xs text-emerald-700 font-semibold">
+              ✓ Your signature has been recorded. Share the petition to gather more support!
+            </p>
+          </div>
         ) : profile ? (
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/sign-petition')}
             className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:opacity-95"
           >
             <PenLine size={16} /> {t('abt.sign_cta')}

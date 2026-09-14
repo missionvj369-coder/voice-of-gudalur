@@ -268,6 +268,7 @@ export async function listPetitionSignsCursor(
 }
 
 export async function getMyPetitionSign(userUid: string): Promise<MyPetitionSign | null> {
+  // Check resident signatures first (petition_signs table)
   const row = await db.queryOne<{
     sign_hash: string; full_name: string; village: string | null; batch_no: number; created_at: string;
   }>(
@@ -276,15 +277,43 @@ export async function getMyPetitionSign(userUid: string): Promise<MyPetitionSign
      ORDER BY created_at DESC LIMIT 1`,
     [userUid],
   );
-  if (!row) return null;
-  return {
-    signHash: row.sign_hash,
-    fullName: row.full_name,
-    village: row.village ?? null,
-    batchNo: Number(row.batch_no),
-    signedAt: row.created_at,
-    verifyUrl: `/verify-sign?hash=${encodeURIComponent(row.sign_hash)}`,
-  };
+  if (row) {
+    return {
+      signHash: row.sign_hash,
+      fullName: row.full_name,
+      village: row.village ?? null,
+      batchNo: Number(row.batch_no),
+      signedAt: row.created_at,
+      verifyUrl: `/verify-sign?hash=${encodeURIComponent(row.sign_hash)}`,
+    };
+  }
+
+  // Also check mobile signatures (petition_mobile_signs) linked to this user via phone hash
+  // Mobile signs don't have user_uid, so we check by matching the user's phone
+  const mobileRow = await db.queryOne<{
+    sign_hash: string; full_name: string; batch_no: number; created_at: string;
+  }>(
+    `SELECT pms.sign_hash, pms.full_name, pms.batch_no, pms.created_at
+     FROM petition_mobile_signs pms
+     JOIN users u ON u.phone = (
+       SELECT phone FROM users WHERE uid = $1
+     )
+     WHERE pms.mobile_identity_hash = encode(digest(u.phone || $2, 'sha256'), 'hex')
+     ORDER BY pms.created_at DESC LIMIT 1`,
+    [userUid, process.env.PETITION_IDENTITY_SECRET || ''],
+  );
+  if (mobileRow) {
+    return {
+      signHash: mobileRow.sign_hash,
+      fullName: mobileRow.full_name,
+      village: null,
+      batchNo: Number(mobileRow.batch_no),
+      signedAt: mobileRow.created_at,
+      verifyUrl: `/verify-sign?hash=${encodeURIComponent(mobileRow.sign_hash)}`,
+    };
+  }
+
+  return null;
 }
 
 

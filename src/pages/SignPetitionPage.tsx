@@ -2,7 +2,7 @@
 import { Link } from "react-router-dom";
 import { useAuth, readLocalSignature, isRealGudalurId } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
-import { petitionApi, mediaApi, type MediaItem } from "../services/api";
+import { petitionApi, mediaApi, validationApi, type MediaItem } from "../services/api";
 import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal";
 import { ThirukuralSection } from "../components/ThirukuralSection";
 import { buildVerifiedSignatureReceipt } from "../utils/grievanceReceipt";
@@ -10,7 +10,7 @@ import ShareSocialModal from "../components/ShareSocial/ShareSocialModal";
 import MediaGallery from "../components/ShareSocial/MediaGallery";
 import MediaViewer from "../components/ShareSocial/MediaViewer";
 import { PlatformIcon } from '../components/ShareSocial/PlatformIcon';
-import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2, ImageIcon, Video, Sparkles, Hash, CreditCard } from "lucide-react";
+import { BarChart3, Download, PenLine, Eye, Loader2, Share2, CheckCircle2, User, Phone, MapPin, Clock, Shield, IdCard, BadgeCheck, Link2, ImageIcon, Video, Sparkles, Hash, CreditCard, Users, Copy, Check } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface PlaceCount {
@@ -47,6 +47,10 @@ export const SignPetitionPage: React.FC = () => {
   const [places, setPlaces] = useState<PlaceCount[]>([]);
   const [hasSigned, setHasSigned] = useState(false);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  // Validation link state
+  const [validationLink, setValidationLink] = useState<string | null>(null);
+  const [validationLoading, setValidationLoading] = useState(false);
+  const [validationCopied, setValidationCopied] = useState(false);
   const [shareActive, setShareActive] = useState<{ id: string; title: string; description: string; imageUrl?: string; videoUrl?: string; createdAt: string } | null>(null);
   const [ledger, setLedger] = useState<Array<{ hash: string; name: string; village: string; phoneLast4: string | null; batchNo: number; signedAt: string; verifyUrl: string }>>([]);
   const [ledgerTotal, setLedgerTotal] = useState<number | null>(null);
@@ -318,6 +322,40 @@ export const SignPetitionPage: React.FC = () => {
     }
   }, [result, profile, t]);
 
+  // Create validation link for witness verification
+  const handleCreateValidationLink = useCallback(async () => {
+    setValidationLoading(true);
+    try {
+      const res = await validationApi.create();
+      const link = `${window.location.origin}/validate/${res.token}`;
+      setValidationLink(link);
+      toast.success('Validation link created! Share with a witness to verify your signature.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create validation link');
+    } finally {
+      setValidationLoading(false);
+    }
+  }, []);
+
+  const handleCopyValidationLink = useCallback(async () => {
+    if (!validationLink) return;
+    try {
+      await navigator.clipboard.writeText(validationLink);
+      setValidationCopied(true);
+      toast.success('Validation link copied!');
+      setTimeout(() => setValidationCopied(false), 2000);
+    } catch {
+      toast.error('Failed to copy link');
+    }
+  }, [validationLink]);
+
+  const handleShareValidationLink = useCallback(() => {
+    if (!validationLink) return;
+    const msg = `🔐 *Voice of Gudalur — Witness Validation Required*\n\nI have signed the Right to Life petition. Please verify my signature by clicking the link below:\n\n${validationLink}\n\nThis link is secure and can only be used once. Thank you for helping verify my signature!`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+  }, [validationLink]);
+
   return (
     <div className="max-w-2xl mx-auto px-3 py-3 sm:px-4 sm:py-8 space-y-3 sm:space-y-6">
       {/* Sticky Welcome Banner — stays pinned at top during scroll */}
@@ -528,6 +566,61 @@ export const SignPetitionPage: React.FC = () => {
             </button>
           </div>
           <p className="text-[10px] text-emerald-700 break-all">{result.verifyUrl}</p>
+        </div>
+      )}
+
+      {/* Validation Link Section - Witness Verification */}
+      {hasSigned && result && (
+        <div className="rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+              <Users size={20} className="text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-blue-900">Witness Validation</h3>
+              <p className="text-[10px] text-blue-600">Share a secure link with a witness to verify your signature</p>
+            </div>
+          </div>
+
+          {!validationLink ? (
+            <button
+              onClick={handleCreateValidationLink}
+              disabled={validationLoading}
+              className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition disabled:opacity-50"
+            >
+              {validationLoading ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Users size={16} />
+              )}
+              {validationLoading ? 'Creating...' : 'Create Validation Link'}
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <div className="bg-white rounded-xl p-3 border border-blue-200">
+                <p className="text-[10px] text-blue-600 font-bold mb-1">Validation Link (share with witness):</p>
+                <p className="text-[10px] text-blue-800 font-mono break-all">{validationLink}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={handleCopyValidationLink}
+                  className="py-2.5 rounded-xl bg-white border border-blue-300 text-blue-700 font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-blue-50 transition"
+                >
+                  {validationCopied ? <Check size={13} /> : <Copy size={13} />}
+                  {validationCopied ? 'Copied!' : 'Copy Link'}
+                </button>
+                <button
+                  onClick={handleShareValidationLink}
+                  className="py-2.5 rounded-xl bg-green-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-green-700 transition"
+                >
+                  <PlatformIcon platform="whatsapp" size={14} className="brightness-0 invert" /> Share
+                </button>
+              </div>
+              <p className="text-[9px] text-blue-600 text-center">
+                ⚠️ This link can only be used once. After validation, your signature status changes to "Community Validated".
+              </p>
+            </div>
+          )}
         </div>
       )}
 
