@@ -59,7 +59,8 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
         try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
         try {
           await loginWithTelegram(user);
-          toast.success('Welcome back!', { icon: 'ðŸªª', duration: 6000 });
+          toast.success('Welcome back!', { icon: '🪪', duration: 6000 });
+          window.dispatchEvent(new Event('vog:authorization-updated'));
           onSuccess?.();
           onClose();
         } catch (err: any) {
