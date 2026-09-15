@@ -58,7 +58,10 @@ export function formatTakenAt(iso: string | null): string | null {
  */
 export async function extractPhotoInsights(file: File): Promise<PhotoInsights> {
   try {
-    const exif = await exifr.parse(file, { gps: true, tiff: true, ifd0: true, exif: true }).catch(() => null);
+    // `tiff: true` already reads the IFD0 block — exifr has no `ifd0: true`
+    // switch (its IFD0 parsing "cannot be disabled"), so asking for it as a
+    // boolean only produced a type error.
+    const exif = await exifr.parse(file, { gps: true, tiff: true, exif: true }).catch(() => null);
 
     const lat = exif && typeof exif.latitude === 'number' ? exif.latitude : null;
     const lng = exif && typeof exif.longitude === 'number' ? exif.longitude : null;

@@ -2,11 +2,12 @@ import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider, useAuth, isRealGudalurId } from './context/AuthContext';
 import { LanguageProvider, useLanguage, type Language } from './context/LanguageContext';
 import { Shell } from './components/Layout/Shell';
 import { OpeningAnimation } from './components/OpeningAnimation';
 import { PETITION_ONLY } from './config/productionMode';
+import { WITNESS_REGISTER_EVENT, WITNESS_REGISTER_FLAG } from './pages/about_helpers';
 
 const SignPetitionPage = lazy(() => import('./pages/SignPetitionPage').then((m) => ({ default: m.SignPetitionPage })));
 const Manifesto = lazy(() => import('./pages/Manifesto').then((m) => ({ default: m.Manifesto })));
@@ -36,13 +37,37 @@ const RouteFallback: React.FC = () => (
  * z-[100]`, so on these routes it covers the target screen — a witness who
  * just tapped a WhatsApp validation link would have to tap through four intro
  * screens (language -> concern -> intro -> cost) before reaching it.
- *
- * Skipping is safe: the language is still restored from localStorage and can
- * be changed any time from the menu.
  */
 const DEEP_LINK_PREFIXES = ['/validate/', '/verify-sign'] as const;
 const isDeepLink = (pathname: string): boolean =>
   DEEP_LINK_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+
+/** A witness link — the one deep link that needs a resident account. */
+const isWitnessLink = (pathname: string): boolean => pathname.startsWith('/validate/');
+
+/**
+ * Where AuthContext caches the resident card this device registered with.
+ * Reading it gives a SYNCHRONOUS answer to "does this visitor already have an
+ * account?", which is exactly what the intro decision needs on the first paint
+ * — the async session restore in AuthContext lands too late to matter here.
+ */
+const REGISTERED_PROFILE_KEY = 'VoiceOfGudalur_resident_profile';
+
+/**
+ * True only for a REAL server-issued Gudalur ID (GD-YYYY-XXXXXX), the same
+ * rule AuthContext applies before trusting a cached card — a synthetic
+ * "OFFLINE-*" placeholder must never be mistaken for an account.
+ */
+const hasRegisteredResidentOnDevice = (): boolean => {
+  try {
+    const raw = localStorage.getItem(REGISTERED_PROFILE_KEY);
+    if (!raw) return false;
+    const cached = JSON.parse(raw) as { gudalurId?: string } | null;
+    return isRealGudalurId(cached?.gudalurId);
+  } catch {
+    return false; // private mode / corrupt entry
+  }
+};
 
 const CampaignDashboard = lazy(() => import('./pages/CampaignDashboard').then((m) => ({ default: m.CampaignDashboard })));
 
@@ -72,14 +97,32 @@ const AdminRoutes: React.FC = () => (
   </Routes>
 );
 
+/**
+ * Route + intro wiring for a SHARED link:
+ *
+ *   • ALREADY a resident on this device → the intro is skipped entirely and the
+ *     witness lands on the validate screen. Their account is what the link
+ *     asks for, so nothing else should stand in the way; if the session has
+ *     lapsed they simply log in ON that screen and it turns into "Confirm
+ *     Signature" without navigating anywhere.
+ *
+ *   • Brand-new visitor → the normal introduction still plays. Someone who has
+ *     never heard of this campaign should first learn what it is; the moment
+ *     the intro finishes the registration form opens by itself, because an
+ *     account is the only step between them and the signature they were asked
+ *     to give (and the Shell modal already offers "Already registered? Log in"
+ *     for a resident opening the link on a new phone).
+ */
 const AppContent: React.FC = () => {
   const { setLang } = useLanguage();
   const location = useLocation();
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [location.pathname]);
-  // A shared deep link lands on its target screen immediately (see
-  // DEEP_LINK_PREFIXES) — the intro overlay must never cover it.
   const deepLink = isDeepLink(location.pathname);
-  const [showOpening, setShowOpening] = useState(() => !deepLink);
+  const witnessLink = isWitnessLink(location.pathname);
+  const alreadyRegistered = hasRegisteredResidentOnDevice();
+  // Evaluated once, on the first paint: the intro must never appear a moment
+  // after a shared link has already rendered its target screen.
+  const [showOpening, setShowOpening] = useState(() => !(deepLink && alreadyRegistered));
   useEffect(() => {
     // Mark this tab as "past the intro" so the service-worker update guard in
     // main.tsx cannot hard-reload the page out from under a witness who is
@@ -100,6 +143,18 @@ const AppContent: React.FC = () => {
             try { localStorage.setItem('VoiceOfGudalur_lang_chosen', '1'); } catch { /* private mode */ }
             setLang(l);
             setShowOpening(false);
+            /* A brand-new visitor who arrived on a witness link is holding a
+               request to validate a neighbour's signature. Do not leave them
+               staring at a login gate: hand them straight to registration.
+               ValidatePage owns that form (Shell's modals do not exist in
+               petition-only mode), and it re-reads the link the instant the new
+               Gudalur ID lands, so the witness continues with zero taps. The
+               session flag covers a validate route whose code was still
+               loading when this fired. */
+            if (witnessLink && !alreadyRegistered) {
+              try { sessionStorage.setItem(WITNESS_REGISTER_FLAG, '1'); } catch { /* private mode */ }
+              window.dispatchEvent(new Event(WITNESS_REGISTER_EVENT));
+            }
           }}
         />
       )}

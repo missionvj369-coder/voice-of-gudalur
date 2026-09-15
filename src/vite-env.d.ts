@@ -28,6 +28,15 @@ declare module "*.webp" {
   export default src;
 }
 
+interface Window {
+  /**
+   * Epoch ms recorded at the very top of main.tsx. The service-worker
+   * `controllerchange` handler uses it to only self-reload during the first
+   * seconds of boot, never while a resident is mid-registration.
+   */
+  __vogBootTime?: number;
+}
+
 interface ImportMetaEnv {
   /** petition = production shows ONLY the petition page; full = the entire app. */
   readonly VITE_APP_MODE?: string;

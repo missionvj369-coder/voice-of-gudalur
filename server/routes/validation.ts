@@ -80,7 +80,13 @@ router.get('/verify/:token', readLimiter, async (req: Request, res: Response) =>
          s.display_name, s.area, s.status AS status_sig,
          s.signed_at, s.petition_id, s.identity_id
        FROM validation_links vl
-       JOIN signatures s ON s.id = vl.signature_id
+       -- UUID/STRING drift: migration 020 declares validation_links.signature_id
+       -- as STRING while signatures.id is UUID. An untyped parameter can adapt
+       -- to a column's type, but a COLUMN-to-COLUMN comparison of two different
+       -- declared types cannot — it fails at PLAN time with "unsupported
+       -- comparison operator: <uuid> = <string>" (HTTP 500 on every witness
+       -- link). Casting both sides to STRING matches either live schema.
+       JOIN signatures s ON s.id::STRING = vl.signature_id::STRING
        WHERE vl.token_hash = $1`,
       [tokenHash],
     );
@@ -450,7 +456,7 @@ router.get('/my-validations', requireAuth, readLimiter, async (req: Request, res
     const activeLinks = await db.queryOne<{ activeCount: string }>(
       `SELECT COUNT(*)::int AS activeCount
        FROM validation_links vl
-       JOIN signatures s ON s.id = vl.signature_id
+       JOIN signatures s ON s.id::STRING = vl.signature_id::STRING -- see verify: UUID/STRING drift
        WHERE s.identity_id = $1 AND vl.status = 'active'`,
       [ownerId],
     );
@@ -472,7 +478,7 @@ router.get('/my-validations', requireAuth, readLimiter, async (req: Request, res
          s.petition_id AS petitionId,
          s.public_reference AS publicReference
        FROM validation_links vl
-       JOIN signatures s ON s.id = vl.signature_id
+       JOIN signatures s ON s.id::STRING = vl.signature_id::STRING -- see verify: UUID/STRING drift
        WHERE s.identity_id = $1
        ORDER BY vl.created_at DESC
        LIMIT 10`,

@@ -5,6 +5,7 @@ import { validationApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal";
 import { LoginResidentModal } from "../components/Auth/LoginResidentModal";
+import { WITNESS_REGISTER_EVENT, WITNESS_REGISTER_FLAG } from "./about_helpers";
 
 const APP_NAME = "VOICE OF GUDALUR";
 
@@ -32,14 +33,65 @@ export default function ValidatePage() {
       try {
         const d = await validationApi.verify(token);
         if (!cancelled) setDetails(d);
-      } catch (e) {
-        if (!cancelled) setDetails({ valid: false, error: "Failed to load validation details" });
+      } catch (err) {
+        // The API client throws an Error carrying the server's own message and
+        // HTTP status. 404/410 are verdicts about the LINK (not found / used /
+        // revoked / expired) — everything else is a load failure worth a retry.
+        const e = err as { error?: string; message?: string; status?: number };
+        if (!cancelled) setDetails({
+          valid: false,
+          status: e?.status,
+          error: e?.error || e?.message || "Failed to load validation details",
+        });
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
   }, [token]);
+
+  /**
+   * Refresh the link the moment a resident identity exists.
+   *
+   * A witness may register or log in through the Shell-level modal (the one the
+   * intro hands brand-new visitors to) instead of the two buttons on this
+   * screen, so `afterAuth` is not the only path to an account. Once the Gudalur
+   * ID is known, the link is re-read under that identity and this screen flips
+   * straight from "verify who you are" to "Confirm Signature" — no navigation,
+   * no reload, nothing for the witness to tap.
+   */
+  const residentKey = profile?.gudalurId || profile?.phone || "";
+  useEffect(() => {
+    if (!token || !residentKey) return;
+    let cancelled = false;
+    validationApi
+      .verify(token)
+      .then((d) => { if (!cancelled) setDetails(d); })
+      .catch(() => { /* keep whatever the anonymous read already showed */ });
+    return () => { cancelled = true; };
+  }, [token, residentKey]);
+
+  /**
+   * WITNESS FUNNEL — a stranger who tapped a shared link has just finished the
+   * intro (App.tsx pushes WITNESS_REGISTER_EVENT). Open the registration form
+   * for them instead of leaving a button to find: an account is the single step
+   * between them and the signature they were asked to witness. Login stays one
+   * tap away inside that modal ("Already registered? Log in") for a resident
+   * opening the link on a fresh phone.
+   */
+  useEffect(() => {
+    const openRegister = () => {
+      try { sessionStorage.removeItem(WITNESS_REGISTER_FLAG); } catch { /* private mode */ }
+      if (profile) return; // already identified — nothing to register
+      setShowLogin(false);
+      setShowRegister(true);
+    };
+    try {
+      if (sessionStorage.getItem(WITNESS_REGISTER_FLAG) === '1') openRegister();
+    } catch { /* private mode */ }
+    window.addEventListener(WITNESS_REGISTER_EVENT, openRegister);
+    return () => window.removeEventListener(WITNESS_REGISTER_EVENT, openRegister);
+  }, [profile]);
 
   const afterAuth = useCallback(() => {
     setShowRegister(false);
@@ -58,13 +110,20 @@ export default function ValidatePage() {
     try {
       const key = crypto.randomUUID();
       await validationApi.accept({ validationToken: token, idempotencyKey: key });
-      toast.success("Validation accepted! The signature has been verified.");
-      navigate("/validate/done", { state: { token, action: "accepted" }, replace: true });
+      toast.success(
+        "Validation accepted — thank you! This signature now has a witness. Add your own voice below.",
+        { duration: 6000 },
+      );
+      /* Straight into the petition. A witness who has just vouched for a
+         neighbour is the warmest supporter the campaign will ever get — do not
+         strand them on a "done" card with nothing left to do. `replace` keeps
+         the now-used token out of the back stack. */
+      navigate("/sign-petition", { replace: true });
     } catch (err) {
       const msg = (err && (err.error || err.message)) || "Failed to accept";
       if (/already|used|revoked/i.test(msg)) {
-        toast.success("This signature has already been validated.");
-        navigate("/validate/done", { state: { token, action: "accepted" }, replace: true });
+        toast.success("This signature has already been validated. Add your own voice below.", { duration: 6000 });
+        navigate("/sign-petition", { replace: true });
       } else {
         toast.error(msg);
       }
@@ -131,6 +190,56 @@ export default function ValidatePage() {
   }
 
 
+
+  /*
+   * The link itself was refused — 410 (expired, already used, revoked) or 404
+   * (unknown token). Each signature needs exactly one witness and links are
+   * single-use, so this is the common case for a reopened WhatsApp message.
+   * Offering Decline / Sign & Validate buttons that can only fail wastes a
+   * witness's data; say what happened and point them at the next best step
+   * (their own signature). A non-verdict failure (offline, 5xx) keeps a retry.
+   */
+  if (details && details.valid === false) {
+    const dead = details.status === 410 || details.status === 404;
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-full max-w-md mx-4 rounded-3xl bg-white border border-slate-200 p-8 text-center space-y-4 shadow-sm">
+          <div className={"w-14 h-14 mx-auto rounded-2xl flex items-center justify-center " + (dead ? "bg-amber-50" : "bg-slate-50")}>
+            <svg className={"w-7 h-7 " + (dead ? "text-amber-500" : "text-slate-500")} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              {dead ? (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-13.7-3.3L4 8m16 8l-2.3 2.3A8 8 0 014 15" />
+              )}
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">
+              {dead ? "This validation link is no longer active" : "Could not open this validation link"}
+            </h1>
+            <p className="mt-2 text-sm text-gray-600">{details.error}</p>
+          </div>
+          <div className="pt-1">
+            {dead ? (
+              <button
+                onClick={() => navigate("/sign-petition")}
+                className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 transition shadow-sm"
+              >
+                Sign the petition yourself
+              </button>
+            ) : (
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 hover:bg-slate-50 transition shadow-sm"
+              >
+                Try again
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // No token
   if (!token) {

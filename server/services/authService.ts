@@ -33,7 +33,13 @@ async function allocateGudalurId() {
   throw new Error('Failed to allocate a unique Gudalur ID');
 }
 
-function rowToResident(row) {
+/**
+ * Map a `users` ledger row (snake_case) to the camelCase resident shape the
+ * client consumes. Exported because the social sign-in path in
+ * server/routes/auth.ts loads the same row shape and must return the IDENTICAL
+ * object — a second hand-rolled mapper blanked gudalurId/localityName.
+ */
+export function rowToResident(row) {
   return {
     uid: row.uid, phone: row.phone, gudalurId: row.gudalur_id, name: row.name,
     email: row.email ?? undefined, localityId: row.locality_id ?? undefined,

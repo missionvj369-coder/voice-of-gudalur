@@ -8,7 +8,7 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import { db } from '../db/client';
-import { registerResident, loginResident, normalizePhone } from '../services/authService';
+import { registerResident, loginResident, normalizePhone, rowToResident } from '../services/authService';
 import {
   createSession, revokeSession, resolveSession, SessionUser,
   requireAuth,
