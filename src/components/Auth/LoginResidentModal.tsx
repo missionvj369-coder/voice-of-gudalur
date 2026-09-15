@@ -127,6 +127,13 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
     setSocialBusy('google');
     try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
     try {
+      // If the modal's provider check already knows Google is unavailable,
+      // surface that instead of hitting the server again.
+      if (providers?.google && !providers.google.available) {
+        toast.error(providers.google.reason || 'Google sign-in is not available');
+        setSocialBusy(null);
+        return;
+      }
       const res = await fetch('/api/auth/google/url');
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -158,18 +165,24 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
   };
 
   const handleSocialTelegram = async () => {
-    setSocialBusy('telegram');
-    try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
+    setSocialBusy("telegram");
+    try { sessionStorage.setItem("vog_user_active", "1"); } catch (e) { /* ignore */ }
     try {
-      toast('Telegram sign-in requires server configuration. Please use phone registration.', { icon: 'â„¹ï¸' });
+      if (providers && providers.telegram && !providers.telegram.available) {
+        toast.error(providers.telegram.reason || "Telegram sign-in is not available");
+        setSocialBusy(null);
+        return;
+      }
+      toast("Telegram sign-in requires server configuration. Please use phone registration.", { icon: "info" });
       setSocialBusy(null);
-    } catch (err: any) {
-      toast.error(err?.message || 'Telegram sign-in failed');
+    } catch (err) {
+      toast.error(err && (err.message || err) || "Telegram sign-in failed");
       setSocialBusy(null);
     } finally {
-      try { sessionStorage.removeItem('vog_user_active'); } catch { /* ignore */ }
+      try { sessionStorage.removeItem("vog_user_active"); } catch (e) { /* ignore */ }
     }
   };
+
 
   return (
     <AnimatePresence>

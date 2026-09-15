@@ -60,7 +60,13 @@ export const VerificationLadder: React.FC<{
         setError(null);
       }
     } catch (e: any) {
-      if (mounted.current) setError(e?.message || t('authz.error'));
+      if (mounted.current) {
+        const msg = e?.message || t('authz.error');
+        // Distinguish "not logged in" from other failures so we can guide the
+        // user to the right next step instead of offering a Retry that cannot help.
+        const isAuthRequired = /auth/i.test(msg) || /401/i.test(String(e?.status ?? ''));
+        setError(isAuthRequired ? 'auth_required' : msg);
+      }
     }
   }, [signatureId, signHash, t]);
 
@@ -147,6 +153,22 @@ export const VerificationLadder: React.FC<{
   }, [status, signatureId, signHash, refresh, t]);
 
   if (error && !status) {
+    // "Not authenticated" — guide the user to log in rather than retrying a
+    // request that will keep returning 401 until they have a session.
+    if (error === 'auth_required') {
+      return (
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 text-center space-y-3">
+          <div className="w-10 h-10 mx-auto rounded-xl bg-amber-50 flex items-center justify-center">
+            <ShieldCheck size={20} className="text-amber-500" />
+          </div>
+          <p className="text-xs text-slate-600">{t('authz.not_authenticated')}</p>
+          <button type="button" onClick={() => window.dispatchEvent(new Event('vog:open-login'))}
+            className="text-xs font-bold text-emerald-700 hover:underline">
+            {t('authz.login_to_continue')}
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="rounded-3xl border border-slate-200 bg-white p-5 text-center space-y-2">
         <ShieldCheck size={22} className="mx-auto text-slate-400" />

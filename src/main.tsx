@@ -26,6 +26,10 @@ if ('serviceWorker' in navigator) {
     try {
       if (localStorage.getItem('VoiceOfGudalur_lang_chosen') === '1') return;
     } catch { /* ignore */ }
+    // Critical-flow guard: if the user is mid-registration / mid-signing,
+    // defer the reload until they finish (same rule as checkVersion below).
+    try { if (sessionStorage.getItem("vog_user_active") === "1") return; } catch (e) { /* ignore */ }
+
     swReloaded = true;
     try { sessionStorage.setItem('vog_sw_reloaded', '1'); } catch { /* ignore */ }
     // Only reload during initial app load (within first 10 seconds).
