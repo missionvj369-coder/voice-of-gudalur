@@ -197,7 +197,7 @@ export default function App() {
         <Router>
           {!PETITION_ONLY && <AdminRoutes />}
           <AppContent />
-          <Toaster position="top-center" toastOptions={{ duration: Infinity, style: { borderRadius: '24px', background: '#9ACD32', color: '#FFFFFF', fontSize: '13px', fontWeight: '900', padding: '6px 16px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' } }} />
+          <Toaster position="top-center" toastOptions={{ duration: 6000, style: { borderRadius: '24px', background: '#9ACD32', color: '#FFFFFF', fontSize: '13px', fontWeight: '900', padding: '6px 16px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' } }} />
         </Router>
       </AuthProvider>
     </LanguageProvider>

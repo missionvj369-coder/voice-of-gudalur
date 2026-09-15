@@ -4,6 +4,7 @@ import { useAuth, readLocalSignature, isRealGudalurId } from "../context/AuthCon
 import { useLanguage } from "../context/LanguageContext";
 import { petitionApi, mediaApi, validationApi, type MediaItem } from "../services/api";
 import { RegisterResidentModal } from "../components/Auth/RegisterResidentModal";
+import { VerificationLadder } from "../components/Verification/VerificationLadder";
 import { ThirukuralSection } from "../components/ThirukuralSection";
 import { buildVerifiedSignatureReceipt } from "../utils/grievanceReceipt";
 import ShareSocialModal from "../components/ShareSocial/ShareSocialModal";
@@ -583,6 +584,14 @@ export const SignPetitionPage: React.FC = () => {
           </div>
           <p className="text-[10px] text-emerald-700 break-all">{result.verifyUrl}</p>
         </div>
+      )}
+
+      {/* Verification ladder — OPTIONAL post-signature authorizations.
+          Google authenticates the signer, Telegram validates the mobile number;
+          both + a witness validation = a fully validated petition. Neither is
+          required: the signature above already counts. */}
+      {result && (
+        <VerificationLadder signatureId={result.signatureId} signHash={result.hash} />
       )}
 
       {/* Validation Link Section - Witness Verification */}

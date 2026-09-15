@@ -22,6 +22,7 @@ import { db } from '../db/client';
 import { logger } from '../utils/logger';
 import { requireAuth, logAudit } from '../middleware/auth';
 import { hashToken, generateSecureToken } from '../security/vouTokens';
+import { applyTrustRank } from '../db/trustRanking';
 
 const router = Router();
 
@@ -73,12 +74,14 @@ router.get('/verify/:token', readLimiter, async (req: Request, res: Response) =>
       public_reference: string; public_display_mode: string;
       display_name: string; area: string; status_sig: string;
       signed_at: string; petition_id: string; identity_id: string;
+      validation_count: string; max_validations: string;
     }>(
       `SELECT
          vl.id, vl.signature_id, vl.status, vl.expires_at,
          s.public_reference, s.public_display_mode,
          s.display_name, s.area, s.status AS status_sig,
-         s.signed_at, s.petition_id, s.identity_id
+         s.signed_at, s.petition_id, s.identity_id,
+         s.validation_count, s.max_validations
        FROM validation_links vl
        -- UUID/STRING drift: migration 020 declares validation_links.signature_id
        -- as STRING while signatures.id is UUID. An untyped parameter can adapt
@@ -101,6 +104,19 @@ router.get('/verify/:token', readLimiter, async (req: Request, res: Response) =>
         valid: false,
         used: row.status === 'used',
         revoked: row.status === 'revoked',
+        validationCount: Number(row.validation_count || 0),
+        maxValidations: Number(row.max_validations || 3),
+        signature: {
+          id: row.id,
+          publicReference: row.public_reference,
+          publicDisplayMode: row.public_display_mode,
+          displayName: row.display_name,
+          area: row.area,
+          status: row.status_sig,
+          signedAt: row.signed_at,
+          petitionId: row.petition_id,
+          identityId: row.identity_id,
+        },
       });
     }
 
@@ -109,6 +125,19 @@ router.get('/verify/:token', readLimiter, async (req: Request, res: Response) =>
         error: 'This validation link has expired',
         valid: false,
         expired: true,
+        validationCount: Number(row.validation_count || 0),
+        maxValidations: Number(row.max_validations || 3),
+        signature: {
+          id: row.id,
+          publicReference: row.public_reference,
+          publicDisplayMode: row.public_display_mode,
+          displayName: row.display_name,
+          area: row.area,
+          status: row.status_sig,
+          signedAt: row.signed_at,
+          petitionId: row.petition_id,
+          identityId: row.identity_id,
+        },
       });
     }
 
@@ -126,6 +155,8 @@ router.get('/verify/:token', readLimiter, async (req: Request, res: Response) =>
         petitionId: row.petition_id,
         identityId: row.identity_id,
       },
+      validationCount: Number(row.validation_count || 0),
+      maxValidations: Number(row.max_validations || 3),
     });
   } catch (err) {
     logger.error(`[${rid}] validation verify error:`, err);
@@ -312,32 +343,21 @@ router.post('/accept', requireAuth, writeLimiter, async (req: Request, res: Resp
         [link.signature_id],
       );
 
-      // Recalculate unicode_sort_key based on method + validation status
-      await tx.execute(
-        `UPDATE signatures
-         SET unicode_sort_key =
-           CASE
-             WHEN sign_method = 'TELEGRAM' AND validation_count > 0 THEN 1000
-             WHEN sign_method = 'GOOGLE' AND validation_count > 0 THEN 800
-             WHEN sign_method = 'TELEGRAM' THEN 500
-             WHEN sign_method = 'GOOGLE' THEN 300
-             WHEN validation_count > 0 THEN 200
-             ELSE 100
-           END
-         WHERE id = $1`,
-        [link.signature_id],
-      );
+      // Public trust ranking — the SINGLE source of truth (server/db/trustRanking.ts).
+      // Runs AFTER the count bump above (the ladder reads validation_count), and
+      // because it owns the whole ladder a witness validation can never downgrade
+      // a signature that was already authorized with Google/Telegram.
+      await applyTrustRank(tx, link.signature_id);
 
       // Mirror the accepted validation onto the source `petition_signs` row.
-      // Signing writes both tables (petition_signs + signatures) and the
-      // accept path only ever bumped `signatures`, so petition_signs.
-      // validation_count stayed 0 forever and the two tables disagreed.
-      // Matched via signatures.public_reference = petition_signs.sign_hash.
-      // Runs AFTER the sort-key recalc above so the copied key is the new one.
+      // Signing writes both tables (petition_signs + signatures) and the accept
+      // path only ever bumped `signatures`, so petition_signs.validation_count
+      // stayed 0 forever and the two tables disagreed. Matched via
+      // signatures.public_reference = petition_signs.sign_hash. The sort key is
+      // mirrored by applyTrustRank itself.
       await tx.execute(
         `UPDATE petition_signs
-         SET validation_count = validation_count + 1,
-             unicode_sort_key  = (SELECT unicode_sort_key FROM signatures WHERE id = $1)
+         SET validation_count = validation_count + 1
          WHERE sign_hash = (SELECT public_reference FROM signatures WHERE id = $1)
            AND validation_count < max_validations`,
         [link.signature_id],

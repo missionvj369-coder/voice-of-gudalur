@@ -13,6 +13,8 @@
 export interface ApiError extends Error {
   error: string;
   status: number;
+  /** Parsed JSON body of the failing response, when available. */
+  responseData?: any;
 }
 
 import { snapshotOrLive } from '../utils/snapshotFirst';
@@ -52,6 +54,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const err = new Error(msg) as ApiError;
     err.error = msg;
     err.status = res.ok ? 502 : res.status;
+    err.responseData = data;
     throw err;
   }
   if (!res.ok) {
@@ -61,6 +64,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const err = new Error(msg) as ApiError;
     err.error = msg;
     err.status = res.status;
+    err.responseData = data;
     throw err;
   }
   return data as T;
@@ -642,6 +646,70 @@ export const validationApi = {
     }>('/api/validation/my-validations'),
 };
 
+// ─────────────────────────────────────────────────────────────
+// Authorization (post-signature Google / Telegram — optional)
+// ─────────────────────────────────────────────────────────────
+
+/** One provider's authorization state for a signature. */
+export interface ProviderAuthorization {
+  authorized: boolean;
+  phoneMatched?: boolean;
+  at: string | null;
+  label: string | null;
+}
+
+/** GET/POST /api/authorization — the trust-ladder state for one own signature. */
+export interface AuthorizationStatus {
+  success: boolean;
+  signature: {
+    id: string;
+    publicReference: string;
+    status: string;
+    validationCount: number;
+    witnessValidated: boolean;
+    unicodeSortKey: number | null;
+  };
+  authorizations: {
+    google: ProviderAuthorization;
+    telegram: ProviderAuthorization;
+  };
+  /** Google + Telegram(mobile) + a community witness validation. */
+  fullyValidated: boolean;
+  providers: {
+    google: { available: boolean; clientId: string | null; reason: string | null };
+    telegram: { available: boolean; botUsername: string | null; reason: string | null };
+  };
+  message?: string;
+}
+
+export const authorizationApi = {
+  /** GET /api/authorization/status — the ladder for one own signature. */
+  status: (input: { signatureId?: string; signHash?: string }) => {
+    const params = new URLSearchParams();
+    if (input.signatureId) params.set('signatureId', input.signatureId);
+    if (input.signHash) params.set('signHash', input.signHash);
+    return request<AuthorizationStatus>(`/api/authorization/status?${params.toString()}`);
+  },
+
+  /** POST /api/authorization/google — authorize a signed petition with Google. */
+  google: (input: { idToken: string; signatureId?: string; signHash?: string }) =>
+    ensureCsrf().then(() =>
+      request<AuthorizationStatus>('/api/authorization/google', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    ),
+
+  /** POST /api/authorization/telegram — validate the mobile number via Telegram. */
+  telegram: (input: Record<string, any> & { signatureId?: string; signHash?: string }) =>
+    ensureCsrf().then(() =>
+      request<AuthorizationStatus>('/api/authorization/telegram', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    ),
+};
+
 export default {
   auth: authApi,
   petitions: petitionApi,
@@ -651,4 +719,5 @@ export default {
   config: configApi,
   media: mediaApi,
   validation: validationApi,
+  authorization: authorizationApi,
 };

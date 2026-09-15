@@ -149,7 +149,7 @@ router.post('/lookup', async (req: Request, res: Response) => {
  * Verify a Google ID token. Returns the verified payload or null.
  * Uses Google's public keys (JWKS) to validate the JWT signature.
  */
-async function verifyGoogleIdToken(idToken: string): Promise<Record<string, any> | null> {
+export async function verifyGoogleIdToken(idToken: string): Promise<Record<string, any> | null> {
   try {
     const parts = idToken.split('.');
     if (parts.length !== 3) return null;
@@ -178,7 +178,7 @@ async function verifyGoogleIdToken(idToken: string): Promise<Record<string, any>
 }
 
 /** Verify Telegram Login Widget authentication hash. */
-function verifyTelegramHash(payload: Record<string, any>, botToken: string): boolean {
+export function verifyTelegramHash(payload: Record<string, any>, botToken: string): boolean {
   try {
     const crypto = require('crypto');
     const fields = Object.keys(payload).filter(k => k !== 'hash').sort().map(k => `${k}=${payload[k]}`).join('\n');

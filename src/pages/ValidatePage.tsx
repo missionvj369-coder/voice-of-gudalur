@@ -12,6 +12,83 @@ const APP_NAME = "VOICE OF GUDALUR";
 const fmtDateTime = (iso) =>
   (iso ? new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—");
 
+/** A signature whose validation count has reached its cap is fully witnessed —
+ * no more witness action is possible or needed for it. Show a completion screen
+ * that guides the visitor to register / sign their own petition instead of the
+ * validate controls.
+ *
+ * This can be determined either from an active link (details.valid === true, with
+ * validationCount/maxValidations returned by GET /verify) or from a dead link
+ * (410 used / revoked / expired) whose error body now carries the same counts so
+ * the UI can still recognise a fully-validated signature.
+ */
+const isSignatureFullyValidated = (details: any): boolean =>
+  !!(details &&
+      details.signature &&
+      typeof details.validationCount === 'number' &&
+      typeof details.maxValidations === 'number' &&
+      details.validationCount >= details.maxValidations);
+
+const ValidationCompleteScreen: React.FC<{
+  token: string;
+  navigate: (to: string, opts?: any) => void;
+  profile: any;
+}> = ({ token, navigate, profile }) => {
+  const isRegistered = !!(profile && profile.gudalurId);
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="w-full max-w-md mx-4 rounded-3xl bg-white border border-emerald-200 p-8 text-center shadow-sm">
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-50 flex items-center justify-center">
+          <svg className="w-7 h-7 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h1 className="mt-4 text-lg font-bold text-gray-900">3 validations completed</h1>
+        <p className="mt-2 text-sm text-gray-600">
+          This signature has already been verified by enough witnesses. No further validation is needed.
+        </p>
+        <p className="mt-1 text-xs text-gray-400">
+          Token: {token}
+        </p>
+        <div className="mt-5 space-y-2">
+          {isRegistered ? (
+            <>
+              <button
+                onClick={() => navigate("/sign-petition")}
+                className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 transition shadow-sm"
+              >
+                Sign the petition yourself
+              </button>
+              <button
+                onClick={() => navigate("/profile")}
+                className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 hover:bg-slate-50 transition shadow-sm"
+              >
+                View my profile
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event("vog:open-register"))}
+                className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 transition shadow-sm"
+              >
+                Register as a resident
+              </button>
+              <button
+                onClick={() => navigate("/sign-petition")}
+                className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 hover:bg-slate-50 transition shadow-sm"
+              >
+                Sign the petition yourself
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function ValidatePage() {
   const { token } = useParams();
   const navigate = useNavigate();
@@ -37,11 +114,21 @@ export default function ValidatePage() {
         // The API client throws an Error carrying the server's own message and
         // HTTP status. 404/410 are verdicts about the LINK (not found / used /
         // revoked / expired) — everything else is a load failure worth a retry.
-        const e = err as { error?: string; message?: string; status?: number };
+        // Preserve any extra fields the server folded into the error body (e.g.
+        // validationCount / maxValidations / signature for a dead link) so the
+        // UI can still show a meaningful "3 validations completed" state.
+        const e = err as { error?: string; message?: string; status?: number; responseData?: any };
+        const rd = e?.responseData || {};
         if (!cancelled) setDetails({
           valid: false,
           status: e?.status,
           error: e?.error || e?.message || "Failed to load validation details",
+          validationCount: typeof rd.validationCount === 'number' ? rd.validationCount : undefined,
+          maxValidations: typeof rd.maxValidations === 'number' ? rd.maxValidations : undefined,
+          signature: rd.signature || undefined,
+          used: !!rd.used,
+          revoked: !!rd.revoked,
+          expired: !!rd.expired,
         });
       } finally {
         if (!cancelled) setLoading(false);
@@ -137,7 +224,10 @@ export default function ValidatePage() {
     setActionLoading(true);
     try {
       await validationApi.reject({ validationToken: token });
-      toast.success("Validation declined. The signature will need another witness.");
+      toast.success(
+        "Validation declined. The signature will need another witness.",
+        { duration: 6000 },
+      );
       navigate("/validate/done", { state: { token, action: "rejected" }, replace: true });
     } catch (err) {
       toast.error((err && (err.error || err.message)) || "Failed to reject");
@@ -149,7 +239,7 @@ export default function ValidatePage() {
   const copyLink = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      toast.success("Link copied to clipboard");
+      toast.success("Link copied to clipboard", { duration: 6000 });
     } catch { window.prompt("Copy this link:", window.location.href); }
   }, []);
 
@@ -189,7 +279,15 @@ export default function ValidatePage() {
     );
   }
 
-
+  // A signature that has already reached its validation cap is fully witnessed.
+  // Do not show the validate controls — guide the visitor to register / sign
+  // their own petition instead. This can happen for:
+  //   • an active link whose signature already hit the cap (rare), or
+  //   • a dead link (used / revoked / expired) whose signature has since been
+  //     fully validated by enough witnesses.
+  if (details && isSignatureFullyValidated(details)) {
+    return <ValidationCompleteScreen token={token || ""} navigate={navigate} profile={profile} />;
+  }
 
   /*
    * The link itself was refused — 410 (expired, already used, revoked) or 404
@@ -303,8 +401,6 @@ export default function ValidatePage() {
 
             <div className="mt-4 flex flex-col gap-2">
 
-
-
               {showRegister ? (
                 <RegisterResidentModal
                   isOpen
@@ -337,44 +433,12 @@ export default function ValidatePage() {
               )}
             </div>
 
-            <div className="mt-5 flex gap-3">
-              <button
-                onClick={reject}
-                disabled={actionLoading}
-                className="flex-1 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-bold text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition shadow-sm"
-              >
-                {actionLoading ? "Processing…" : "Decline"}
-              </button>
-              <button
-                onClick={accept}
-                disabled={actionLoading || !profile}
-                className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700 transition shadow-sm"
-              >
-                {actionLoading ? "Validating…" : "Sign & Validate"}
-              </button>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between text-xs text-gray-400">
-              <button
-                onClick={copyLink}
-                className="flex items-center gap-1 hover:text-gray-600 transition"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                </svg>
-                Copy link
-              </button>
-
-
-
-            </div>
+          {/* Logged-out witnesses only see the signup/login CTA above; Decline / Sign&Validate / Copy-link require an authenticated session. */}
           </div>
         </div>
       </div>
     );
   }
-
-
 
   // Authenticated — show confirmation + action buttons
   return (
@@ -429,20 +493,7 @@ export default function ValidatePage() {
                 onNeedRegister={() => { setShowLogin(false); setShowRegister(true); }}
               />
             ) : (
-              <>
-                <button
-                  onClick={() => setShowRegister(true)}
-                  className="w-full rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition shadow-sm"
-                >
-                  Sign up as a resident
-                </button>
-                <button
-                  onClick={() => setShowLogin(true)}
-                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-slate-50 transition shadow-sm"
-                >
-                  Already a resident? Log in
-                </button>
-              </>
+              <div className="hidden" />
             )}
           </div>
 

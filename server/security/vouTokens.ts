@@ -51,3 +51,15 @@ export function generatePhoneIdentityKey(normalizedE164: string): string {
   const secret = process.env.IDENTITY_HMAC_SECRET || process.env.SESSION_SECRET || "";
   return createHash("sha256").update(`phone:${normalizedE164}:${secret}`).digest("hex");
 }
+/**
+ * Keyed hash of a social provider subject (Google `sub`, Telegram id) — the only
+ * form of it ever persisted (signature_authorizations.subject_hash). Same
+ * construct as the phone identity key, so a leaked table cannot be turned back
+ * into real provider accounts without the secret.
+ */
+export function generateProviderSubjectKey(provider: string, subject: string): string {
+  const secret = process.env.IDENTITY_HMAC_SECRET || process.env.SESSION_SECRET || "";
+  return createHash("sha256")
+    .update(`authorization:${provider}:${subject}:${secret}`)
+    .digest("hex");
+}

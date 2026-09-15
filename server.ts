@@ -33,6 +33,7 @@ import adminStatsRoutes from './server/routes/adminStats';
 import mediaRoutes from './server/routes/media';
 import configRoutes from './server/routes/config';
 import validationRoutes from './server/routes/validation';
+import authorizationRoutes from './server/routes/authorization';
 import { db } from './server/db/client';
 import { clusterPlaces } from './server/utils/placeCluster';
 import { logger } from './server/utils/logger';
@@ -707,6 +708,9 @@ YOUR MANTRA (end every reply with a variation of):
 
   // ─── Validation API (witness validation flow — Layer B) ─────────────────────────
   app.use('/api/validation', validationRoutes);
+
+  // ─── Authorization API (post-signature Google/Telegram — optional trust ladder) ──
+  app.use('/api/authorization', authorizationRoutes);
 
   // ─── PUBLIC READ endpoint — live campaign stats for the view-only dashboard ───
   // Served at /stats.json (root, NOT /api/*) so the client polls a clean URL.
