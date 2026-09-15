@@ -21,9 +21,10 @@ import { Users, Globe, BarChart3, Activity, ScrollText, PenLine } from 'lucide-r
 
 interface DashboardStats {
   total: number;
+  signers: number;       // residents who signed the petition (Gudalur + Outside)
   validations: number;
   communityReach: number;
-  external: number;
+  external: number;      // external supporters
   gudalur: number;
   outsideGudalur: number;
   places: Array<{ place: string; count: number }>;
@@ -116,6 +117,8 @@ export const CampaignDashboard: React.FC = () => {
   }, []);
 
   const total = stats?.total ?? 0;
+  const signers = stats?.signers ?? 0;
+  const signers = stats?.signers ?? 0;
   const gudalur = stats?.gudalur ?? 0;
   const outsideGudalur = stats?.outsideGudalur ?? 0;
   const validations = stats?.validations ?? 0;
@@ -148,45 +151,56 @@ export const CampaignDashboard: React.FC = () => {
         </div>
       </div>
 
-       {/* ── Metrics grid ── */}
-       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
-         <MetricCard
-           icon={<BarChart3 size={22} className="text-[#AED581]" />}
-           label={t('home.title')}
-           value={total}
-           sub={t('home.live').replace('{n}', '')}
-         />
-         <MetricCard
-           icon={<Activity size={22} className="text-[#6EE7B7]" />}
-           label="Validations"
-           value={validations}
-           sub="Verified signatures"
-         />
-         <MetricCard
-           icon={<Globe size={22} className="text-[#34D399]" />}
-           label="Community Reach"
-           value={communityReach}
-           sub="Total reach including external"
-         />
-         <MetricCard
-           icon={<Users size={22} className="text-[#A7F3D0]" />}
-           label="Gudalur"
-           value={gudalur}
-           sub="From the Nilgiris"
-         />
-         <MetricCard
-           icon={<Users size={22} className="text-[#6EE7B7]" />}
-           label="Outside Gudalur"
-           value={outsideGudalur}
-           sub="Across India"
-         />
-         <MetricCard
-           icon={<Globe size={22} className="text-[#D1FAE5]" />}
-           label="External Supporters"
-           value={external}
-           sub="Global reach"
-         />
-       </div>
+       {/* ── Top-line numbers: Petitions Signed + Supporters ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 mb-2">
+          {/* Petitions Signed — the Right-to-Life sign ledger */}
+          <div className="rounded-xl border border-[#1B5E20]/40 bg-[#1B5E20]/20 backdrop-blur-sm p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#A5D6A7] mb-1">
+              {t('home.petitions')}
+            </p>
+            <h2 className="text-4xl font-bold text-[#E8F5E9]">
+              <AnimatedCount value={signers} />
+            </h2>
+            <p className="text-sm text-[#9CA3AF] mt-1">
+              {gudalur} from Gudalur · {outsideGudalur} from outside · {validations} validations
+            </p>
+          </div>
+
+          {/* Supporters — external (non-resident) supporters */}
+          <div className="rounded-xl border border-[#1B5E20]/40 bg-[#1B5E20]/20 backdrop-blur-sm p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#A5D6A7] mb-1">
+              {t('home.supporters')}
+            </p>
+            <h2 className="text-4xl font-bold text-[#E8F5E9]">
+              <AnimatedCount value={external} />
+            </h2>
+            <p className="text-sm text-[#9CA3AF] mt-1">
+              {t('home.supportersSub')}
+            </p>
+          </div>
+        </div>
+
+        {/* ── Breakdown cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+          <MetricCard
+            icon={<Users size={20} className="text-[#A7F3D0]" />}
+            label="Gudalur (Nilgiris)"
+            value={gudalur}
+            sub="Petition signers from Gudalur taluk"
+          />
+          <MetricCard
+            icon={<Users size={20} className="text-[#6EE7B7]" />}
+            label="Outside Gudalur"
+            value={outsideGudalur}
+            sub="Residents outside The Nilgiris"
+          />
+          <MetricCard
+            icon={<Globe size={20} className="text-[#D1FAE5]" />}
+            label="Community Reach"
+            value={communityReach}
+            sub="Signed + external supporters"
+          />
+        </div>
 
        {/* ── About the Movement (from media/about — brought to front page) ── */}
        <section className="space-y-6">

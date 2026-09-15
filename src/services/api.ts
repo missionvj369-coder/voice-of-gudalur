@@ -280,6 +280,7 @@ export const petitionApi = {
   signStats: () =>
     snapshotOrLive<{
       total: number;
+      signers?: number;
       validations?: number;
       communityReach?: number;
       external?: number;

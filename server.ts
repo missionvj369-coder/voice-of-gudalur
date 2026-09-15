@@ -759,6 +759,7 @@ YOUR MANTRA (end every reply with a variation of):
 
         return {
           total,
+          signers: gudalur + outsideGudalur,  // residents who signed the petition
           validations: total,
           communityReach: total + external,
           gudalur,
