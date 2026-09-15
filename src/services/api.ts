@@ -116,12 +116,21 @@ export const authApi = {
       body: JSON.stringify({ idToken }),
     }),
 
-  /** POST /api/auth/telegram — sign in / register with Telegram Login Widget payload. */
+    /** POST /api/auth/telegram — sign in / register with Telegram Login Widget payload. */
   telegram: (payload: Record<string, any>) =>
     request<{ resident: AuthUser; csrfToken: string }>('/api/auth/telegram', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+
+  // ─── Public config ────────────────────────────────────────────────
+
+  /** GET /api/auth/providers — which social login providers are configured? */
+  providers: () =>
+    request<{
+      google: { available: boolean; reason: string | null };
+      telegram: { available: boolean; botUsername: string | null; reason: string | null };
+    }>('/api/auth/providers'),
 
   // ─── Admin ─────────────────────────────────────────────────────────
 

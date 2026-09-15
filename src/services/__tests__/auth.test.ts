@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 
 describe('auth types', () => {
   it('VerificationLevel includes PHONE_VERIFIED', async () => {
@@ -10,8 +10,14 @@ describe('auth types', () => {
     const { authApi } = await import('../api');
     expect(typeof authApi.register).toBe('function');
     expect(typeof authApi.lookup).toBe('function');
-    // Resident flows are OTP-free by design — the dead OTP client was removed.
+    // Resident flows are OTP-free by design â€” the dead OTP client was removed.
     expect((authApi as Record<string, unknown>).requestOtp).toBeUndefined();
     expect((authApi as Record<string, unknown>).verifyOtp).toBeUndefined();
   });
+
+  it('authApi exposes a providers() method for checking social login availability', async () => {
+    const { authApi } = await import('../api');
+    expect(typeof authApi.providers).toBe('function');
+  });
 });
+

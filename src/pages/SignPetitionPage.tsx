@@ -345,6 +345,7 @@ export const SignPetitionPage: React.FC = () => {
       const link = `${window.location.origin}/validate/${res.validationToken}`;
       setValidationLink(link);
       toast.success('Validation link created! Share with a witness to verify your signature.');
+      window.dispatchEvent(new Event('vog:validation-updated'));
     } catch (err: any) {
       toast.error(err?.error || err?.message || 'Failed to create validation link');
     } finally {

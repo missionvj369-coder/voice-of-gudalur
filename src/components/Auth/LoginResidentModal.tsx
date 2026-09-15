@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Phone, IdCard, LogIn, Loader2, ShieldCheck } from 'lucide-react';
 import { SiGoogle, SiTelegram } from 'react-icons/si';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { authApi } from '../../services/api';
 import toast from 'react-hot-toast';
 
 interface LoginResidentModalProps {
@@ -15,7 +16,7 @@ interface LoginResidentModalProps {
 }
 
 /**
- * PASSWORDLESS LOGIN — residents sign in with their Phone Number + Gudalur ID number only.
+ * PASSWORDLESS LOGIN â€” residents sign in with their Phone Number + Gudalur ID number only.
  * No password is ever requested.
  */
 export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
@@ -31,19 +32,72 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
   const [gudalurId, setGudalurId] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [socialBusy, setSocialBusy] = useState<'google' | 'telegram' | null>(null);
+  const [providers, setProviders] = useState<{
+    google: { available: boolean; reason: string | null };
+    telegram: { available: boolean; botUsername: string | null; reason: string | null };
+  } | null>(null);
+
+  // Fetch which social providers are configured so we can show the Telegram
+  // Login Widget only when it's actually wired up on the server.
+  useEffect(() => {
+    void authApi.providers().then(setProviders).catch(() => setProviders(null));
+  }, []);
+
+  // Telegram Login Widget â€” renders the widget script into the container div
+  // when Telegram is configured. The widget callback fires onAuth with the
+  // user data, which we forward to loginWithTelegram (AuthContext).
+  useEffect(() => {
+    if (!providers?.telegram.available || !providers.telegram.botUsername) return;
+
+    const container = document.getElementById('vog-telegram-login-widget');
+    if (!container || container.childElementCount > 0) return;
+
+    // @ts-ignore â€” Telegram sets window.onTelegramAuth as a global callback
+    window.onTelegramAuth = (user: Record<string, any>) => {
+      void (async () => {
+        setSocialBusy('telegram');
+        try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
+        try {
+          await loginWithTelegram(user);
+          toast.success('Welcome back!', { icon: 'ðŸªª', duration: 6000 });
+          onSuccess?.();
+          onClose();
+        } catch (err: any) {
+          toast.error(err?.message || 'Telegram sign-in failed');
+          setSocialBusy(null);
+        } finally {
+          try { sessionStorage.removeItem('vog_user_active'); } catch { /* ignore */ }
+        }
+      })();
+    };
+
+    const script = document.createElement('script');
+    script.src = 'https://telegram.org/js/telegram-widget.js?22';
+    script.async = true;
+    script.setAttribute('data-telegram-login', providers.telegram.botUsername);
+    script.setAttribute('data-size', 'large');
+    script.setAttribute('data-onauth', 'onTelegramAuth(user)');
+    script.setAttribute('data-request-access', 'write');
+    container.appendChild(script);
+    return () => {
+      // @ts-ignore
+      delete window.onTelegramAuth;
+      container.innerHTML = '';
+    };
+  }, [providers, loginWithTelegram, onSuccess, onClose]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const digits = phone.replace(/\D/g, '');
-    // EITHER identifier is enough — no field is mandatory on its own.
+    // EITHER identifier is enough â€” no field is mandatory on its own.
     if (digits.length !== 10 && !gudalurId.trim()) {
-      toast.error('Enter your mobile number OR your Gudalur ID — either one is enough to continue.');
+      toast.error('Enter your mobile number OR your Gudalur ID â€” either one is enough to continue.');
       return;
     }
     if (phone.trim() && digits.length > 0 && digits.length < 10) {
-      toast.error('Mobile number looks incomplete — enter all 10 digits, or clear it and use your Gudalur ID.');
+      toast.error('Mobile number looks incomplete â€” enter all 10 digits, or clear it and use your Gudalur ID.');
       return;
     }
     setIsLoggingIn(true);
@@ -52,8 +106,8 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
     try {
       const resident = await loginResident(digits.length === 10 ? phone : '', gudalurId.trim().toUpperCase());
       toast.success(
-        lang === 'ta' ? `வரவேற்பு, ${resident.name}!` : `Welcome back, ${resident.name}!`,
-        { icon: '🪪' }
+        lang === 'ta' ? `à®µà®°à®µà¯‡à®±à¯à®ªà¯, ${resident.name}!` : `Welcome back, ${resident.name}!`,
+        { icon: 'ðŸªª' }
       );
       setPhone('');
       setGudalurId('');
@@ -106,7 +160,7 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
     setSocialBusy('telegram');
     try { sessionStorage.setItem('vog_user_active', '1'); } catch { /* ignore */ }
     try {
-      toast('Telegram sign-in requires server configuration. Please use phone registration.', { icon: 'ℹ️' });
+      toast('Telegram sign-in requires server configuration. Please use phone registration.', { icon: 'â„¹ï¸' });
       setSocialBusy(null);
     } catch (err: any) {
       toast.error(err?.message || 'Telegram sign-in failed');
@@ -129,7 +183,7 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
               exit={{ opacity: 0, scale: 0.95, y: 16 }}
               className="relative my-auto flex w-full max-w-md flex-col overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-200 max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)]"
             >
-              {/* Pinned header — heading + close button always visible */}
+              {/* Pinned header â€” heading + close button always visible */}
               <div className="relative shrink-0 border-b border-slate-100 px-5 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
                 <button
                   type="button"
@@ -146,28 +200,28 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
                       <ShieldCheck size={20} />
                     </div>
                     <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
-                      {lang === 'ta' ? 'குடிமகன் உள்நுழைவு' : 'Resident Login'}
+                      {lang === 'ta' ? 'à®•à¯à®Ÿà®¿à®®à®•à®©à¯ à®‰à®³à¯à®¨à¯à®´à¯ˆà®µà¯' : 'Resident Login'}
                     </h3>
                   </div>
                   <p className="text-xs text-slate-500 font-medium">
                     {lang === 'ta'
-                      ? 'உங்கள் தொலைபேசி எண் அல்லது கூடலூர் ஐடி எண் — இவற்றில் ஏதேனும் ஒன்றை மட்டும் பயன்படுத்தவும் — கடவுச்சொல் தேவையில்லை.'
-                      : 'Sign in with your mobile number OR your Gudalur ID — either one works. No password needed.'}
+                      ? 'à®‰à®™à¯à®•à®³à¯ à®¤à¯Šà®²à¯ˆà®ªà¯‡à®šà®¿ à®Žà®£à¯ à®…à®²à¯à®²à®¤à¯ à®•à¯‚à®Ÿà®²à¯‚à®°à¯ à®à®Ÿà®¿ à®Žà®£à¯ â€” à®‡à®µà®±à¯à®±à®¿à®²à¯ à®à®¤à¯‡à®©à¯à®®à¯ à®’à®©à¯à®±à¯ˆ à®®à®Ÿà¯à®Ÿà¯à®®à¯ à®ªà®¯à®©à¯à®ªà®Ÿà¯à®¤à¯à®¤à®µà¯à®®à¯ â€” à®•à®Ÿà®µà¯à®šà¯à®šà¯Šà®²à¯ à®¤à¯‡à®µà¯ˆà®¯à®¿à®²à¯à®²à¯ˆ.'
+                      : 'Sign in with your mobile number OR your Gudalur ID â€” either one works. No password needed.'}
                   </p>
                 </div>
               </div>
 
               <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-                {/* Scrollable form body — only the fields scroll, header/footer stay put */}
+                {/* Scrollable form body â€” only the fields scroll, header/footer stay put */}
                 <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4 sm:px-6">
               <p className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
                 {lang === 'ta'
-                  ? 'தொலைபேசி எண் அல்லது கூடலூர் ஐடி — இரண்டில் ஒன்றை மட்டும் உள்ளிடவும்.'
-                  : 'Enter your mobile number OR your Gudalur ID — either one is enough.'}
+                  ? 'à®¤à¯Šà®²à¯ˆà®ªà¯‡à®šà®¿ à®Žà®£à¯ à®…à®²à¯à®²à®¤à¯ à®•à¯‚à®Ÿà®²à¯‚à®°à¯ à®à®Ÿà®¿ â€” à®‡à®°à®£à¯à®Ÿà®¿à®²à¯ à®’à®©à¯à®±à¯ˆ à®®à®Ÿà¯à®Ÿà¯à®®à¯ à®‰à®³à¯à®³à®¿à®Ÿà®µà¯à®®à¯.'
+                  : 'Enter your mobile number OR your Gudalur ID â€” either one is enough.'}
               </p>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  {lang === 'ta' ? 'தொலைபேசி எண்' : 'Phone Number'}
+                  {lang === 'ta' ? 'à®¤à¯Šà®²à¯ˆà®ªà¯‡à®šà®¿ à®Žà®£à¯' : 'Phone Number'}
                 </label>
                 <div className="relative">
                   <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -185,7 +239,7 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  {lang === 'ta' ? 'கூடலூர் ஐடி எண்' : 'Gudalur ID Number'}
+                  {lang === 'ta' ? 'à®•à¯‚à®Ÿà®²à¯‚à®°à¯ à®à®Ÿà®¿ à®Žà®£à¯' : 'Gudalur ID Number'}
                 </label>
                 <div className="relative">
                   <IdCard size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -199,14 +253,14 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1.5">
                   {lang === 'ta'
-                    ? 'பதிவு செய்யும் போது பெற்ற ஐடியை உள்ளிடவும் (எ.கா. GD-2025-000001)'
+                    ? 'à®ªà®¤à®¿à®µà¯ à®šà¯†à®¯à¯à®¯à¯à®®à¯ à®ªà¯‹à®¤à¯ à®ªà¯†à®±à¯à®± à®à®Ÿà®¿à®¯à¯ˆ à®‰à®³à¯à®³à®¿à®Ÿà®µà¯à®®à¯ (à®Ž.à®•à®¾. GD-2025-000001)'
                     : 'Enter the ID issued when you registered (e.g. GD-2025-000001)'}
                 </p>
               </div>
 
                 </div>
 
-                {/* Pinned footer — Login + Register link always reachable, no scrolling needed */}
+                {/* Pinned footer â€” Login + Register link always reachable, no scrolling needed */}
                 <div className="shrink-0 space-y-3 border-t border-slate-100 bg-white px-5 py-4 sm:px-6">
                   <button
                     type="submit"
@@ -218,7 +272,7 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
                     ) : (
                       <>
                         <LogIn size={18} />
-                        <span>{lang === 'ta' ? 'உள்நுழை' : 'Login to My Resident Card'}</span>
+                        <span>{lang === 'ta' ? 'à®‰à®³à¯à®¨à¯à®´à¯ˆ' : 'Login to My Resident Card'}</span>
                       </>
                     )}
                   </button>
@@ -233,10 +287,16 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
                       className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition disabled:opacity-50">
                       {socialBusy === 'google' ? <Loader2 size={16} className="animate-spin" /> : <SiGoogle size={16} className="text-blue-500" />} Google
                     </button>
-                    <button type="button" disabled={socialBusy !== null || isLoggingIn} onClick={handleSocialTelegram}
-                      className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition disabled:opacity-50">
-                      {socialBusy === 'telegram' ? <Loader2 size={16} className="animate-spin" /> : <SiTelegram size={16} className="text-sky-500" />} Telegram
-                    </button>
+                    {providers?.telegram.available ? (
+                      <div className="col-span-2 flex justify-center">
+                        <div id="vog-telegram-login-widget" className="flex justify-center py-1" />
+                      </div>
+                    ) : (
+                      <button type="button" disabled={socialBusy !== null || isLoggingIn} onClick={handleSocialTelegram}
+                        className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition disabled:opacity-50">
+                        {socialBusy === 'telegram' ? <Loader2 size={16} className="animate-spin" /> : <SiTelegram size={16} className="text-sky-500" />} Telegram
+                      </button>
+                    )}
                   </div>
                   {onNeedRegister && (
                     <button
@@ -248,7 +308,7 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
                       className="w-full text-center text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:underline"
                     >
                       {lang === 'ta'
-                        ? 'இன்னும் பதிவு செய்யவில்லையா? புதிய குடிமக்கள் அட்டை உருவாக்குக'
+                        ? 'à®‡à®©à¯à®©à¯à®®à¯ à®ªà®¤à®¿à®µà¯ à®šà¯†à®¯à¯à®¯à®µà®¿à®²à¯à®²à¯ˆà®¯à®¾? à®ªà¯à®¤à®¿à®¯ à®•à¯à®Ÿà®¿à®®à®•à¯à®•à®³à¯ à®…à®Ÿà¯à®Ÿà¯ˆ à®‰à®°à¯à®µà®¾à®•à¯à®•à¯à®•'
                         : 'Not registered yet? Create your Resident Card'}
                     </button>
                   )}
@@ -263,4 +323,6 @@ export const LoginResidentModal: React.FC<LoginResidentModalProps> = ({
 };
 
 export default LoginResidentModal;
+
+
 

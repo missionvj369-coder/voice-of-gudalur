@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BadgeCheck, CheckCircle2, Circle, Loader2, MinusCircle, ShieldCheck, Users } from 'lucide-react';
 import { SiGoogle, SiTelegram } from 'react-icons/si';
 import { useLanguage } from '../../context/LanguageContext';
@@ -31,13 +31,13 @@ function loadGoogleScript(): Promise<void> {
 }
 
 /**
- * THE VERIFICATION LADDER — what a signature can become AFTER it is recorded.
+ * THE VERIFICATION LADDER â€” what a signature can become AFTER it is recorded.
  *
- * Registration never offers Google/Telegram (they cannot create a Gudalur ID —
+ * Registration never offers Google/Telegram (they cannot create a Gudalur ID â€”
  * see routes/auth.ts#findSocialResident). They live here, on the signed
  * petition, where they are exactly what they are: optional, post-signature
  * authentication. Google authenticates the person; Telegram validates the
- * mobile number (that is what it is FOR — the copy says so). Doing both plus one
+ * mobile number (that is what it is FOR â€” the copy says so). Doing both plus one
  * witness validation yields the "Fully validated petition" badge, the top of the
  * public ranking; doing neither leaves a perfectly valid, perfectly counted
  * signature.
@@ -64,13 +64,25 @@ export const VerificationLadder: React.FC<{
     }
   }, [signatureId, signHash, t]);
 
-  useEffect(() => {
+    useEffect(() => {
     mounted.current = true;
     void refresh();
-    return () => { mounted.current = false; };
+    // Auto-refresh every 15 seconds so the ladder reflects community
+    // witness validations that complete in other tabs or contexts.
+    const poll = window.setInterval(() => { void refresh(); }, 15000);
+    // Also listen for explicit update events dispatched elsewhere.
+    const onUpdate = () => { void refresh(); };
+    window.addEventListener('vog:authorization-updated', onUpdate);
+    window.addEventListener('vog:validation-updated', onUpdate);
+    return () => {
+      mounted.current = false;
+      clearInterval(poll);
+      window.removeEventListener('vog:authorization-updated', onUpdate);
+      window.removeEventListener('vog:validation-updated', onUpdate);
+    };
   }, [refresh]);
 
-  /** Google: One-Tap prompt → ID token → POST (the server verifies the token). */
+  /** Google: One-Tap prompt â†’ ID token â†’ POST (the server verifies the token). */
   const authorizeGoogle = useCallback(async () => {
     const clientId = status?.providers.google.clientId;
     if (!clientId) return;
@@ -91,8 +103,9 @@ export const VerificationLadder: React.FC<{
           reject(err);
         }
       });
-      await authorizationApi.google({ idToken: credential, signatureId, signHash });
+            await authorizationApi.google({ idToken: credential, signatureId, signHash });
       await refresh();
+      window.dispatchEvent(new Event('vog:authorization-updated'));
     } catch (e: any) {
       if (mounted.current) setError(e?.message || t('authz.error'));
     } finally {
@@ -100,7 +113,7 @@ export const VerificationLadder: React.FC<{
     }
   }, [status, signatureId, signHash, refresh, t]);
 
-  /** Telegram: Login Widget callback → POST (the server verifies the widget hash). */
+  /** Telegram: Login Widget callback â†’ POST (the server verifies the widget hash). */
   useEffect(() => {
     const botUsername = status?.providers.telegram.botUsername;
     if (!botUsername || !status?.providers.telegram.available) return;
@@ -109,8 +122,9 @@ export const VerificationLadder: React.FC<{
       void (async () => {
         setBusy('telegram');
         try {
-          await authorizationApi.telegram({ ...user, signatureId, signHash });
+      await authorizationApi.telegram({ ...user, signatureId, signHash });
           await refresh();
+          window.dispatchEvent(new Event('vog:authorization-updated'));
         } catch (e: any) {
           if (mounted.current) setError(e?.message || t('authz.error'));
         } finally {
@@ -236,7 +250,7 @@ export const VerificationLadder: React.FC<{
               </div>
             </div>
 
-            {/* Optional actions — only on the provider rungs, only when configured */}
+            {/* Optional actions â€” only on the provider rungs, only when configured */}
             {rung.id === 'google' && rung.state === 'todo' && status.providers.google.available && (
               <button type="button" onClick={() => void authorizeGoogle()} disabled={busy !== null}
                 className="mt-2 ml-7 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-slate-800 text-xs font-bold hover:bg-slate-50 transition disabled:opacity-50">
@@ -262,7 +276,7 @@ export const VerificationLadder: React.FC<{
         </div>
       ) : (
         <p className="text-[10px] text-emerald-700/80 text-center leading-relaxed">
-          {headlineText} · <Users size={10} className="inline -mt-0.5" /> {t('authz.witness_footnote')}
+          {headlineText} Â· <Users size={10} className="inline -mt-0.5" /> {t('authz.witness_footnote')}
         </p>
       )}
     </div>

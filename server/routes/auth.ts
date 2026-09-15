@@ -466,6 +466,32 @@ router.get('/csrf', (_req: Request, res: Response) => {
   res.json({ csrfToken: token });
 });
 
+/**
+ * GET /api/auth/providers — which social login providers are configured?
+ *
+ * Public endpoint (no auth required). Lets the LoginResidentModal show/hide
+ * Google and Telegram sign-in buttons at runtime based on deployment config,
+ * instead of always rendering buttons that silently fail when unconfigured.
+ */
+router.get('/providers', (_req: Request, res: Response) => {
+  const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
+  const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN || '';
+  const telegramBotUsername = process.env.TELEGRAM_BOT_USERNAME || '';
+  res.json({
+    google: {
+      available: Boolean(googleClientId),
+      reason: googleClientId ? null : 'Google sign-in is not configured on this deployment',
+    },
+    telegram: {
+      available: Boolean(telegramBotToken) && Boolean(telegramBotUsername),
+      botUsername: telegramBotUsername || null,
+      reason: telegramBotToken && telegramBotUsername
+        ? null
+        : 'Telegram sign-in is not configured on this deployment',
+    },
+  });
+});
+
 /** POST /api/auth/forgot — residents authenticate via OTP to their phone. */
 router.post('/forgot', async (_req: Request, res: Response) => {
   res.json({
