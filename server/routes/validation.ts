@@ -322,6 +322,21 @@ router.post('/accept', requireAuth, writeLimiter, async (req: Request, res: Resp
         [link.signature_id],
       );
 
+      // Mirror the accepted validation onto the source `petition_signs` row.
+      // Signing writes both tables (petition_signs + signatures) and the
+      // accept path only ever bumped `signatures`, so petition_signs.
+      // validation_count stayed 0 forever and the two tables disagreed.
+      // Matched via signatures.public_reference = petition_signs.sign_hash.
+      // Runs AFTER the sort-key recalc above so the copied key is the new one.
+      await tx.execute(
+        `UPDATE petition_signs
+         SET validation_count = validation_count + 1,
+             unicode_sort_key  = (SELECT unicode_sort_key FROM signatures WHERE id = $1)
+         WHERE sign_hash = (SELECT public_reference FROM signatures WHERE id = $1)
+           AND validation_count < max_validations`,
+        [link.signature_id],
+      );
+
       await logAudit({
         actorId: ownerId,
         actorKind: 'user',

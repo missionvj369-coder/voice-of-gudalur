@@ -31,6 +31,19 @@ const RouteFallback: React.FC = () => (
   </div>
 );
 
+/**
+ * Paths a SHARED link can point at. The intro overlay is `fixed inset-0
+ * z-[100]`, so on these routes it covers the target screen — a witness who
+ * just tapped a WhatsApp validation link would have to tap through four intro
+ * screens (language -> concern -> intro -> cost) before reaching it.
+ *
+ * Skipping is safe: the language is still restored from localStorage and can
+ * be changed any time from the menu.
+ */
+const DEEP_LINK_PREFIXES = ['/validate/', '/verify-sign'] as const;
+const isDeepLink = (pathname: string): boolean =>
+  DEEP_LINK_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+
 const CampaignDashboard = lazy(() => import('./pages/CampaignDashboard').then((m) => ({ default: m.CampaignDashboard })));
 
 const PetitionOnlyRoutes: React.FC = () => (
@@ -63,7 +76,18 @@ const AppContent: React.FC = () => {
   const { setLang } = useLanguage();
   const location = useLocation();
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [location.pathname]);
-  const [showOpening, setShowOpening] = useState(true);
+  // A shared deep link lands on its target screen immediately (see
+  // DEEP_LINK_PREFIXES) — the intro overlay must never cover it.
+  const deepLink = isDeepLink(location.pathname);
+  const [showOpening, setShowOpening] = useState(() => !deepLink);
+  useEffect(() => {
+    // Mark this tab as "past the intro" so the service-worker update guard in
+    // main.tsx cannot hard-reload the page out from under a witness who is
+    // mid-registration on a shared validation link.
+    if (deepLink) {
+      try { localStorage.setItem('VoiceOfGudalur_lang_chosen', '1'); } catch { /* private mode */ }
+    }
+  }, [deepLink]);
   return (
     <>
       {/* The opening overlay MUST unmount when chosen — otherwise it keeps
