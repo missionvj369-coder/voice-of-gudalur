@@ -93,7 +93,7 @@ export default function ValidatePage() {
   const { token } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile } = useAuth();
+    const { profile, loading: authLoading } = useAuth();
 
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -358,6 +358,23 @@ export default function ValidatePage() {
         <div className="text-center">
           <div className="w-10 h-10 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent mx-auto" />
           <p className="mt-4 text-sm text-gray-500">Loading validation details…</p>
+        </div>
+      </div>
+    );
+    }
+
+  // Auth session is still hydrating (httpOnly cookie restoration in progress).
+  // Do NOT show the signup/login gate yet — the user may already be logged in,
+  // we just haven't confirmed it. Showing the gate during this window causes the
+  // "Authentication required" screen flicker you reported, and the SW
+  // controllerchange reload (within first few seconds) bounces the user back
+  // here before the session resolves. Wait for the auth state to settle.
+  if (authLoading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent mx-auto" />
+          <p className="mt-4 text-sm text-gray-500">Checking your session…</p>
         </div>
       </div>
     );

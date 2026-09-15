@@ -28,10 +28,17 @@ if ('serviceWorker' in navigator) {
     } catch { /* ignore */ }
     swReloaded = true;
     try { sessionStorage.setItem('vog_sw_reloaded', '1'); } catch { /* ignore */ }
-    // Only reload during initial app load (within first 3 seconds)
-    // This prevents reloads after the user has interacted with the app
-    const isInitialLoad = Date.now() - window.__vogBootTime < 3000;
-    if (isInitialLoad) {
+    // Only reload during initial app load (within first 10 seconds).
+    // Extended from 3s to 10s to give AuthContext time to hydrate the session
+    // (authApi.me() over httpOnly cookie) before a forced reload. This was
+    // the root cause of the "Authentication required" flicker on deep-link
+    // pages like /validate/:token — the 3s window fired before the session
+    // resolved, bouncing a logged-in user onto the signup/login gate.
+    const isInitialLoad = Date.now() - window.__vogBootTime < 10000;
+    // Skip reload on witness-validation deep links — a forced reload mid-flow
+    // discards in-progress auth hydration and resets the validate flow.
+    const isDeepLink = /^\/validate\/[a-f0-9]/.test(window.location.pathname);
+    if (isInitialLoad && !isDeepLink) {
       window.location.reload();
     }
   });
