@@ -1,0 +1,161 @@
+# VOICE OF GUDALUR — static petition page ONLY.
+#
+# This repository intentionally contains nothing but the deployable static
+# petition page (static-petition/). There is no build step: the files ship
+# as-is. This file overrides any build command / publish directory set in
+# the Netlify UI, so Netlify never attempts the old full-app build.
+
+[build]
+  command = "echo 'voice of gudalur: static page deploy — no build step'"
+  publish = "static-petition"
+
+# Caching + security headers are read by Netlify from
+# static-petition/_headers at deploy time. No redirects and no functions:
+# the page is fully first-party apart from the YouTube embed.
+
+# ─── Build environment ─────────────────────────────────────────
+# Force npm to always install devDependencies (vite, vite-plugin-pwa,
+# @vitejs/plugin-react, etc.) — they are required by the build step but
+# Netlify may run with NODE_ENV=production which skips them.
+# This fixes the "vite: not found" error.
+[build.environment]
+  NPM_FLAGS = "--include=dev"
+  NODE_ENV = "production"
+  # Disable Netlify's build cache for CSS/asset changes
+  NEXT_TELEMETRY_DISABLED = "1"
+  # Force fresh install
+  NPM_CONFIG_FROZEN_LOCKFILE = "false"
+  # FULL-APP (post free-tier upgrade) knobs:
+  #   DATABASE_POOL_MAX   20 — paid tier allows a real pool per serverless
+  #                        instance (was 2 on free tier).
+  #   MAX_IN_FLIGHT       1000 — generous concurrency now that functions have
+  #                        paid timeout/memory (was 150 free-tier shedding).
+  #   VITE_APP_MODE       full — the entire app loads (all routes, AI VOG,
+  #                        wildlife, officials, admin).
+  #   VITE_AI_VOG_ENABLED true — AI VOG greeter mounts in full mode.
+  DATABASE_POOL_MAX = "20"
+  MAX_IN_FLIGHT = "1000"
+  VITE_APP_MODE = "full"
+  VITE_AI_VOG_ENABLED = "true"
+
+# ── API (Netlify Function — the Express backend itself) ─────────────────────
+# server.ts#createApp() is wrapped with serverless-http in
+# netlify/functions/api.ts, so the WHOLE backend (auth, petitions, config,
+# CockroachDB) runs on Netlify. Required Netlify environment variables
+# (Site configuration → Environment variables):
+#   DATABASE_URL        CockroachDB connection string
+#   SESSION_SECRET      JWT signing secret (required)
+#   NODE_ENV            production  (enables secure session cookies)
+#   DATABASE_POOL_MAX   5 recommended for serverless (each instance has its own pool)
+#   DATABASE_SSL        optional — verify-full | require; encryption-only
+#                       fallback when no CA file is present (server/db/client.ts)
+
+[functions]
+  node_bundler = "esbuild"
+  # vite is only dynamically imported by the local dev server (startServer);
+  # keep it out of the serverless bundle. pg-native is an optional pg binding
+  # that is never used here but would otherwise fail the esbuild pass.
+  external_node_modules = ["vite", "pg-native"]
+[[redirects]]
+    from = "/api/*"
+    to = "/.netlify/functions/api/:splat"
+    status = 200
+    force = true
+
+# Public data snapshots (dist/data/*.json) — MUST come BEFORE the SPA fallback
+# so the crowd's live-counter polls are served as static JSON, not HTML.
+[[redirects]]
+  from = "/data/*"
+  to = "/data/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/stats.json"
+  to = "/data/stats.json"
+  status = 200
+  force = true
+
+# SPA fallback — lets /verify-docket and other client routes work on Netlify.
+# Static-file redirects above take priority; this only catches unrecognised paths.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# ─── Cache control ────────────────────────────────────────────────────────────
+# The service worker script and the HTML entry must NEVER be cached long —
+# otherwise browsers keep serving a stale app shell after a deploy.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Hashed build assets are immutable — cache them hard.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# ─── Public API read endpoints (CDN edge cache) ───────────────────────────────
+# These endpoints return public, aggregate, non-personal data that is already
+# cached server-side for 6–10 s (in-process TTL). The CDN caches them for an
+# additional 10 s so repeat hits from the crowd are absorbed at the edge before
+# they ever reach a serverless function — the single biggest free-tier win.
+[[headers]]
+  for = "/api/petitions/sign-stats"
+  [headers.values]
+    Cache-Control = "public, max-age=10, stale-while-revalidate=10"
+
+[[headers]]
+  for = "/api/petitions/ledger"
+  [headers.values]
+    Cache-Control = "public, max-age=10, stale-while-revalidate=10"
+
+[[headers]]
+  for = "/api/media"
+  [headers.values]
+    Cache-Control = "public, max-age=10, stale-while-revalidate=10"
+
+# ─── Public data snapshots (dist/data/*.json) — crowd read path ──────────────
+# Generated at build time by scripts/exportSnapshot.ts and refreshed by the
+# refresh-snapshots cron function. Long-lived because they only change on
+# writes; revalidated so a fresh snapshot is picked up quickly after a write.
+[[headers]]
+  for = "/data/*.json"
+  [headers.values]
+    Cache-Control = "public, max-age=30, stale-while-revalidate=30"
+[[headers]]
+  for = "/stats.json"
+  [headers.values]
+    Cache-Control = "public, max-age=6, stale-while-revalidate=6"
+
+[[headers]]
+  for = "/api/manifesto/stats"
+  [headers.values]
+    Cache-Control = "public, max-age=6, stale-while-revalidate=6"
+
+[[headers]]
+  for = "/api/wildlife/incidents"
+  [headers.values]
+    Cache-Control = "public, max-age=6, stale-while-revalidate=6"
+
+[[headers]]
+  for = "/api/wildlife/sightings"
+  [headers.values]
+    Cache-Control = "public, max-age=6, stale-while-revalidate=6"
+
+[[headers]]
+  for = "/api/wildlife/voice"
+  [headers.values]
+    Cache-Control = "public, max-age=6, stale-while-revalidate=6"
