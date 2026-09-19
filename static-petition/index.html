@@ -41,8 +41,21 @@ html,body{height:100%}
 body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background:var(--cb)}
 .header{display:flex;align-items:center;justify-content:center;gap:10px;padding:8px 16px;background:var(--glass);border-bottom:1px solid var(--line);flex-shrink:0;backdrop-filter:blur(14px) saturate(1.15);-webkit-backdrop-filter:blur(14px) saturate(1.15)}
 .header-title{font-family:'Montserrat',sans-serif;font-size:1.16rem;font-weight:700;color:#FFFFFF;letter-spacing:.06em;text-shadow:0 1px 6px rgba(0,0,0,.55)}
-.center{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;padding:4px 16px;overflow:hidden;position:relative}
-.center>*{position:relative;z-index:1}
+/* Two snapped screens inside one scroll area that sits between the glass bars:
+   screen 1 is the petition (badge + headline + card + CTA), screen 2 is the
+   films (reel + its own CTA). The header and the footer are flex siblings of
+   this scroller, so both bars stay put while only the middle moves - the footer
+   can no longer slide away and reveal the background film underneath it. */
+.screens{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scroll-snap-type:y mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;position:relative;z-index:1}
+.screens::-webkit-scrollbar{display:none}
+.screen{min-height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;padding:8px 16px;position:relative}
+.screen>*{position:relative;z-index:1}
+/* The ask must never be half-seen. When screen 1's content is taller than the
+   viewport (short phones), the card scrolls behind a pinned foot - the dots and
+   the whole CTA stay on screen, so the visitor always sees where the card is and
+   can always sign. */
+.screen-foot{position:sticky;bottom:2px;margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;z-index:2}
+#screen-2{justify-content:center}
 .landscape{position:absolute;inset:0;z-index:0;opacity:.08;pointer-events:none}
 /* The IMAX film: one fixed full-viewport layer behind the whole page - the
    loops run edge to edge, and the header/footer float on it as glass bars. */
@@ -157,14 +170,26 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
   .ytdots{display:flex;gap:7px;justify-content:center;align-items:center;width:100%;max-width:470px;margin:7px auto 0;padding:0}
 .ytdots button{width:9px;height:9px;border-radius:50%;border:1px solid rgba(255,255,255,.55);background:transparent;cursor:pointer;padding:0}
 .ytdots button.on{background:#fbbf24;border-color:#fbbf24}
-.videos{flex-shrink:0;display:block;padding:2px 16px;max-width:540px;margin:0 auto;width:100%}
+.videos{flex-shrink:0;display:block;max-width:540px;margin:0 auto;width:100%}
+/* Reel bar: the film dots with the sound switch sitting at the right end, kept
+   out of the stage itself so it never covers YouTube's own player controls. */
+.reelbar{position:relative;display:flex;align-items:center;justify-content:center;width:100%;max-width:470px;margin:8px auto 0;min-height:34px}
+.reelbar .ytdots{margin:0}
+.snd{position:absolute;right:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.6);background:rgba(9,22,14,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:background .2s,border-color .2s}
+.snd:hover{background:rgba(13,148,136,.55);border-color:#fbbf24}
+.snd svg{width:17px;height:17px;fill:#fff}
+.snd .snd-x,.snd .snd-w,.snd .snd-w2{transition:opacity .2s}
+.snd .snd-x{opacity:0}
+.snd.mute .snd-x{opacity:1}
+.snd.mute .snd-w,.snd.mute .snd-w2{opacity:0}
+.snd:focus-visible{outline:2px solid var(--pg);outline-offset:2px}
 
 .vposter span{display:flex;align-items:center;justify-content:center}
 .vplay{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--pt),var(--pg));box-shadow:0 3px 12px rgba(0,0,0,.4)}
 .vplay::before{content:'';border-style:solid;border-width:6px 0 6px 10px;border-color:transparent transparent transparent #fff;margin-left:3px}
 .vcap{font-family:'Montserrat',sans-serif;font-size:.6rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.9)}
 .vposter:focus-visible{outline:2px solid var(--pg);outline-offset:2px}
-.app-footer{flex-shrink:0;background:var(--glass);border-top:2px solid var(--line);padding:8px 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-family:'Montserrat',sans-serif;backdrop-filter:blur(14px) saturate(1.15);-webkit-backdrop-filter:blur(14px) saturate(1.15)}
+.app-footer{flex-shrink:0;position:relative;z-index:60;background:var(--glass);border-top:2px solid var(--line);padding:8px 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-family:'Montserrat',sans-serif;backdrop-filter:blur(14px) saturate(1.15);-webkit-backdrop-filter:blur(14px) saturate(1.15)}
 .f-brand{font-family:'Montserrat',sans-serif;font-weight:700;font-size:.8rem;color:#FFFFFF;letter-spacing:.08em;text-shadow:0 1px 5px rgba(0,0,0,.5)}
 .f-by{font-size:.62rem;font-weight:400;letter-spacing:.05em;color:rgba(255,255,255,.88);margin-top:2px}
 .f-by a{color:#FFFFFF;font-weight:700;letter-spacing:.05em;text-decoration:underline;text-underline-offset:2px}
@@ -176,24 +201,50 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
 .f-links{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:.6rem;font-weight:500;letter-spacing:.08em;color:rgba(255,255,255,.82)}
 .f-links a{color:rgba(255,255,255,.82);text-decoration:none}
 .f-links a:hover{color:#FFFFFF}
+/* Page indicator for the two screens: sits on the footer's top edge so it costs
+   no layout height and always shows whether there is a second screen below. */
+.screendots{position:absolute;left:50%;top:-11px;transform:translateX(-50%);display:flex;gap:6px;z-index:2}
+.screendots button{width:7px;height:7px;border-radius:50%;border:1px solid rgba(255,255,255,.6);background:rgba(9,22,14,.45);padding:0;cursor:pointer;transition:all .25s}
+.screendots button.on{width:16px;border-radius:5px;background:#fbbf24;border-color:#fbbf24}
+.screendots button:focus-visible{outline:2px solid var(--pg);outline-offset:2px}
 @media (max-width:380px){.card{min-height:140px}.videos .ytstage{max-width:100%}.f-right{align-items:center}}
 @media (max-height:760px){.videos .ytstage{max-width:340px}}
-@media (max-width:640px) and (max-height:820px),(max-height:880px){body{height:auto;min-height:100dvh;overflow-y:auto}.card{min-height:200px}}
+/* The middle scroller owns all scrolling now, so the page body must not scroll:
+   the two-screen layout needs a definite viewport height for the bars to stay
+   put and for each section to measure exactly one screen. */
+/* Phones: the footer keeps the social row and lays the three links out in one
+   line, which hands ~80px back to screen 1 - the difference between the CTA
+   sitting on the first screen and falling off it. */
+@media (max-width:640px){
+  .f-links{flex-direction:row;flex-wrap:wrap;justify-content:flex-end;gap:6px;font-size:.55rem}
+  .f-right{gap:4px}
+}
+@media (max-height:700px){
+  .f-links{flex-direction:row;gap:8px}
+  .rotator{min-height:10dvh}
+  .slide{padding:8px 12px}
+  .slide p{line-height:1.34}
+}
+@media (max-height:700px) and (orientation:portrait){
+  .stage{width:50px;height:50px;top:8px}
+}
 /* Portrait phones. The hero film is framed wide and the elephant shadow lives
    on the right wall - slide the cover-crop onto it and lift the loop's opacity
    so the shadow movement reads through the veil on small screens.
-   Portrait stacks opaque content (card, CTA, reel) over the film, which used to
-   leave the loop visible in gaps only (~19% of the first screen): nobody could
-   tell there was a background film at all. So the headline band is deliberately
-   opened up to 26dvh and the headline sits at its foot like a title card - the
-   loop gets a real band across the top of the first screen - and the veil is
-   lightened in the same breath so the film reads rather than washes out. */
+   Screen 1 has to hold the badge, the headline band, the card, the dots and the
+   whole CTA without spilling past the fold, so the band and the badge are a
+   touch tighter here and the veil is lightened in the same breath: the loop
+   still reads as a film behind the title card, and nothing gets half-cut. */
 @media (orientation:portrait){
   .bgpic video{object-position:92% 50%}
   .bgpic video.live{opacity:.72}
   .bgveil{background:radial-gradient(120% 90% at 50% 40%,rgba(6,10,8,0) 62%,rgba(6,10,8,.22) 100%),linear-gradient(180deg,rgba(6,10,8,.10) 0%,rgba(6,10,8,.16) 52%,rgba(6,10,8,.30) 100%)}
-  .rotator{min-height:20dvh;align-items:flex-end;padding-bottom:6px}
-  .center{justify-content:flex-start;gap:10px}
+  /* The badge floats ON the film band instead of sitting inside its flow, so the
+     band is an unobstructed window on the loop (elephant shadow included) and the
+     badge, the headline and the film read as one title card. */
+  .stage{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:62px;height:62px;margin:0;z-index:3}
+  .rotator{min-height:18dvh;align-items:flex-end;padding-bottom:6px}
+  .screen{gap:7px}
 }
 
 </style>
@@ -209,7 +260,8 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
   <div class="header-title">Voice of Gudalur</div>
 </header>
 
-<div class="center">
+<main class="screens" id="screens">
+<section class="screen" id="screen-1" aria-label="The petition">
   <div class="stage">
     <div class="ring"></div>
     <div class="badge"><img src="media/logo-voice.webp" alt="Voice of Gudalur"></div>
@@ -260,25 +312,43 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
   </div>
       </div>
 </div>
+  <div class="screen-foot">
   <div class="dots" id="dots"></div>
   <div class="cta-row">
     <div class="cta-pulse" aria-hidden="true"></div>
     <a href="https://c.org/JnjH68G57Q" class="sign-btn" target="_blank" rel="noopener noreferrer"><span class="vbars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span class="sign-label">Sign in Petition</span></a>
   </div>
-</div>
+  </div>
+</section>
 
+<section class="screen" id="screen-2" aria-label="The films">
 <div class="videos">
   <div class="ytstage" id="ytstage"><video id="localvid" class="localvid" muted playsinline preload="auto" poster="media/bg-left.jpg" disablepictureinpicture></video><div id="ytwrap" class="ytwrap hidden"></div></div>
-  <div class="ytdots" id="ytdots"></div>
+  <div class="reelbar">
+    <div class="ytdots" id="ytdots"></div>
+    <button id="snd" class="snd" type="button" aria-label="Sound on — tap to mute" aria-pressed="true" title="Sound on — tap to mute">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.2h3.2L12 5.3v13.4l-4.8-3.9H4V9.2z"/><path class="snd-w" d="M15.4 8.7a4.7 4.7 0 0 1 0 6.6" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/><path class="snd-w2" d="M18.1 6.1a8.3 8.3 0 0 1 0 11.8" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/><path class="snd-x" d="M16.3 9.3l5.4 5.4M21.7 9.3l-5.4 5.4" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/></svg>
+    </button>
+  </div>
 </div>
+  <div class="cta-row">
+    <div class="cta-pulse" aria-hidden="true"></div>
+    <a href="https://c.org/JnjH68G57Q" class="sign-btn" target="_blank" rel="noopener noreferrer"><span class="vbars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span class="sign-label">Sign in Petition</span></a>
+  </div>
+</section>
+</main>
 
 <footer class="app-footer">
+  <div class="screendots" id="screendots"></div>
   <div>
     <div class="f-brand">Voice of Gudalur</div>
     <p class="f-by">A citizen initiative by <a href="https://ugtindia.space" target="_blank" rel="noopener noreferrer">Universal Guard Trust</a></p>
   </div>
   <div class="f-right">
     <div class="f-social">
+      <a href="https://www.youtube.com/@voiceforgudalur" target="_blank" rel="noopener noreferrer" title="YouTube — Voice of Gudalur" aria-label="Voice of Gudalur on YouTube">
+        <svg viewBox="0 0 24 24"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
+      </a>
       <a href="https://www.instagram.com/voiceofgudalur" target="_blank" rel="noopener noreferrer" title="Instagram — Voice of Gudalur" aria-label="Voice of Gudalur on Instagram">
         <svg viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.6 0 4.9.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1 .4 2.2.1 1.3.1 1.6.1 4.9s0 3.6-.1 4.9c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1 .4-2.2.4-1.3.1-1.6.1-4.9.1s-3.6 0-4.9-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.9c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1-.4 2.2-.4C8.4 2.2 8.8 2.2 12 2.2zm0 1.8c-3.1 0-3.5 0-4.8.1-1.1.1-1.5.2-1.8.3-.5.2-.8.4-1.1.7-.3.3-.5.6-.7 1.1-.1.3-.3.8-.3 1.8-.1 1.2-.1 1.6-.1 4.8s0 3.5.1 4.8c.1 1.1.2 1.5.3 1.8.2.5.4.8.7 1.1.3.3.6.5 1.1.7.3.1.8.3 1.8.3 1.2.1 1.6.1 4.8.1s3.5 0 4.8-.1c1.1-.1 1.5-.2 1.8-.3.5-.2.8-.4 1.1-.7.3-.3.5-.6.7-1.1.1-.3.3-.8.3-1.8.1-1.2.1-1.6.1-4.8s0-3.5-.1-4.8c-.1-1.1-.2-1.5-.3-1.8-.2-.5-.4-.8-.7-1.1-.3-.3-.6-.5-1.1-.7-.3-.1-.8-.3-1.8-.3-1.2-.1-1.6-.1-4.8-.1zm0 3.1a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8zm0 8.1a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zm6.2-8.3a1.1 1.1 0 1 1-2.3 0 1.1 1.1 0 0 1 2.3 0z"/></svg>
       </a>
@@ -392,6 +462,74 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
   var dotsEl = document.getElementById('ytdots');
   var cur = 0, localPlays = 0, ytTimer = null;
   var ytFrame = null;
+  var ytState = -1;
+  /* Sound. Every engine withholds UNMUTED autoplay until the visitor interacts,
+     so the films start muted - but sound is the default the moment there is a
+     gesture (a scroll, a tap, a key, a wheel notch), and the switch in the reel
+     bar turns it off and on. Attempting an unmuted play() before a gesture would
+     only be rejected and logged, so the muted start is deliberate and silent.
+     `sound` is the visitor's intent, `policyMuted` is the engine holding it
+     back until the first gesture. */
+  var sndBtn = document.getElementById('snd');
+  var sound = true, policyMuted = false, unlocked = false;
+  function ytCmd(func, args){
+    if (!ytFrame) return;
+    try { ytFrame.postMessage(JSON.stringify({ event: 'command', func: func, args: args || [] }), '*'); } catch(e){}
+  }
+  function soundOn(){ return sound && unlocked && !policyMuted; }
+  function paintSound(){
+    if (!sndBtn) return;
+    var on = soundOn();
+    sndBtn.className = on ? 'snd' : 'snd mute';
+    sndBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    var label = on ? 'Sound on — tap to mute' : 'Muted — tap for sound';
+    sndBtn.setAttribute('aria-label', label);
+    sndBtn.setAttribute('title', label);
+  }
+  function applySound(){
+    if (FILMS[cur].type === 'local') {
+      vid.muted = !soundOn();
+      /* Re-issue play() inside the unlocking gesture: some engines only lift the
+         sound when the element is (re)started within the gesture itself. */
+      if (soundOn() && vid.paused) { var p = vid.play(); if (p && p.catch) p.catch(function(){}); }
+    }
+    else if (soundOn()) { ytCmd('unMute'); ytCmd('setVolume', [100]); }
+    else ytCmd('mute');
+  }
+  /* The first real interaction lifts the sound. This is also what makes the reel
+     audible "by default": nobody reaches the films without touching the page. */
+  function unlock(){
+    if (unlocked) return;
+    unlocked = true;
+    policyMuted = false;
+    applySound();
+    paintSound();
+  }
+  ['touchstart', 'click', 'keydown', 'wheel'].forEach(function(ev){
+    document.addEventListener(ev, unlock, { once: true, passive: true });
+  });
+  /* Deliberately NOT on scroll: a programmatic or snap-induced scroll is not a
+     user gesture, and the sound must never start on its own. */
+  if (sndBtn) sndBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    unlocked = true;
+    policyMuted = false;
+    sound = !sound;
+    applySound();
+    paintSound();
+  });
+  /* Local film: muted only until the visitor's first gesture, then with voice -
+     and if the engine still refuses (an in-app browser with a stubborn policy)
+     the film keeps playing muted and the switch stays honest about it. */
+  function playLocal(){
+    vid.muted = !soundOn();
+    var p = vid.play();
+    if (p && p.catch) p.catch(function(){
+      if (!soundOn()) return;
+      policyMuted = true; vid.muted = true; paintSound();
+      var q = vid.play(); if (q && q.catch) q.catch(function(){});
+    });
+  }
 
   FILMS.forEach(function(_, i){
     var b = document.createElement('button');
@@ -414,7 +552,9 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
                   + '<source src="' + f.srcs[1] + '" type="' + f.types[1] + '">';
     localPlays = 0;
     vid.load();
-    var p = vid.play(); if (p && p.catch) p.catch(function(){});
+    policyMuted = false;
+    playLocal();
+    paintSound();
   }
   /* Each YouTube film is a fresh muted-autoplay embed: the iframe is rebuilt per
      film (src set before insertion) because a brand-new muted iframe is the
@@ -436,9 +576,10 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
     fr.setAttribute('title', 'Voice of Gudalur film');
     wrap.appendChild(fr);
     ytFrame = fr.contentWindow;
+    ytState = -1;
     /* YouTube's enablejsapi handshake. Until a state arrives the safety timer
        runs alone; the moment we hear ENDED the reel moves on immediately. */
-    try { fr.addEventListener('load', function(){ try { fr.contentWindow.postMessage('{"event":"listening"}', '*'); } catch(e){} }); } catch(e){}
+    try { fr.addEventListener('load', function(){ try { fr.contentWindow.postMessage('{"event":"listening"}', '*'); } catch(e){} applySound(); }); } catch(e){}
     try { fr.contentWindow.postMessage('{"event":"listening"}', '*'); } catch(e){}
     ytTimer = setTimeout(function(){ go(cur + 1); }, (f.secs + 12) * 1000);
   }
@@ -451,8 +592,24 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
     var d = e.data, o = null;
     try { o = (typeof d === 'string') ? JSON.parse(d) : d; } catch(err){ return; }
     if (!o) return;
-    if (o.event === 'onStateChange' && o.info === 0) go(cur + 1);
+    if (o.event === 'onStateChange') { ytState = o.info; if (o.info === 0) go(cur + 1); return; }
   });
+  /* The reel plays while it is being watched. Entering screen 2 starts the
+     current film - WebKit refuses to start an off-screen video at all, so this
+     kick is what makes the tiger films run on Safari instead of sitting frozen.
+     Leaving screen 2 pauses the YouTube embed: a film must never keep talking
+     from the other screen. Coming back to a paused embed rebuilds it, because a
+     fresh muted iframe is the one autoplay path every engine honours without a
+     gesture. */
+  function onScreen(index){
+    var watching = index === 1;
+    if (FILMS[cur].type === 'local') { if (watching && vid.paused) playLocal(); return; }
+    if (!watching) { ytCmd('pause'); return; }
+    if (ytState === 1) return;
+    ytCmd('playVideo');
+    setTimeout(function(){ if (ytState !== 1) mountYt(cur); }, 2500);
+  }
+  document.addEventListener('vog:screen', function(e){ onScreen(e.detail.index); });
   function showYt(n){
     vid.pause();
     /* Drop the local films' decoder and buffers while the reel is on YouTube:
@@ -474,8 +631,122 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
     dots();
     if (FILMS[cur].type === 'local') showLocal(cur); else showYt(cur);
   }
+  /* The reel only runs while it can actually be seen. Screen 2 sits below the
+     fold at load, and an off-screen film is wasted decoding, wasted bandwidth
+     and needless battery - on strict engines it can even be throttled by the
+     browser and never paint. So the stage plays when screen 2 is on screen and
+     pauses when it is not (and whenever the tab is hidden). */
+  var stage = document.getElementById('ytstage');
+  var inView = !('IntersectionObserver' in window), pageShown = true;
+  function syncPlayback(){
+    var want = inView && pageShown;
+    if (FILMS[cur].type === 'local') {
+      if (want) { if (vid.paused) playLocal(); }
+      else if (!vid.paused) { try { vid.pause(); } catch(e){} }
+    } else {
+      ytCmd(want ? 'playVideo' : 'pauseVideo');
+    }
+  }
+  if (stage && 'IntersectionObserver' in window) {
+    try {
+      new IntersectionObserver(function(es){
+        inView = es[0].isIntersecting && es[0].intersectionRatio > 0.35;
+        syncPlayback();
+      }, { root: document.getElementById('screens'), threshold: [0, 0.35, 0.9] }).observe(stage);
+    } catch(e){}
+  }
+  document.addEventListener('visibilitychange', function(){
+    pageShown = document.visibilityState !== 'hidden';
+    syncPlayback();
+  });
   dots();
   showLocal(0);
+  paintSound();
+})();
+</script>
+
+<script>
+/* One gesture, one screen. The two sections snap like full pages: the middle
+   scroller keeps native scrolling and CSS snap as the base, and this settles a
+   gesture onto the neighbouring screen so a small flick on a phone (or one wheel
+   notch, or an arrow key) always lands on the next screen's top. Screen 1 is the
+   ask, screen 2 is the films with the ask again - the visitor should never have
+   to hunt for either half. */
+(function(){
+  var box = document.getElementById('screens');
+  if (!box) return;
+  var secs = [].slice.call(box.querySelectorAll('.screen'));
+  if (secs.length < 2) return;
+  var lock = 0;
+  function nearest(){
+    var best = 0, d = Infinity;
+    secs.forEach(function(s, i){ var x = Math.abs(s.offsetTop - box.scrollTop); if (x < d) { d = x; best = i; } });
+    return best;
+  }
+  function goto(i){
+    i = Math.max(0, Math.min(secs.length - 1, i));
+    try { box.scrollTo({ top: secs[i].offsetTop, behavior: 'smooth' }); }
+    catch(e){ box.scrollTop = secs[i].offsetTop; }
+  }
+  function step(from, dir){
+    var now = Date.now();
+    if (now < lock) return;
+    lock = now + 700;
+    goto(from + dir);
+  }
+  box.addEventListener('wheel', function(e){
+    if (Math.abs(e.deltaY) < 4) return;
+    e.preventDefault();
+    step(nearest(), e.deltaY > 0 ? 1 : -1);
+  }, { passive: false });
+  var ty = null, tx = null, startIdx = 0;
+  box.addEventListener('touchstart', function(e){
+    if (e.touches.length !== 1) { ty = null; return; }
+    ty = e.touches[0].clientY;
+    tx = e.touches[0].clientX;
+    startIdx = nearest();
+  }, { passive: true });
+  box.addEventListener('touchend', function(e){
+    if (ty === null) return;
+    var dy = e.changedTouches[0].clientY - ty;
+    var dx = e.changedTouches[0].clientX - tx;
+    ty = null;
+    /* vertical intention only - the card's own swipe gesture is horizontal */
+    if (Math.abs(dy) < 26 || Math.abs(dy) < Math.abs(dx)) return;
+    var from = startIdx, dir = dy < 0 ? 1 : -1;
+    /* let the native momentum settle first, then land exactly on the neighbour */
+    setTimeout(function(){ step(from, dir); }, 140);
+  }, { passive: true });
+  document.addEventListener('keydown', function(e){
+    var k = e.key;
+    if (k === 'ArrowDown' || k === 'PageDown' || k === ' ') { e.preventDefault(); step(nearest(), 1); }
+    else if (k === 'ArrowUp' || k === 'PageUp') { e.preventDefault(); step(nearest(), -1); }
+  });
+  /* dots for the two screens, so the pair is visible and reachable */
+  var bar = document.getElementById('screendots');
+  var lastIdx = -1;
+  function paint(){
+    var n = nearest();
+    /* Tell the reel which screen is being watched: it starts the film on entry
+       (WebKit will not run an off-screen video) and pauses the embed on exit. */
+    if (n !== lastIdx) {
+      lastIdx = n;
+      try { document.dispatchEvent(new CustomEvent('vog:screen', { detail: { index: n } })); } catch(e){}
+    }
+    if (!bar) return;
+    [].forEach.call(bar.children, function(d, i){ d.className = i === n ? 'on' : ''; });
+  }
+  if (bar) {
+    secs.forEach(function(_, i){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('aria-label', 'Screen ' + (i + 1));
+      b.addEventListener('click', function(){ lock = 0; step(i, 0); paint(); });
+      bar.appendChild(b);
+    });
+  }
+  box.addEventListener('scroll', paint, { passive: true });
+  paint();
 })();
 </script>
 
