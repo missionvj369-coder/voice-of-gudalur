@@ -154,12 +154,7 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
 .localvid{object-fit:cover;background:#000}
 .hidden{display:none}
 .ytwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-/* Tap-to-play: shown only when a browser refuses muted autoplay; the tap is
-   the user gesture that unlocks playback, so the reel never freezes. */
-#taptoplay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(4,10,7,.35);border:0;cursor:pointer;padding:0}
-#taptoplay::before{content:'';width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--pt),var(--pg));box-shadow:0 4px 16px rgba(0,0,0,.45)}
-#taptoplay::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-34%,-50%);border-style:solid;border-width:10px 0 10px 16px;border-color:transparent transparent transparent #fff}
-.ytdots{display:flex;gap:7px;justify-content:center;align-items:center;width:100%;max-width:470px;margin:7px auto 0;padding:0}
+  .ytdots{display:flex;gap:7px;justify-content:center;align-items:center;width:100%;max-width:470px;margin:7px auto 0;padding:0}
 .ytdots button{width:9px;height:9px;border-radius:50%;border:1px solid rgba(255,255,255,.55);background:transparent;cursor:pointer;padding:0}
 .ytdots button.on{background:#fbbf24;border-color:#fbbf24}
 .videos{flex-shrink:0;display:block;padding:2px 16px;max-width:540px;margin:0 auto;width:100%}
@@ -184,12 +179,21 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
 @media (max-width:380px){.card{min-height:140px}.videos .ytstage{max-width:100%}.f-right{align-items:center}}
 @media (max-height:760px){.videos .ytstage{max-width:340px}}
 @media (max-width:640px) and (max-height:820px),(max-height:880px){body{height:auto;min-height:100dvh;overflow-y:auto}.card{min-height:200px}}
-/* Portrait phones: the hero film is framed wide and the elephant shadow lives
+/* Portrait phones. The hero film is framed wide and the elephant shadow lives
    on the right wall - slide the cover-crop onto it and lift the loop's opacity
-   a touch so the shadow movement reads through the veil on small screens. */
+   so the shadow movement reads through the veil on small screens.
+   Portrait stacks opaque content (card, CTA, reel) over the film, which used to
+   leave the loop visible in gaps only (~19% of the first screen): nobody could
+   tell there was a background film at all. So the headline band is deliberately
+   opened up to 26dvh and the headline sits at its foot like a title card - the
+   loop gets a real band across the top of the first screen - and the veil is
+   lightened in the same breath so the film reads rather than washes out. */
 @media (orientation:portrait){
   .bgpic video{object-position:92% 50%}
-  .bgpic video.live{opacity:.62}
+  .bgpic video.live{opacity:.72}
+  .bgveil{background:radial-gradient(120% 90% at 50% 40%,rgba(6,10,8,0) 62%,rgba(6,10,8,.22) 100%),linear-gradient(180deg,rgba(6,10,8,.10) 0%,rgba(6,10,8,.16) 52%,rgba(6,10,8,.30) 100%)}
+  .rotator{min-height:20dvh;align-items:flex-end;padding-bottom:6px}
+  .center{justify-content:flex-start;gap:10px}
 }
 
 </style>
@@ -197,7 +201,7 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
 <body>
 
 <div class="film" aria-hidden="true">
-  <div class="bgpic hero"><video class="bgvid" autoplay muted loop playsinline preload="auto" poster="media/bg-hero.jpg" disablepictureinpicture aria-hidden="true" tabindex="-1"><source src="media/bg-hero.av1.mp4" type="video/mp4"><source src="media/bg-hero.h264.mp4" type="video/mp4"></video></div>
+  <div class="bgpic hero"><video class="bgvid" autoplay muted loop playsinline preload="auto" poster="media/bg-hero.jpg" disablepictureinpicture aria-hidden="true" tabindex="-1"><source src="media/bg-hero.h264.mp4" type="video/mp4; codecs=avc1.64001f"><source src="media/bg-hero.av1.mp4" type="video/mp4; codecs=av01.0.05M.08"></video></div>
   <div class="bgveil"></div>
 </div>
 
@@ -264,7 +268,7 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
 </div>
 
 <div class="videos">
-  <div class="ytstage" id="ytstage"><video id="localvid" class="localvid" muted playsinline preload="auto" poster="media/bg-left.jpg" disablepictureinpicture></video><div id="ytwrap" class="ytwrap hidden"><div id="ytplayer"></div></div></div>
+  <div class="ytstage" id="ytstage"><video id="localvid" class="localvid" muted playsinline preload="auto" poster="media/bg-left.jpg" disablepictureinpicture></video><div id="ytwrap" class="ytwrap hidden"></div></div>
   <div class="ytdots" id="ytdots"></div>
 </div>
 
@@ -348,31 +352,46 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
 })();
 </script>
 
-<script src="https://www.youtube.com/iframe_api" async></script>
 <script>
 /* Reel of seven films: the two tiger-corridor loops play first by default (each
-   twice), then the reel flows into the five YouTube films - the last one is
-   the sign-the-petition appeal - swiping automatically when a film ends. The
-   dots jump between films. If the API cannot load (blocked/offline), a plain
-   muted autoplaying iframe takes over at once, and each film's own thumbnail
-   sits behind the player so the stage never shows a black void. All playback
-   starts muted per browser autoplay policy; visitors can unmute with the
-   player's own sound control. */
+   twice), then the reel flows into the five YouTube films - the last one being
+   the sign-the-petition appeal. The dots jump between films.
+
+   Source order matters: H.264 is listed FIRST, with its codec string, and AV1
+   second. WebKit picks the first source whose type it accepts and does NOT fall
+   through if that file later fails to decode, so an AV1-first list left Safari
+   with a black stage (AV1 is unsupported on most iPhones). H.264 decodes
+   everywhere, and the H.264 files are ~40% smaller than the AV1 ones here, so
+   H.264-first is both the compatible and the lighter choice.
+
+   Every YouTube film is mounted as a fresh youtube-nocookie iframe with
+   autoplay=1&mute=1 - a brand-new muted iframe is the autoplay path every
+   engine accepts, including WebKit/Safari, which ignores playVideo() calls made
+   outside a gesture. The reel then talks to that embed over postMessage
+   (enablejsapi=1) purely to READ its state, so it advances on the film's real
+   ENDED without loading any third-party script. Each film's own thumbnail sits
+   behind the embed, and a safety timer guarantees the reel never stalls. All
+   playback starts muted per browser autoplay policy; visitors can unmute with
+   the player's own sound control. */
 (function(){
+  var H264 = 'video/mp4; codecs=avc1.64001f';
+  var AV1 = 'video/mp4; codecs=av01.0.05M.08';
   var FILMS = [
-    { type: 'local', poster: 'media/bg-left.jpg', srcs: ['media/bg-left.av1.mp4', 'media/bg-left.h264.mp4'] },
-    { type: 'local', poster: 'media/bg-right.jpg', srcs: ['media/bg-right.av1.mp4', 'media/bg-right.h264.mp4'] },
-    { type: 'yt', id: '7ubPU-aD9XM' },
-    { type: 'yt', id: 'KI6TFRYdWPM' },
-    { type: 'yt', id: 'cQzdBv3LQTY' },
-    { type: 'yt', id: 'nOCdTTdAxCc' },
-    { type: 'yt', id: 'UPQ99bYGVPQ' }
+    { type: 'local', poster: 'media/bg-left.jpg', srcs: ['media/bg-left.h264.mp4', 'media/bg-left.av1.mp4'], types: [H264, AV1] },
+    { type: 'local', poster: 'media/bg-right.jpg', srcs: ['media/bg-right.h264.mp4', 'media/bg-right.av1.mp4'], types: [H264, AV1] },
+    /* secs is the film's own runtime; the reel advances on ENDED and only uses
+       secs + 12 s as the never-stall safety net. */
+    { type: 'yt', id: '7ubPU-aD9XM', secs: 16 },
+    { type: 'yt', id: 'KI6TFRYdWPM', secs: 176 },
+    { type: 'yt', id: 'cQzdBv3LQTY', secs: 135 },
+    { type: 'yt', id: 'nOCdTTdAxCc', secs: 131 },
+    { type: 'yt', id: 'UPQ99bYGVPQ', secs: 89 }
   ];
-  var YT_FROM = 2;
   var vid = document.getElementById('localvid');
   var wrap = document.getElementById('ytwrap');
   var dotsEl = document.getElementById('ytdots');
-  var cur = 0, player = null, apiReady = false, localPlays = 0, fbFrame = null, watchTimer = null;
+  var cur = 0, localPlays = 0, ytTimer = null;
+  var ytFrame = null;
 
   FILMS.forEach(function(_, i){
     var b = document.createElement('button');
@@ -381,92 +400,70 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
     dotsEl.appendChild(b);
   });
   function dots(){ [].forEach.call(dotsEl.children, function(d, i){ d.className = i === cur ? 'on' : ''; }); }
-  function stopWatch(){ if (watchTimer) { clearInterval(watchTimer); watchTimer = null; } }
-  function hideTap(){ var b = document.getElementById('taptoplay'); if (b) b.remove(); }
+  function stopYt(){ if (ytTimer) { clearTimeout(ytTimer); ytTimer = null; } }
+  function killYt(){ stopYt(); ytFrame = null; }
   function showLocal(n){
-    if (player) { try { player.pauseVideo(); } catch(e){} }
-    stopWatch();
-    hideTap();
-    wrap.style.background = '';
-    if (fbFrame) { try { fbFrame.remove(); } catch(e){} fbFrame = null; }
+    killYt();
     wrap.className = 'hidden';
+    wrap.innerHTML = '';
+    wrap.style.background = '';
     vid.className = 'localvid';
     var f = FILMS[n];
     vid.poster = f.poster;
-    vid.innerHTML = '<source src="' + f.srcs[0] + '" type="video/mp4"><source src="' + f.srcs[1] + '" type="video/mp4">';
+    vid.innerHTML = '<source src="' + f.srcs[0] + '" type="' + f.types[0] + '">'
+                  + '<source src="' + f.srcs[1] + '" type="' + f.types[1] + '">';
     localPlays = 0;
+    vid.load();
     var p = vid.play(); if (p && p.catch) p.catch(function(){});
   }
-  /* The YT stage is never a black void: each film's own thumbnail sits behind
-     the player, so buffering and autoplay-blocked states show the film. */
-  function thumb(n){
-    wrap.style.background = '#000 url(https://i.ytimg.com/vi/' + FILMS[n].id + '/hqdefault.jpg) center/cover no-repeat';
+  /* Each YouTube film is a fresh muted-autoplay embed: the iframe is rebuilt per
+     film (src set before insertion) because a brand-new muted iframe is the
+     autoplay path every engine accepts, including WebKit/Safari. enablejsapi
+     makes the embed report its state over postMessage - read-only, so no
+     third-party script is ever loaded - which is how the reel learns the film
+     ENDED instead of guessing. A safety timer covers a silent or blocked embed,
+     and each film's own thumbnail sits behind it, so the stage is never a black
+     void while the player spins up. */
+  function mountYt(n){
+    var f = FILMS[n];
+    wrap.innerHTML = '';
+    wrap.style.background = '#000 url(https://i.ytimg.com/vi/' + f.id + '/hqdefault.jpg) center/cover no-repeat';
+    var fr = document.createElement('iframe');
+    fr.src = 'https://www.youtube-nocookie.com/embed/' + f.id
+           + '?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1&enablejsapi=1&origin=' + encodeURIComponent(location.origin);
+    fr.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+    fr.setAttribute('allowfullscreen', '');
+    fr.setAttribute('title', 'Voice of Gudalur film');
+    wrap.appendChild(fr);
+    ytFrame = fr.contentWindow;
+    /* YouTube's enablejsapi handshake. Until a state arrives the safety timer
+       runs alone; the moment we hear ENDED the reel moves on immediately. */
+    try { fr.addEventListener('load', function(){ try { fr.contentWindow.postMessage('{"event":"listening"}', '*'); } catch(e){} }); } catch(e){}
+    try { fr.contentWindow.postMessage('{"event":"listening"}', '*'); } catch(e){}
+    ytTimer = setTimeout(function(){ go(cur + 1); }, (f.secs + 12) * 1000);
   }
-  function showTap(){
-    if (document.getElementById('taptoplay')) return;
-    var b = document.createElement('button');
-    b.id = 'taptoplay';
-    b.type = 'button';
-    b.setAttribute('aria-label', 'Tap to play the film');
-    b.addEventListener('click', function(){
-      hideTap();
-      try { if (player) player.playVideo(); } catch(e){}
-      watch();
-    });
-    wrap.appendChild(b);
-  }
+  /* Read-only listener: only YouTube's own frame is trusted, and only the
+     documented ENDED signal acts. Nothing else ever clears the safety timer, so
+     the reel can never stall on a silent or blocked embed. */
+  window.addEventListener('message', function(e){
+    if (typeof e.origin !== 'string' || e.origin.indexOf('youtube') === -1) return;
+    if (!ytFrame || e.source !== ytFrame) return;
+    var d = e.data, o = null;
+    try { o = (typeof d === 'string') ? JSON.parse(d) : d; } catch(err){ return; }
+    if (!o) return;
+    if (o.event === 'onStateChange' && o.info === 0) go(cur + 1);
+  });
   function showYt(n){
     vid.pause();
+    /* Drop the local films' decoder and buffers while the reel is on YouTube:
+       one decoder, one film's worth of memory, at any moment. */
+    vid.innerHTML = '';
+    try { vid.load(); } catch(e){}
     vid.className = 'localvid hidden';
     wrap.className = 'ytwrap';
-    stopWatch();
-    hideTap();
-    thumb(n);
-    if (player) { try { player.loadVideoById(FILMS[n].id); watch(); } catch(e){} }
-    else if (apiReady) { createPlayer(FILMS[n].id, true); watch(); }
-    else mountFallback(n); /* API blocked or offline: muted autoplaying iframe, now */
+    stopYt();
+    mountYt(n);
   }
-  function mountFallback(n){
-    if (fbFrame) { try { fbFrame.remove(); } catch(e){} }
-    fbFrame = document.createElement('iframe');
-    fbFrame.src = 'https://www.youtube-nocookie.com/embed/' + FILMS[n].id + '?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1';
-    fbFrame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
-    fbFrame.setAttribute('allowfullscreen', '');
-    fbFrame.setAttribute('title', 'Voice of Gudalur film');
-    wrap.appendChild(fbFrame);
-  }
-  function createPlayer(id, playNow){
-    player = new YT.Player('ytplayer', {
-      videoId: id,
-      playerVars: { autoplay: playNow ? 1 : 0, mute: 1, playsinline: 1, rel: 0, modestbranding: 1, origin: location.origin },
-      events: {
-        onReady: function(e){ try { e.target.mute(); if (playNow) e.target.playVideo(); } catch(err){} },
-        onStateChange: function(e){ if (e.data === YT.PlayerState.ENDED) go(cur + 1); },
-        onError: function(){ go(cur + 1); } /* a dead film must never stall the reel */
-      }
-    });
-  }
-  /* Watchdog: if autoplay is blocked (iOS / in-app browsers), surface a tap
-     target instead of a frozen frame - the tap is the gesture that unlocks
-     playback. A healthy stream (playing or buffering) never shows it. */
-  function watch(){
-    stopWatch();
-    hideTap();
-    var tries = 0;
-    watchTimer = setInterval(function(){
-      tries++;
-      var st = 1;
-      try { st = player ? player.getPlayerState() : 1; } catch(e){}
-      if (st === 1 || st === 3) { stopWatch(); hideTap(); return; }
-      if (tries >= 5) { stopWatch(); showTap(); }
-    }, 900);
-  }
-  window.onYouTubeIframeAPIReady = function(){
-    apiReady = true;
-    if (fbFrame) { try { fbFrame.remove(); } catch(e){} fbFrame = null; }
-    if (cur >= YT_FROM) { createPlayer(FILMS[cur].id, true); watch(); }
-    else createPlayer(FILMS[YT_FROM].id, false);
-  };
   vid.addEventListener('ended', function(){
     localPlays++;
     if (localPlays < 2) { try { vid.currentTime = 0; } catch(e){} vid.play(); }

@@ -24,13 +24,16 @@
 /fonts/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
-# Baseline security headers. The page is fully first-party except the YouTube
-# reel: one muted autoplaying embed (IFrame API) that auto-swipes through five
-# films, plus the self-hosted hero background loop in media/bg-hero.*.
+# Baseline security headers. The page is fully first-party: no third-party script
+# at all (the YouTube IFrame API was removed - it had to start films through
+# cross-origin postMessage, which WebKit drops). The reel mounts each YouTube
+# film as a fresh youtube-nocookie iframe with autoplay=1&mute=1, so the only
+# cross-origin surface left is the embed frame itself plus its thumbnails, and
+# nothing contacts YouTube until the reel reaches a YouTube film.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN
   Permissions-Policy: geolocation=(), microphone=(), camera=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://i.ytimg.com https://s.ytimg.com; media-src 'self' https://www.youtube.com https://*.googlevideo.com; font-src 'self'; connect-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.googlevideo.com; frame-src https://www.youtube-nocookie.com https://www.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://i.ytimg.com https://www.youtube.com; media-src 'self'; font-src 'self'; connect-src 'self'; frame-src https://www.youtube-nocookie.com https://www.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'
