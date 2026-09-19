@@ -3,7 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Voice of Gudalur</title>
+<title>Voice of Gudalur — Stand With Us | Petition 18982473</title>
+<meta name="description" content="Gudalur: 95 lives lost. Tamil Nadu: 720. India: 7,868 (2009–2025). Human–wildlife conflict is a national crisis. Grievance 18982473 is before Mudhalvarin Mugavari, demanding dedicated wildlife corridors, real-time early warning and permanent safety within 30–180 days. Stand with Gudalur — sign now.">
+<link rel="canonical" href="https://voiceofgudalur.space/">
+<meta name="robots" content="index,follow">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Voice of Gudalur">
+<meta property="og:title" content="Voice of Gudalur — Stand With Us | Petition 18982473">
+<meta property="og:description" content="Human–wildlife conflict is a national crisis: Gudalur 95, Tamil Nadu 720, India 7,868 (2009–2025). Sign grievance 18982473 — wildlife corridors, real-time early warning, permanent safety within 30–180 days.">
+<meta property="og:url" content="https://voiceofgudalur.space/">
+<meta property="og:image" content="https://voiceofgudalur.space/media/bg-hero.jpg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta property="og:image:alt" content="A family sleeps on their floor while the shadow of an elephant looms on the wall above them.">
+<meta property="og:locale" content="ta_IN">
+<meta property="og:locale:alternate" content="en_IN">
+<meta property="og:locale:alternate" content="ml_IN">
+<meta property="og:locale:alternate" content="kn_IN">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Voice of Gudalur — Stand With Us | Petition 18982473">
+<meta name="twitter:description" content="Sign grievance 18982473: wildlife corridors, real-time early warning and permanent safety within 30–180 days. Gudalur 95 · TN 720 · India 7,868 (2009–2025).">
+<meta name="twitter:image" content="https://voiceofgudalur.space/media/bg-hero.jpg">
 <link rel="preload" href="fonts/montserrat.woff2" as="font" type="font/woff2" crossorigin>
 <meta name="theme-color" content="#0d2818">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http://www.w3.org/2000/svg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%230d2818%22/%3E%3Crect%20x%3D%2212%22%20y%3D%226%22%20width%3D%228%22%20height%3D%2213%22%20rx%3D%224%22%20fill%3D%22%23fbbf24%22/%3E%3Cpath%20d%3D%22M8.5%2014.5a7.5%207.5%200%200%200%2015%200M16%2022v4%22%20fill%3D%22none%22%20stroke%3D%22%23fbbf24%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E">
@@ -134,6 +154,11 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
 .localvid{object-fit:cover;background:#000}
 .hidden{display:none}
 .ytwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+/* Tap-to-play: shown only when a browser refuses muted autoplay; the tap is
+   the user gesture that unlocks playback, so the reel never freezes. */
+#taptoplay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(4,10,7,.35);border:0;cursor:pointer;padding:0}
+#taptoplay::before{content:'';width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--pt),var(--pg));box-shadow:0 4px 16px rgba(0,0,0,.45)}
+#taptoplay::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-34%,-50%);border-style:solid;border-width:10px 0 10px 16px;border-color:transparent transparent transparent #fff}
 .ytdots{display:flex;gap:7px;justify-content:center;align-items:center;width:100%;max-width:470px;margin:7px auto 0;padding:0}
 .ytdots button{width:9px;height:9px;border-radius:50%;border:1px solid rgba(255,255,255,.55);background:transparent;cursor:pointer;padding:0}
 .ytdots button.on{background:#fbbf24;border-color:#fbbf24}
@@ -159,6 +184,13 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
 @media (max-width:380px){.card{min-height:140px}.videos .ytstage{max-width:100%}.f-right{align-items:center}}
 @media (max-height:760px){.videos .ytstage{max-width:340px}}
 @media (max-width:640px) and (max-height:820px),(max-height:880px){body{height:auto;min-height:100dvh;overflow-y:auto}.card{min-height:200px}}
+/* Portrait phones: the hero film is framed wide and the elephant shadow lives
+   on the right wall - slide the cover-crop onto it and lift the loop's opacity
+   a touch so the shadow movement reads through the veil on small screens. */
+@media (orientation:portrait){
+  .bgpic video{object-position:92% 50%}
+  .bgpic video.live{opacity:.62}
+}
 
 </style>
 </head>
@@ -318,12 +350,14 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
 
 <script src="https://www.youtube.com/iframe_api" async></script>
 <script>
-/* Reel of six films: the two tiger-corridor loops play first by default (each
-   twice), then the reel flows into the four YouTube films — swiping
-   automatically when a film ends. The dots jump between films. If the API
-   cannot load (offline), a plain muted autoplaying iframe keeps the reel
-   alive. All playback starts muted per browser autoplay policy; visitors can
-   unmute with the player's own sound control. */
+/* Reel of seven films: the two tiger-corridor loops play first by default (each
+   twice), then the reel flows into the five YouTube films - the last one is
+   the sign-the-petition appeal - swiping automatically when a film ends. The
+   dots jump between films. If the API cannot load (blocked/offline), a plain
+   muted autoplaying iframe takes over at once, and each film's own thumbnail
+   sits behind the player so the stage never shows a black void. All playback
+   starts muted per browser autoplay policy; visitors can unmute with the
+   player's own sound control. */
 (function(){
   var FILMS = [
     { type: 'local', poster: 'media/bg-left.jpg', srcs: ['media/bg-left.av1.mp4', 'media/bg-left.h264.mp4'] },
@@ -331,13 +365,14 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
     { type: 'yt', id: '7ubPU-aD9XM' },
     { type: 'yt', id: 'KI6TFRYdWPM' },
     { type: 'yt', id: 'cQzdBv3LQTY' },
-    { type: 'yt', id: 'nOCdTTdAxCc' }
+    { type: 'yt', id: 'nOCdTTdAxCc' },
+    { type: 'yt', id: 'UPQ99bYGVPQ' }
   ];
   var YT_FROM = 2;
   var vid = document.getElementById('localvid');
   var wrap = document.getElementById('ytwrap');
   var dotsEl = document.getElementById('ytdots');
-  var cur = 0, player = null, apiReady = false, localPlays = 0, fallback = false;
+  var cur = 0, player = null, apiReady = false, localPlays = 0, fbFrame = null, watchTimer = null;
 
   FILMS.forEach(function(_, i){
     var b = document.createElement('button');
@@ -346,8 +381,14 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
     dotsEl.appendChild(b);
   });
   function dots(){ [].forEach.call(dotsEl.children, function(d, i){ d.className = i === cur ? 'on' : ''; }); }
+  function stopWatch(){ if (watchTimer) { clearInterval(watchTimer); watchTimer = null; } }
+  function hideTap(){ var b = document.getElementById('taptoplay'); if (b) b.remove(); }
   function showLocal(n){
     if (player) { try { player.pauseVideo(); } catch(e){} }
+    stopWatch();
+    hideTap();
+    wrap.style.background = '';
+    if (fbFrame) { try { fbFrame.remove(); } catch(e){} fbFrame = null; }
     wrap.className = 'hidden';
     vid.className = 'localvid';
     var f = FILMS[n];
@@ -356,12 +397,43 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
     localPlays = 0;
     var p = vid.play(); if (p && p.catch) p.catch(function(){});
   }
+  /* The YT stage is never a black void: each film's own thumbnail sits behind
+     the player, so buffering and autoplay-blocked states show the film. */
+  function thumb(n){
+    wrap.style.background = '#000 url(https://i.ytimg.com/vi/' + FILMS[n].id + '/hqdefault.jpg) center/cover no-repeat';
+  }
+  function showTap(){
+    if (document.getElementById('taptoplay')) return;
+    var b = document.createElement('button');
+    b.id = 'taptoplay';
+    b.type = 'button';
+    b.setAttribute('aria-label', 'Tap to play the film');
+    b.addEventListener('click', function(){
+      hideTap();
+      try { if (player) player.playVideo(); } catch(e){}
+      watch();
+    });
+    wrap.appendChild(b);
+  }
   function showYt(n){
     vid.pause();
     vid.className = 'localvid hidden';
     wrap.className = 'ytwrap';
-    if (player) { try { player.loadVideoById(FILMS[n].id); } catch(e){} }
-    else if (apiReady) createPlayer(FILMS[n].id, true);
+    stopWatch();
+    hideTap();
+    thumb(n);
+    if (player) { try { player.loadVideoById(FILMS[n].id); watch(); } catch(e){} }
+    else if (apiReady) { createPlayer(FILMS[n].id, true); watch(); }
+    else mountFallback(n); /* API blocked or offline: muted autoplaying iframe, now */
+  }
+  function mountFallback(n){
+    if (fbFrame) { try { fbFrame.remove(); } catch(e){} }
+    fbFrame = document.createElement('iframe');
+    fbFrame.src = 'https://www.youtube-nocookie.com/embed/' + FILMS[n].id + '?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1';
+    fbFrame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+    fbFrame.setAttribute('allowfullscreen', '');
+    fbFrame.setAttribute('title', 'Voice of Gudalur film');
+    wrap.appendChild(fbFrame);
   }
   function createPlayer(id, playNow){
     player = new YT.Player('ytplayer', {
@@ -369,14 +441,30 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
       playerVars: { autoplay: playNow ? 1 : 0, mute: 1, playsinline: 1, rel: 0, modestbranding: 1, origin: location.origin },
       events: {
         onReady: function(e){ try { e.target.mute(); if (playNow) e.target.playVideo(); } catch(err){} },
-        onStateChange: function(e){ if (e.data === YT.PlayerState.ENDED) go(cur + 1); }
+        onStateChange: function(e){ if (e.data === YT.PlayerState.ENDED) go(cur + 1); },
+        onError: function(){ go(cur + 1); } /* a dead film must never stall the reel */
       }
     });
   }
+  /* Watchdog: if autoplay is blocked (iOS / in-app browsers), surface a tap
+     target instead of a frozen frame - the tap is the gesture that unlocks
+     playback. A healthy stream (playing or buffering) never shows it. */
+  function watch(){
+    stopWatch();
+    hideTap();
+    var tries = 0;
+    watchTimer = setInterval(function(){
+      tries++;
+      var st = 1;
+      try { st = player ? player.getPlayerState() : 1; } catch(e){}
+      if (st === 1 || st === 3) { stopWatch(); hideTap(); return; }
+      if (tries >= 5) { stopWatch(); showTap(); }
+    }, 900);
+  }
   window.onYouTubeIframeAPIReady = function(){
     apiReady = true;
-    if (fallback) return;
-    if (cur >= YT_FROM) createPlayer(FILMS[cur].id, true);
+    if (fbFrame) { try { fbFrame.remove(); } catch(e){} fbFrame = null; }
+    if (cur >= YT_FROM) { createPlayer(FILMS[cur].id, true); watch(); }
     else createPlayer(FILMS[YT_FROM].id, false);
   };
   vid.addEventListener('ended', function(){
@@ -391,16 +479,6 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
   }
   dots();
   showLocal(0);
-  setTimeout(function(){
-    if (apiReady || player) return;
-    fallback = true;
-    var f = document.createElement('iframe');
-    f.src = 'https://www.youtube-nocookie.com/embed/' + FILMS[YT_FROM].id + '?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1';
-    f.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
-    f.setAttribute('allowfullscreen', '');
-    f.setAttribute('title', 'Voice of Gudalur films');
-    wrap.appendChild(f);
-  }, 8000);
 })();
 </script>
 
@@ -420,6 +498,16 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
   vids.forEach(function(v){
     var p = v.play(); if (p && p.catch) p.catch(function(){});
   });
+  /* Some mobile in-app browsers hold autoplay until a gesture: retry the hero
+     loop (and the reel's local film while it is the visible stage) on the
+     first touch and whenever the tab becomes visible again. */
+  function kick(){
+    vids.forEach(function(v){ if (v.paused) { var p = v.play(); if (p && p.catch) p.catch(function(){}); } });
+    var lv = document.getElementById('localvid');
+    if (lv && !/\bhidden\b/.test(lv.className) && lv.paused) { var p2 = lv.play(); if (p2 && p2.catch) p2.catch(function(){}); }
+  }
+  document.addEventListener('touchstart', kick, { once: true, passive: true });
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden) kick(); });
 })();
 </script>
 

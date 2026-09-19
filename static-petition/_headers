@@ -25,7 +25,7 @@
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 # Baseline security headers. The page is fully first-party except the YouTube
-# reel: one muted autoplaying embed (IFrame API) that auto-swipes through four
+# reel: one muted autoplaying embed (IFrame API) that auto-swipes through five
 # films, plus the self-hosted hero background loop in media/bg-hero.*.
 /*
   X-Content-Type-Options: nosniff
@@ -33,4 +33,4 @@
   X-Frame-Options: SAMEORIGIN
   Permissions-Policy: geolocation=(), microphone=(), camera=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://www.youtube.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://i.ytimg.com https://s.ytimg.com; media-src 'self' https://www.youtube.com https://*.googlevideo.com; font-src 'self'; connect-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.googlevideo.com; frame-src https://www.youtube-nocookie.com https://www.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://i.ytimg.com https://s.ytimg.com; media-src 'self' https://www.youtube.com https://*.googlevideo.com; font-src 'self'; connect-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.googlevideo.com; frame-src https://www.youtube-nocookie.com https://www.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'
