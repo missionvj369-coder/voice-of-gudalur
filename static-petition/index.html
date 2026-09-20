@@ -159,12 +159,12 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
 #taptoplay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(4,10,7,.35);border:0;cursor:pointer;padding:0}
 #taptoplay::before{content:'';width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--pt),var(--pg));box-shadow:0 4px 16px rgba(0,0,0,.45)}
 #taptoplay::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-34%,-50%);border-style:solid;border-width:10px 0 10px 16px;border-color:transparent transparent transparent #fff}
-  .picker{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 2px 2px;user-select:none;-webkit-tap-highlight-color:transparent}
-  .pv{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:108px;padding:7px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.6);background:rgba(0,0,0,.32);color:#fff;font-family:'Montserrat',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:background .2s,border-color .2s,transform .15s}
-  .pv:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.85)}
-  .pv:active{transform:scale(.96)}
-  .pv:focus-visible{outline:2px solid var(--pg);outline-offset:2px}
-  .arr{display:inline-block;width:14px;height:14px;position:relative}
+  .reel-play{display:flex;justify-content:center;align-items:center;gap:8px;padding:6px 0 2px;user-select:none;-webkit-tap-highlight-color:transparent}
+  .play-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--pt),var(--pg));color:#fff;cursor:pointer;transition:transform .15s,box-shadow .2s;box-shadow:0 2px 8px rgba(0,0,0,.3);flex-shrink:0}
+  .play-btn:hover{transform:scale(1.05);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+  .play-btn:active{transform:scale(.95)}
+  .play-btn:focus-visible{outline:2px solid var(--pg);outline-offset:2px}
+.arr{display:inline-block;width:14px;height:14px;position:relative}
   .arr::before{content:'';position:absolute;inset:0;border-style:solid;border-width:0 0 0 14px;border-color:transparent transparent transparent var(--pg);transform:translateX(2px)}
   .arr.r::before{border-width:0 14px 0 0;border-color:transparent var(--pg) transparent transparent;transform:translateX(-2px)}
   .pv-label{display:inline-block}
@@ -269,13 +269,9 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
       </div>
 </div>
   <div class="dots" id="dots"></div>
-    <div class="reel">
-    <div class="dots" id="reel-dots" aria-hidden="true"></div>
+    <div class="reel" style="margin-top:auto"><div class="reel-dots" id="reel-dots" aria-label="Films"></div><div class="reel-play" role="group" aria-label="Pause or replay the reel"><button class="play-btn" id="play-btn" type="button" aria-label="Play the reel"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button></div>
     <div class="videos" id="videos">
-      <div class="picker" role="group" aria-label="Choose previous or next film">
-        <button class="pv" data-dir="-1" type="button" aria-label="Previous film"><span class="arr" aria-hidden="true"></span><span class="pv-label">PREV</span></button>
-        <button class="pv" data-dir="1" type="button" aria-label="Next film"><span class="pv-label">NEXT</span><span class="arr r" aria-hidden="true"></span></button>
-      </div>
+      
       <div class="ytstage" id="ytstage"><video id="localvid" class="localvid" muted playsinline preload="auto" poster="media/bg-left.jpg" disablepictureinpicture></video><div id="ytwrap" class="ytwrap hidden"><div id="ytplayer"></div></div></div>
       <div class="ytdots" id="ytdots"></div>
     </div>
@@ -363,6 +359,62 @@ body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background
 
 <script src="https://www.youtube.com/iframe_api" async></script>
 <script>
+(function(){
+  // PREV / NEXT picker: stepping +/-1 with wraparound updates the reel-dots
+  // highlight and signals the reel engine via window.__REEL so the stage
+  // switches to the chosen film without reloading. The reel engine exposes
+  // __REEL.go(cur), __REEL.cur(), __REEL.len(), __REEL.pauseCurrent().
+  var pickers = document.querySelectorAll('.pv');
+  for (var p=0;p<pickers.length;p++){
+    (function(btn){
+      btn.addEventListener('click', function(){
+        var d = parseInt(btn.getAttribute('data-dir'),10)||1;
+        var R = window.__REEL;
+        if (!R) return;
+        R.pauseCurrent();
+        var n = R.cur() + d;
+        if (n < 0) n += R.len();
+        R.go(n);
+      });
+    })(pickers[p]);
+  }
+  // Play / pause toggle: the central play button pauses an active reel stage
+  // (local <video> or YouTube iframe) and re-plays it on the next tap — a
+  // one-tap replay that never reloads the film. Works even before the reel
+  // engine mounts: it reads the player from the DOM when clicked.
+  (function(){
+    var pb = document.getElementById('play-btn');
+    if (!pb) return;
+    function toggle(){
+      try {
+        var ytd = document.getElementById('ytplayer');
+        var lv = document.getElementById('localvid');
+        var target = (ytd && ytd.tagName === 'IFRAME') ? ytd : (lv && lv.tagName === 'VIDEO' ? lv : null);
+        if (!target) return;
+        if (target.tagName === 'IFRAME'){
+          if (window.YT && window.YT.Player){
+            var pl = window.YT.getLaunchedPlayer?.ytplayer:null;
+            if (pl){
+              if (pl.pauseVideo){ try { pl.pauseVideo(); }catch(e){} }
+              else { try { pl.stopVideo(); }catch(e){} }
+              return;
+            }
+          }
+          var id = target.getAttribute('src');
+          if (id){ try { target.src = id; }catch(e){} }
+          return;
+        }
+        if (target.paused){
+          try { target.currentTime = 0; target.play(); }catch(e){}
+        } else {
+          try { target.pause(); }catch(e){}
+        }
+      } catch(e){ /* ignore */ }
+    }
+    pb.addEventListener('click', function(e){ e.preventDefault(); toggle(); });
+  })();
+})();
+</script><script>
 /* Reel of seven films: the two tiger-corridor loops play first by default (each
    twice), then the reel flows into the five YouTube films - the last one is
    the sign-the-petition appeal - swiping automatically when a film ends. The
