@@ -1,0 +1,48 @@
+# Voice of Gudalur — petition site caching rules.
+#
+# Cloudflare Pages reads this `_headers` file from the repository root and
+# applies the rules to the build output directory (static-petition/).
+#
+# WHY index.html must never be cached hard: the page is shared by link over
+# WhatsApp / Instagram, whose in-app browsers cache aggressively. If the HTML is
+# cached, visitors keep seeing the stale page after a redeploy. Revalidate every
+# time; the page is ~27 KB and brotli-compresses to ~6 KB.
+#
+# IMPORTANT: Content-Type: charset=utf-8 is REQUIRED. Without it, Cloudflare
+# serves text/html without a charset directive, so browsers fall back to
+# ISO-8859-1 and the UTF-8 em-dashes, curly quotes and Tamil/Malayalam/Kannada
+# glyphs turn into mojibake (e.g. " â€" " instead of " — ").
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+  Content-Type: text/html; charset=utf-8
+
+/*.html
+  Content-Type: text/html; charset=utf-8
+
+/robots.txt
+  Cache-Control: public, max-age=3600
+
+# Decorative background stills, logos and the self-hosted font subsets. None of
+# these are content-hashed, so keep the TTL short enough that a re-encoded asset
+# is picked up within a day, with a long stale-while-revalidate tail so the swap
+# never costs the visitor a wait.
+/static-petition/media/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/static-petition/fonts/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+# Baseline security headers. The page is fully first-party: no third-party script
+# at all (the YouTube IFrame API was removed - it had to start films through
+# cross-origin postMessage, which WebKit drops). The reel mounts each YouTube
+# film as a fresh youtube-nocookie iframe with autoplay=1&mute=1, so the only
+# cross-origin surface left is the embed frame itself plus its thumbnails, and
+# nothing contacts YouTube until the reel reaches a YouTube film.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://i.ytimg.com https://www.youtube.com; media-src 'self'; font-src 'self'; connect-src 'self'; frame-src https://www.youtube-nocookie.com https://www.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'
