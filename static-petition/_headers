@@ -14,6 +14,16 @@
 /
   Cache-Control: public, max-age=0, must-revalidate
 
+# Explicit charset for HTML files — without this, Cloudflare/Netlify serve
+# text/html without a charset directive, so browsers fall back to ISO-8859-1
+# and the UTF-8 em-dashes, curly quotes and Tamil/Malayalam/Kannada glyphs
+# turn into mojibake (e.g. " â€" " instead of " — ").
+/*.html
+  Content-Type: text/html; charset=utf-8
+
+/*.htm
+  Content-Type: text/html; charset=utf-8
+
 # Decorative background stills, logos and the self-hosted font subsets. None of
 # these are content-hashed, so keep the TTL short enough that a re-encoded asset
 # is picked up within a day, with a long stale-while-revalidate tail so the swap
