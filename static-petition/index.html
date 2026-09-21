@@ -41,7 +41,7 @@ html,body{height:100%}
 body{display:flex;flex-direction:column;height:100dvh;height:100svh;overflow:hidden;overscroll-behavior:none;position:fixed;inset:0;width:100%;background:var(--cb)}
 .header{display:flex;align-items:center;justify-content:center;gap:10px;padding:8px 16px;background:var(--glass);border-bottom:1px solid var(--line);flex-shrink:0;backdrop-filter:blur(14px) saturate(1.15);-webkit-backdrop-filter:blur(14px) saturate(1.15)}
 .header-title-old{font-family:'Montserrat',sans-serif;font-size:1.16rem;font-weight:700;color:#FFFFFF;letter-spacing:.06em;text-shadow:0 1px 6px rgba(0,0,0,.55)}
-.center{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 16px 8px;overflow:hidden;position:relative}
+.center{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 16px calc(10px + env(safe-area-inset-bottom));overflow:hidden;position:relative}
 .top-row{position:absolute;top:10px;left:12px;right:12px;display:flex;align-items:flex-start;justify-content:space-between;z-index:5}
 .top-brand{position:absolute;left:0;right:0;top:12px;text-align:center;font-family:'Montserrat',sans-serif;font-weight:700;font-size:.95rem;letter-spacing:.14em;color:#FFFFFF;text-shadow:0 1px 6px rgba(0,0,0,.65);text-transform:uppercase;pointer-events:none}
 .top-left{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
@@ -163,9 +163,24 @@ body{display:flex;flex-direction:column;height:100dvh;height:100svh;overflow:hid
 @media (prefers-reduced-motion:reduce){.sign-btn,.sign-btn::before,.cta-pulse::before,.cta-pulse::after,.slide.cr::after,.ring,.bgpic img,.bgpic video,.vbars i{animation:none!important}}
 flex-shrink:0;display:block;padding:2px 16px;max-width:540px;margin:0 auto;width:100%}
 
-.app-footer{flex-shrink:0;background:var(--glass);border-top:1px solid var(--line);padding:6px 12px calc(6px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:'Montserrat',sans-serif;backdrop-filter:blur(14px) saturate(1.15);-webkit-backdrop-filter:blur(14px) saturate(1.15)}
-@media (max-width:380px){.f-brand{font-size:.72rem}.top-cta{font-size:.68rem;padding:8px 16px;letter-spacing:.12em}.mini-logo{width:38px;height:38px}.side-social a{width:26px;height:26px}.side-social svg{width:12px;height:12px}}
-.f-brand{font-family:'Montserrat',sans-serif;font-weight:700;font-size:.8rem;color:#FFFFFF;letter-spacing:.08em;text-shadow:0 1px 5px rgba(0,0,0,.5)}
+@media (max-width:640px){
+  .top-brand{font-size:.72rem;letter-spacing:.1em;top:14px}
+  .top-cta{font-size:.62rem;padding:7px 13px;letter-spacing:.1em;box-shadow:0 2px 10px rgba(13,148,136,.45)}
+  .top-row{top:8px;left:10px;right:10px}
+  .mini-logo{width:36px;height:36px}
+  .side-social{gap:6px}
+  .side-social a{width:25px;height:25px}
+  .side-social svg{width:11px;height:11px}
+  .card{max-width:100%}
+  .dots{padding:0 0 5px}
+}
+@media (max-width:380px){
+  .top-brand{font-size:.62rem;top:15px}
+  .top-cta{font-size:.56rem;padding:6px 10px}
+  .mini-logo{width:32px;height:32px}
+  .side-social a{width:23px;height:23px}
+  .side-social svg{width:10px;height:10px}
+}
 .f-by{font-size:.62rem;font-weight:400;letter-spacing:.05em;color:rgba(255,255,255,.88);margin-top:2px}
 .f-by a{color:#FFFFFF;font-weight:700;letter-spacing:.05em;text-decoration:underline;text-underline-offset:2px}
 .f-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
@@ -260,11 +275,6 @@ flex-shrink:0;display:block;padding:2px 16px;max-width:540px;margin:0 auto;width
   </div>
       </div>
 </div>
-
-
-<footer class="app-footer">
-  <div class="f-brand">Voice of Gudalur</div>
-</footer>
 
 <script>
 (function(){
