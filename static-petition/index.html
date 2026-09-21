@@ -40,9 +40,8 @@ body{font-family:'Inter',sans-serif;background:var(--cb);color:var(--dk);line-he
 html,body{height:100%}
 body{display:flex;flex-direction:column;height:100dvh;height:100svh;overflow:hidden;overscroll-behavior:none;position:fixed;inset:0;width:100%;background:var(--cb)}
 .header{display:flex;align-items:center;justify-content:center;gap:10px;padding:8px 16px;background:var(--glass);border-bottom:1px solid var(--line);flex-shrink:0;backdrop-filter:blur(14px) saturate(1.15);-webkit-backdrop-filter:blur(14px) saturate(1.15)}
-.stage-brand{font-family:'Montserrat',sans-serif;font-weight:700;font-size:clamp(.95rem,2.6vw,1.25rem);color:#FFFFFF;letter-spacing:.12em;text-shadow:0 1px 6px rgba(0,0,0,.6);text-align:center;margin-top:6px}
 .header-title-old{font-family:'Montserrat',sans-serif;font-size:1.16rem;font-weight:700;color:#FFFFFF;letter-spacing:.06em;text-shadow:0 1px 6px rgba(0,0,0,.55)}
-.center{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;padding:4px 16px;overflow:hidden;position:relative}
+.center{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:4px 16px 8px;overflow:hidden;position:relative}
 .center>*{position:relative;z-index:1}
 .landscape{position:absolute;inset:0;z-index:0;opacity:.08;pointer-events:none}
 /* The IMAX film: one fixed full-viewport layer behind the whole page - the
@@ -118,7 +117,6 @@ body{display:flex;flex-direction:column;height:100dvh;height:100svh;overflow:hid
 .slide.cr .lang-id-tag{color:#fbbf24;background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.45);font-weight:700;letter-spacing:.06em}
 /* 8K / large-display tiers: keep the IMAX composition proportional on huge panels */
 @media (min-width:1500px){
-.stage-brand{font-family:'Montserrat',sans-serif;font-weight:700;font-size:clamp(.95rem,2.6vw,1.25rem);color:#FFFFFF;letter-spacing:.12em;text-shadow:0 1px 6px rgba(0,0,0,.6);text-align:center;margin-top:6px}
 .header-title-old{font-size:1.34rem}
 .stage{width:74px;height:74px;margin-top:12px}
 .rotator h1{font-size:clamp(1.05rem,1.6vw,1.5rem)}
@@ -129,7 +127,6 @@ body{display:flex;flex-direction:column;height:100dvh;height:100svh;overflow:hid
 .videos{max-width:540px}
 }
 @media (min-width:1800px){
-.stage-brand{font-family:'Montserrat',sans-serif;font-weight:700;font-size:clamp(.95rem,2.6vw,1.25rem);color:#FFFFFF;letter-spacing:.12em;text-shadow:0 1px 6px rgba(0,0,0,.6);text-align:center;margin-top:6px}
 .header-title-old{font-size:1.5rem;letter-spacing:.09em}
 .stage{width:80px;height:80px}
 .rotator h1{font-size:clamp(1.25rem,2vw,1.85rem)}
@@ -141,7 +138,6 @@ body{display:flex;flex-direction:column;height:100dvh;height:100svh;overflow:hid
 .videos{max-width:620px}
 }
 @media (min-width:3000px){
-.stage-brand{font-family:'Montserrat',sans-serif;font-weight:700;font-size:clamp(.95rem,2.6vw,1.25rem);color:#FFFFFF;letter-spacing:.12em;text-shadow:0 1px 6px rgba(0,0,0,.6);text-align:center;margin-top:6px}
 .header-title-old{font-size:2.2rem;letter-spacing:.1em}
 .stage{width:110px;height:110px}
 .rotator h1{font-size:clamp(1.9rem,1.7vw,2.7rem)}
@@ -153,30 +149,7 @@ body{display:flex;flex-direction:column;height:100dvh;height:100svh;overflow:hid
 .videos{max-width:820px}
 }
 @media (prefers-reduced-motion:reduce){.sign-btn,.sign-btn::before,.cta-pulse::before,.cta-pulse::after,.slide.cr::after,.ring,.bgpic img,.bgpic video,.vbars i{animation:none!important}}
-.ytstage{position:relative;width:100%;max-width:470px;aspect-ratio:16/9;margin:0 auto;border-radius:12px;overflow:hidden;background:#000;box-shadow:0 4px 14px rgba(0,0,0,.12)}
-.localvid,.ytwrap{position:absolute;inset:0;width:100%;height:100%;border:0}
-.localvid{object-fit:cover;background:#000}
-.hidden{display:none}
-.ytwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-/* Tap-to-play: shown only when a browser refuses muted autoplay; the tap is
-   the user gesture that unlocks playback, so the reel never freezes. */
-#taptoplay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(4,10,7,.35);border:0;cursor:pointer;padding:0}
-#taptoplay::before{content:'';width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--pt),var(--pg));box-shadow:0 4px 16px rgba(0,0,0,.45)}
-#taptoplay::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-34%,-50%);border-style:solid;border-width:10px 0 10px 16px;border-color:transparent transparent transparent #fff}
-  .reel-play{display:flex;justify-content:center;align-items:center;gap:8px;padding:6px 0 2px;user-select:none;-webkit-tap-highlight-color:transparent}
-  .play-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--pt),var(--pg));color:#fff;cursor:pointer;transition:transform .15s,box-shadow .2s;box-shadow:0 2px 8px rgba(0,0,0,.3);flex-shrink:0}
-  .play-btn:hover{transform:scale(1.05);box-shadow:0 4px 12px rgba(0,0,0,.4)}
-  .play-btn:active{transform:scale(.95)}
-  .play-btn:focus-visible{outline:2px solid var(--pg);outline-offset:2px}
-.arr{display:inline-block;width:14px;height:14px;position:relative}
-  .arr::before{content:'';position:absolute;inset:0;border-style:solid;border-width:0 0 0 14px;border-color:transparent transparent transparent var(--pg);transform:translateX(2px)}
-  .arr.r::before{border-width:0 14px 0 0;border-color:transparent var(--pg) transparent transparent;transform:translateX(-2px)}
-  .pv-label{display:inline-block}
-  #videos{position:relative}
-  #videos .ytdots{position:absolute;left:0;right:0;top:-18px}
-.ytdots button{width:9px;height:9px;border-radius:50%;border:1px solid rgba(255,255,255,.55);background:transparent;cursor:pointer;padding:0}
-.ytdots button.on{background:#fbbf24;border-color:#fbbf24}
-.videos{flex-shrink:0;display:block;padding:2px 16px;max-width:540px;margin:0 auto;width:100%}
+flex-shrink:0;display:block;padding:2px 16px;max-width:540px;margin:0 auto;width:100%}
 .ytdots button.on{background:#fbbf24;border-color:#fbbf24}
 .videos{flex-shrink:0;display:block;padding:2px 16px;max-width:540px;margin:0 auto;width:100%}
 
@@ -234,7 +207,6 @@ body{display:flex;flex-direction:column;height:100dvh;height:100svh;overflow:hid
   <div class="stage">
     <div class="ring"></div>
     <div class="badge"><img src="media/logo-voice.webp" alt="Voice of Gudalur"></div>
-    <div class="stage-brand">Voice of Gudalur</div>
   </div>
   <div class="rotator"><h1 id="rot">கூடலூருக்குத் தேவை தற்காலிகத் தணிக்கை அல்ல, நிரந்தரத் தீர்வு!</h1></div>
 
@@ -283,21 +255,12 @@ body{display:flex;flex-direction:column;height:100dvh;height:100svh;overflow:hid
       </div>
 </div>
   <div class="dots" id="dots"></div>
-    <div class="reel" style="margin-top:auto"><div class="reel-dots" id="reel-dots" aria-label="Films"></div><div class="reel-play" role="group" aria-label="Pause or replay the reel"><button class="play-btn" id="play-btn" type="button" aria-label="Play the reel"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button></div>
-    <div class="videos" id="videos">
-      
-      <div class="ytstage" id="ytstage"><video id="localvid" class="localvid" muted playsinline preload="auto" poster="media/bg-left.jpg" disablepictureinpicture></video><div id="ytwrap" class="ytwrap hidden"><div id="ytplayer"></div></div></div>
-      <div class="ytdots" id="ytdots"></div>
-    </div>
-  </div>
-
-<footer class="app-footer">
+     class="app-footer">
   <div class="f-brand">Voice of Gudalur</div>
-  <div class="f-cta"><a href="https://c.org/JnjH68G57Q" class="sign-btn" target="_blank" rel="noopener noreferrer"><span class="vbars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>Sign in Petition</a></div>
   <div class="f-social">
-    <a href="https://www.youtube.com/@voiceofgudalur" target="_blank" rel="noopener noreferrer" title="YouTube — Voice of Gudalur" aria-label="Voice of Gudalur on YouTube"><svg viewBox="0 0 24 24"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.5 15.6V8.4L15.8 12l-6.3 3.6z"/></svg></a>
     <a href="https://www.instagram.com/voiceofgudalur" target="_blank" rel="noopener noreferrer" title="Instagram — Voice of Gudalur" aria-label="Voice of Gudalur on Instagram"><svg viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.6 0 4.9.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1 .4 2.2.1 1.3.1 1.6.1 4.9s0 3.6-.1 4.9c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1 .4-2.2.4-1.3.1-1.6.1-4.9.1s-3.6 0-4.9-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.9c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1-.4 2.2-.4C8.4 2.2 8.8 2.2 12 2.2zm0 3.1a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8zm0 8.1a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zm6.2-8.3a1.1 1.1 0 1 1-2.3 0 1.1 1.1 0 0 1 2.3 0z"/></svg></a>
     <a href="https://www.facebook.com/universalguardtrust" target="_blank" rel="noopener noreferrer" title="Facebook — Universal Guard Trust" aria-label="Universal Guard Trust on Facebook"><svg viewBox="0 0 24 24"><path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.4v7A10 10 0 0 0 22 12z"/></svg></a>
+    <a href="https://www.instagram.com/universalguardtrust" target="_blank" rel="noopener noreferrer" title="Instagram — Universal Guard Trust" aria-label="Universal Guard Trust on Instagram"><svg viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.6 0 4.9.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1 .4 2.2.1 1.3.1 1.6.1 4.9s0 3.6-.1 4.9c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1 .4-2.2.4-1.3.1-1.6.1-4.9.1s-3.6 0-4.9-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.9c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1-.4 2.2-.4C8.4 2.2 8.8 2.2 12 2.2zm0 3.1a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8zm0 8.1a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zm6.2-8.3a1.1 1.1 0 1 1-2.3 0 1.1 1.1 0 0 1 2.3 0z"/></svg></a>
   </div>
 </footer>
 
@@ -356,7 +319,6 @@ body{display:flex;flex-direction:column;height:100dvh;height:100svh;overflow:hid
 })();
 </script>
 
-<script src="https://www.youtube.com/iframe_api" async></script>
 <script>
 (function(){
   // PREV / NEXT picker: stepping +/-1 with wraparound updates the reel-dots
@@ -414,139 +376,6 @@ body{display:flex;flex-direction:column;height:100dvh;height:100svh;overflow:hid
   })();
 })();
 </script><script>
-/* Reel of seven films: the two tiger-corridor loops play first by default (each
-   twice), then the reel flows into the five YouTube films - the last one is
-   the sign-the-petition appeal - swiping automatically when a film ends. The
-   dots jump between films. If the API cannot load (blocked/offline), a plain
-   muted autoplaying iframe takes over at once, and each film's own thumbnail
-   sits behind the player so the stage never shows a black void. All playback
-   starts muted per browser autoplay policy; visitors can unmute with the
-   player's own sound control. */
-(function(){
-  var FILMS = [
-    { type: 'local', poster: 'media/bg-left.jpg', srcs: ['media/bg-left.av1.mp4', 'media/bg-left.h264.mp4'] },
-    { type: 'local', poster: 'media/bg-right.jpg', srcs: ['media/bg-right.av1.mp4', 'media/bg-right.h264.mp4'] },
-    { type: 'yt', id: '7ubPU-aD9XM' },
-    { type: 'yt', id: 'KI6TFRYdWPM' },
-    { type: 'yt', id: 'cQzdBv3LQTY' },
-    { type: 'yt', id: 'nOCdTTdAxCc' },
-    { type: 'yt', id: 'UPQ99bYGVPQ' }
-  ];
-  var YT_FROM = 2;
-  var vid = document.getElementById('localvid');
-  var wrap = document.getElementById('ytwrap');
-  var dotsEl = document.getElementById('ytdots');
-  var cur = 0, player = null, apiReady = false, localPlays = 0, fbFrame = null, watchTimer = null;
-
-  FILMS.forEach(function(_, i){
-    var b = document.createElement('button');
-    b.setAttribute('aria-label', 'Film ' + (i + 1));
-    (function(n){ b.addEventListener('click', function(){ go(n); }); })(i);
-    dotsEl.appendChild(b);
-  });
-  function dots(){ [].forEach.call(dotsEl.children, function(d, i){ d.className = i === cur ? 'on' : ''; }); }
-  function stopWatch(){ if (watchTimer) { clearInterval(watchTimer); watchTimer = null; } }
-  function hideTap(){ var b = document.getElementById('taptoplay'); if (b) b.remove(); }
-  function showLocal(n){
-    if (player) { try { player.pauseVideo(); } catch(e){} }
-    stopWatch();
-    hideTap();
-    wrap.style.background = '';
-    if (fbFrame) { try { fbFrame.remove(); } catch(e){} fbFrame = null; }
-    wrap.className = 'hidden';
-    vid.className = 'localvid';
-    var f = FILMS[n];
-    vid.poster = f.poster;
-    vid.innerHTML = '<source src="' + f.srcs[0] + '" type="video/mp4"><source src="' + f.srcs[1] + '" type="video/mp4">';
-    localPlays = 0;
-    var p = vid.play(); if (p && p.catch) p.catch(function(){});
-  }
-  /* The YT stage is never a black void: each film's own thumbnail sits behind
-     the player, so buffering and autoplay-blocked states show the film. */
-  function thumb(n){
-    wrap.style.background = '#000 url(https://i.ytimg.com/vi/' + FILMS[n].id + '/hqdefault.jpg) center/cover no-repeat';
-  }
-  function showTap(){
-    if (document.getElementById('taptoplay')) return;
-    var b = document.createElement('button');
-    b.id = 'taptoplay';
-    b.type = 'button';
-    b.setAttribute('aria-label', 'Tap to play the film');
-    b.addEventListener('click', function(){
-      hideTap();
-      try { if (player) player.playVideo(); } catch(e){}
-      watch();
-    });
-    wrap.appendChild(b);
-  }
-  function showYt(n){
-    vid.pause();
-    vid.className = 'localvid hidden';
-    wrap.className = 'ytwrap';
-    stopWatch();
-    hideTap();
-    thumb(n);
-    if (player) { try { player.loadVideoById(FILMS[n].id); watch(); } catch(e){} }
-    else if (apiReady) { createPlayer(FILMS[n].id, true); watch(); }
-    else mountFallback(n); /* API blocked or offline: muted autoplaying iframe, now */
-  }
-  function mountFallback(n){
-    if (fbFrame) { try { fbFrame.remove(); } catch(e){} }
-    fbFrame = document.createElement('iframe');
-    fbFrame.src = 'https://www.youtube-nocookie.com/embed/' + FILMS[n].id + '?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1';
-    fbFrame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
-    fbFrame.setAttribute('allowfullscreen', '');
-    fbFrame.setAttribute('title', 'Voice of Gudalur film');
-    wrap.appendChild(fbFrame);
-  }
-  function createPlayer(id, playNow){
-    player = new YT.Player('ytplayer', {
-      videoId: id,
-      playerVars: { autoplay: playNow ? 1 : 0, mute: 1, playsinline: 1, rel: 0, modestbranding: 1, origin: location.origin },
-      events: {
-        onReady: function(e){ try { e.target.mute(); if (playNow) e.target.playVideo(); } catch(err){} },
-        onStateChange: function(e){ if (e.data === YT.PlayerState.ENDED) go(cur + 1); },
-        onError: function(){ go(cur + 1); } /* a dead film must never stall the reel */
-      }
-    });
-  }
-  /* Watchdog: if autoplay is blocked (iOS / in-app browsers), surface a tap
-     target instead of a frozen frame - the tap is the gesture that unlocks
-     playback. A healthy stream (playing or buffering) never shows it. */
-  function watch(){
-    stopWatch();
-    hideTap();
-    var tries = 0;
-    watchTimer = setInterval(function(){
-      tries++;
-      var st = 1;
-      try { st = player ? player.getPlayerState() : 1; } catch(e){}
-      if (st === 1 || st === 3) { stopWatch(); hideTap(); return; }
-      if (tries >= 5) { stopWatch(); showTap(); }
-    }, 900);
-  }
-  window.onYouTubeIframeAPIReady = function(){
-    apiReady = true;
-    if (fbFrame) { try { fbFrame.remove(); } catch(e){} fbFrame = null; }
-    if (cur >= YT_FROM) { createPlayer(FILMS[cur].id, true); watch(); }
-    else createPlayer(FILMS[YT_FROM].id, false);
-  };
-  vid.addEventListener('ended', function(){
-    localPlays++;
-    if (localPlays < 2) { try { vid.currentTime = 0; } catch(e){} vid.play(); }
-    else go(cur + 1);
-  });
-    function go(n){
-    cur = ((n % FILMS.length) + FILMS.length) % FILMS.length;
-    dots();
-    if (FILMS[cur].type === 'local') showLocal(cur); else showYt(cur);
-  }
-  // Expose a minimal, safe API to the standalone picker controls (window-bound).
-  window.__REEL = { go: go, cur: function(){ return cur; }, len: function(){ return FILMS.length; }, pauseCurrent: function(){ if (cur < YT_FROM) { try { vid.pause(); }catch(e){} } else { try { if (player) player.pauseVideo(); }catch(e){} } } };
-  dots();
-  showLocal(0);
-})();
-</script>
 
 <script>
 /* Left / right film picker. Wires the PREV/NEXT buttons in the reel band
