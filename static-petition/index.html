@@ -298,62 +298,6 @@ flex-shrink:0;display:block;padding:2px 16px;max-width:540px;margin:0 auto;width
 </script>
 
 <script>
-(function(){
-  // PREV / NEXT picker: stepping +/-1 with wraparound updates the reel-dots
-  // highlight and signals the reel engine via window.__REEL so the stage
-  // switches to the chosen film without reloading. The reel engine exposes
-  // __REEL.go(cur), __REEL.cur(), __REEL.len(), __REEL.pauseCurrent().
-  var pickers = document.querySelectorAll('.pv');
-  for (var p=0;p<pickers.length;p++){
-    (function(btn){
-      btn.addEventListener('click', function(){
-        var d = parseInt(btn.getAttribute('data-dir'),10)||1;
-        var R = window.__REEL;
-        if (!R) return;
-        R.pauseCurrent();
-        var n = R.cur() + d;
-        if (n < 0) n += R.len();
-        R.go(n);
-      });
-    })(pickers[p]);
-  }
-  // Play / pause toggle: the central play button pauses an active reel stage
-  // (local <video> or YouTube iframe) and re-plays it on the next tap — a
-  // one-tap replay that never reloads the film. Works even before the reel
-  // engine mounts: it reads the player from the DOM when clicked.
-  (function(){
-    var pb = document.getElementById('play-btn');
-    if (!pb) return;
-    function toggle(){
-      try {
-        var ytd = document.getElementById('ytplayer');
-        var lv = document.getElementById('localvid');
-        var target = (ytd && ytd.tagName === 'IFRAME') ? ytd : (lv && lv.tagName === 'VIDEO' ? lv : null);
-        if (!target) return;
-        if (target.tagName === 'IFRAME'){
-          if (window.YT && window.YT.Player){
-            var pl = window.YT.getLaunchedPlayer?.ytplayer:null;
-            if (pl){
-              if (pl.pauseVideo){ try { pl.pauseVideo(); }catch(e){} }
-              else { try { pl.stopVideo(); }catch(e){} }
-              return;
-            }
-          }
-          var id = target.getAttribute('src');
-          if (id){ try { target.src = id; }catch(e){} }
-          return;
-        }
-        if (target.paused){
-          try { target.currentTime = 0; target.play(); }catch(e){}
-        } else {
-          try { target.pause(); }catch(e){}
-        }
-      } catch(e){ /* ignore */ }
-    }
-    pb.addEventListener('click', function(e){ e.preventDefault(); toggle(); });
-  })();
-})();
-</script><script>
 
 <script>
 /* Left / right film picker. Wires the PREV/NEXT buttons in the reel band
