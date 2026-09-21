@@ -298,32 +298,6 @@ flex-shrink:0;display:block;padding:2px 16px;max-width:540px;margin:0 auto;width
 </script>
 
 <script>
-
-<script>
-/* Left / right film picker. Wires the PREV/NEXT buttons in the reel band
-   to the reel engine's go() via the exposed window.__REEL API. Safe if the
-   reel script hasn't run yet: each button reads the latest current film and
-   steps ±1 with wraparound, then pauses the active film first so the handoff
-   is clean on slow/mobile (no double-play, no reload). */
-(function(){
-  function attach(btn, dir){
-    btn.addEventListener('click', function(e){
-      e.preventDefault();
-      var R = window.__REEL;
-      if (!R) return;            // reel not ready yet
-      R.pauseCurrent();
-      var n = R.cur() + dir;
-      if (n < 0) n += R.len();
-      R.go(n);                   // engine handles dots() + smooth showLocal/showYt
-    });
-  }
-  var btns = document.querySelectorAll('.picker .pv[data-dir]');
-  if (!btns.length) return;
-  [].forEach.call(btns, function(b){ attach(b, Number(b.getAttribute('data-dir'))); });
-})();
-</script>
-
-<script>
 /* Hero background film: the poster paints instantly and the muted loop starts
    right away (no load defer) so the film is visible while the page loads.
    Reduced-motion users keep the poster frame. */
@@ -344,7 +318,6 @@ flex-shrink:0;display:block;padding:2px 16px;max-width:540px;margin:0 auto;width
      first touch and whenever the tab becomes visible again. */
   function kick(){
     vids.forEach(function(v){ if (v.paused) { var p = v.play(); if (p && p.catch) p.catch(function(){}); } });
-    var lv = document.getElementById('localvid');
     if (lv && !/\bhidden\b/.test(lv.className) && lv.paused) { var p2 = lv.play(); if (p2 && p2.catch) p2.catch(function(){}); }
   }
   document.addEventListener('touchstart', kick, { once: true, passive: true });
