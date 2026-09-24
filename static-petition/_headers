@@ -6,7 +6,7 @@
 # WHY index.html must never be cached hard: the page is shared by link over
 # WhatsApp / Instagram, whose in-app browsers cache aggressively. If the HTML is
 # cached, visitors keep seeing the stale page after a redeploy. Revalidate every
-# time; the page is ~27 KB and brotli-compresses to ~6 KB.
+# time; the page is ~24 KB and brotli-compresses to ~6 KB.
 
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
@@ -24,26 +24,27 @@
 /*.htm
   Content-Type: text/html; charset=utf-8
 
-# Decorative background stills, logos and the self-hosted font subsets. None of
-# these are content-hashed, so keep the TTL short enough that a re-encoded asset
-# is picked up within a day, with a long stale-while-revalidate tail so the swap
-# never costs the visitor a wait.
+# The hero film, its poster frame, the logo and the self-hosted font subsets.
+# None of these are content-hashed, so keep the TTL short enough that a
+# re-encoded asset is picked up within a day, with a long
+# stale-while-revalidate tail so the swap never costs the visitor a wait.
 /media/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 /fonts/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
-# Baseline security headers. The page is fully first-party: no third-party script
-# at all (the YouTube IFrame API was removed - it had to start films through
-# cross-origin postMessage, which WebKit drops). The reel mounts each YouTube
-# film as a fresh youtube-nocookie iframe with autoplay=1&mute=1, so the only
-# cross-origin surface left is the embed frame itself plus its thumbnails, and
-# nothing contacts YouTube until the reel reaches a YouTube film.
+# Baseline security headers. The page is fully first-party by design: no
+# third-party script, no iframe, no remote font - the only outside hosts it
+# names are plain <a href> links a visitor may choose to follow (the petition
+# platform, the social profiles), which CSP does not restrict. So the frame and
+# image directives are closed to 'none'/local: nothing on this page can load
+# anything from another origin. If an embed is ever added back, re-open
+# frame-src (and img-src, for its thumbnail host) here at the same time.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN
   Permissions-Policy: geolocation=(), microphone=(), camera=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://i.ytimg.com https://www.youtube.com; media-src 'self'; font-src 'self'; connect-src 'self'; frame-src https://www.youtube-nocookie.com https://www.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'
