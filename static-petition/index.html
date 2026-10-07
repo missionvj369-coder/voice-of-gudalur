@@ -2,950 +2,426 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
-<title>Voice of Gudalur — Gudalur Vision 2035 | Petition 18982473</title>
-<meta name="description" content="Gudalur Vision 2035 — a long-term plan for Gudalur, The Nilgiris: five pillars, one grievance, two phases. Phase 1 is permanent human–wildlife conflict mitigation, carried by grievance 18982473. Sign it today.">
-<meta name="theme-color" content="#ffffff">
-<!-- The logo is already the one raster this page loads, so it doubles as the
-     favicon. Without this the browser requests /favicon.ico unprompted, 404s,
-     and logs a console error on every first visit. -->
-<link rel="icon" href="media/logo-voice.webp" type="image/webp">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Voice of Gudalur — two open grievances, and how to follow them up</title>
+<meta name="description" content="Voice of Gudalur publishes two open grievances — #18982473 (safety) and #19177921 (long-term plan) — and the official ways to follow up on them: the CM Helpline on 1100, the CM cell mailbox, and the Mudhalvarin Mugavari portal.">
+<meta name="theme-color" content="#0B1410">
+<!-- The logo is the only raster this page loads, so it doubles as the favicon.
+     Without this the browser requests /favicon.ico unprompted, 404s, and logs
+     a console error on every first visit. -->
+<link rel="icon" href="/media/logo-voice.webp" type="image/webp">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Voice of Gudalur">
-<meta property="og:title" content="Voice of Gudalur — Gudalur Vision 2035 | Petition 18982473">
-<meta property="og:description" content="Five pillars, one grievance, two phases. Safety today, Vision 2035 tomorrow. Sign grievance 18982473 — permanent human–wildlife conflict mitigation for Gudalur, The Nilgiris.">
+<meta property="og:title" content="Voice of Gudalur — two open grievances, and how to follow them up">
+<meta property="og:description" content="Grievance #18982473 (safety) and #19177921 (long-term plan for Gudalur), with the official channels to follow up on both: 1100, cmcell@tn.gov.in, and the Mudhalvarin Mugavari portal.">
 <meta property="og:url" content="https://voiceofgudalur.space/">
-<meta property="og:image" content="https://voiceofgudalur.space/media/bg-stats.jpg">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="628">
-<meta property="og:image:alt" content="Voice of Gudalur campaign card: the campaign line above the toll - about 7,800 people and 1,600 wild elephants dead, 2009 to 2026 - with the petition number and where to sign.">
 <meta property="og:locale" content="en_IN">
-<meta property="og:locale:alternate" content="ta_IN">
-<meta property="og:locale:alternate" content="ml_IN">
-<meta property="og:locale:alternate" content="kn_IN">
-<meta property="og:locale:alternate" content="hi_IN">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Voice of Gudalur — Gudalur Vision 2035 | Petition 18982473">
-<meta name="twitter:description" content="Five pillars, one grievance, two phases. Safety today, Vision 2035 tomorrow. Sign grievance 18982473.">
-<meta name="twitter:image" content="https://voiceofgudalur.space/media/bg-stats.jpg">
-<style>
-/* ---------------------------------------------------------------------------
-   Voice of Gudalur - rev 12.
-
-   ONE self-contained page: an intro mark, then a single scrolling sheet that
-   carries the campaign and GUDALUR VISION 2035 end to end.
-
-   What changed from rev 11, and why:
-
-     1. The narration is gone. Rev 11 shipped five recorded tracks plus five
-        word-timing sidecars and ran a word-by-word reveal off the audio clock.
-        That was ~900KB of audio to carry a reveal that a visitor reads faster
-        than they listen, and it gated the whole page behind a language picker
-        and a Voice button. The copy is simply present now, in the language the
-        visitor picked, and the page is readable the instant it paints.
-     2. The page scrolls. Rev 11 was `position:fixed; overflow:hidden` with a
-        touchmove blocker, which cannot hold a five-pillar plan.
-     3. The language is detected from the visitor's own device rather than
-        asked for. Rev 11 picked a language with a gate because it was about to
-        start talking in it; with no narration there is nothing to gate, and a
-        switcher in the header is strictly less friction than a wall of five
-        buttons before any content.
-
-   The palette is unchanged: a near-white cloud field with dark blissful green
-   ink, a slow green bloom behind the copy. The blueprint panel is the one
-   deliberately dark object on the page - a drafting table reads as a
-   blueprint, and the neon accents that carry "2035" only sing on a dark ground.
-   --------------------------------------------------------------------------- */
-:root{
-  --ink:#0A3A28;          /* dark blissful green - the headline */
-  --ink2:#17573F;         /* body copy, a touch lighter for long lines */
-  --line:rgba(10,58,40,.14);
-  --card:rgba(255,255,255,.86);
-  --cta:#0A3A28;         /* the sign button */
-  --red:#C62828;          /* Phase 1 / act-now */
-  --red-deep:#8E1B1B;
-  --shadow:0 10px 30px rgba(10,58,40,.10), 0 2px 6px rgba(10,58,40,.06);
-  /* the blueprint panel */
-  --bp-ink:#0D0D0E;
-  --bp-char:#16161B;
-  --bp-line:rgba(255,255,255,.11);
-  --bp-text:#F5F5F5;
-  --bp-muted:#9A9AA8;
-  --bp-vision:#00E676;
-  --bp-lime:#CCFF00;
-  --bp-urgent:#FF3B30;
-}
-*,*::before,*::after{box-sizing:border-box}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
-  color:var(--ink);
-  background:#FBFDFC;
-  -webkit-font-smoothing:antialiased;
-}
-/* --- the cloud field ------------------------------------------------------
-   Five very soft radial blobs on a near-white vertical wash, each drifting on
-   its own long period. They are transform+opacity only, so none of this can
-   trigger layout and none of it can spend any of the CLS budget. */
-.sky{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;
-  background:
-    radial-gradient(130% 95% at 50% -10%, #FFFFFF 0%, #F6FBF8 38%, #E9F3ED 72%, #E1EEE7 100%);
-}
-.cloud{position:absolute;display:block;border-radius:50%;
-  background:radial-gradient(circle at 42% 40%, rgba(255,255,255,.98) 0%, rgba(255,255,255,.55) 42%, rgba(232,243,237,0) 72%);
-  filter:blur(26px);
-  will-change:transform;
-}
-.c1{width:78vmax;height:52vmax;left:-18vmax;top:-12vmax;animation:drift1 74s ease-in-out infinite}
-.c2{width:64vmax;height:46vmax;right:-16vmax;top:6vmax;animation:drift2 92s ease-in-out infinite}
-.c3{width:88vmax;height:58vmax;left:-8vmax;bottom:-24vmax;animation:drift3 108s ease-in-out infinite}
-.c4{width:52vmax;height:38vmax;right:-10vmax;bottom:4vmax;animation:drift1 66s ease-in-out infinite reverse}
-.c5{width:60vmax;height:40vmax;left:22vmax;top:28vmax;animation:drift2 84s ease-in-out infinite reverse}
-@keyframes drift1{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(5vmax,3vmax,0)}}
-@keyframes drift2{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(-4vmax,4vmax,0)}}
-@keyframes drift3{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(3vmax,-4vmax,0)}}
-/* the bloom behind the copy: the one warm thing on an otherwise cold page */
-.halo{position:absolute;left:50%;top:12%;width:min(96vmax,1200px);height:min(62vmax,760px);
-  transform:translate(-50%,-50%);
-  background:radial-gradient(closest-side, rgba(47,163,107,.17), rgba(47,163,107,.07) 55%, rgba(47,163,107,0) 78%);
-  animation:breathe 19s ease-in-out infinite;
-}
-@keyframes breathe{0%,100%{opacity:.82;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.07)}}
-/* --- the intro mark ------------------------------------------------------- */
-.intro{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  padding-bottom:calc(24px + env(safe-area-inset-bottom))}
-.intro[hidden]{display:none}
-/* Each glyph starts blurred, risen and spread apart, then resolves. The blur
-   is what sells "out of the air": the letters arrive already sharp, as if
-   they had condensed rather than being drawn. */
-.bloom{position:absolute;left:50%;top:44%;width:min(80vmax,760px);height:min(80vmax,760px);
-  transform:translate(-50%,-50%) scale(.2);opacity:0;border-radius:50%;
-  background:radial-gradient(closest-side, rgba(47,163,107,.22), rgba(47,163,107,0) 70%);
-  transition:transform 1.5s cubic-bezier(.16,1,.3,1), opacity 1.5s ease-out}
-.go .bloom{transform:translate(-50%,-50%) scale(1);opacity:1}
-.vog{position:relative;display:flex;font-weight:800;
-  font-size:clamp(74px,17vw,168px);line-height:1;letter-spacing:.26em;
-  margin-right:-.26em}
-.glyph{display:inline-block;opacity:0;
-  filter:blur(30px);transform:translate3d(0,18px,0) scale(1.35);
-  transition:opacity 1.15s cubic-bezier(.16,1,.3,1), filter 1.15s cubic-bezier(.16,1,.3,1), transform 1.15s cubic-bezier(.16,1,.3,1)}
-.go .glyph{opacity:1;filter:blur(0);transform:none}
-.go .g0{transition-delay:.20s} .go .g1{transition-delay:.40s} .go .g2{transition-delay:.60s}
-.vogname{margin-top:10px;font-weight:700;letter-spacing:.02em;
-  font-size:clamp(17px,3.6vw,26px);color:var(--ink);
-  opacity:0;filter:blur(12px);transform:translateY(10px);
-  transition:opacity .9s ease-out 1.30s, filter .9s ease-out 1.30s, transform .9s ease-out 1.30s}
-.go .vogname{opacity:1;filter:blur(0);transform:none}
-.vogtag{margin-top:7px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
-  font-size:clamp(10px,2.1vw,13px);color:rgba(10,58,40,.55);
-  opacity:0;transform:translateY(8px);transition:opacity .8s ease-out 1.75s, transform .8s ease-out 1.75s}
-.go .vogtag{opacity:1;transform:none}
-.hint{position:absolute;bottom:max(30px,env(safe-area-inset-bottom));left:0;right:0;
-  text-align:center;font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;
-  color:rgba(10,58,40,.42);opacity:0;transition:opacity .7s ease 2.3s}
-.go .hint{opacity:1}
-/* --- the scrolling sheet --------------------------------------------------
-   One column, one reading order. Everything is a normal block: no fixed
-   viewport, no scroll trap, so the browser's own scrollbar, find-in-page and
-   back button all behave the way a visitor expects. */
-.sheet{position:relative;z-index:3;display:none}
-.sheet.on{display:block}
-.wrap{width:100%;max-width:1080px;margin:0 auto;padding:0 clamp(18px,4.5vw,40px)}
-
-/* the header sticks so "change language" is always one tap away */
-.bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:11px;
-  padding:calc(14px + env(safe-area-inset-top)) 0 14px;
-  background:linear-gradient(180deg, rgba(251,253,252,.96) 62%, rgba(251,253,252,0));
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-.mini-logo{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
-  width:38px;height:38px;border-radius:11px;background:#fff;
-  border:1px solid var(--line);box-shadow:0 3px 10px rgba(10,58,40,.07)}
-.mini-logo img{width:24px;height:24px;display:block}
-.brand{font-weight:800;letter-spacing:-.01em;font-size:clamp(14px,3.2vw,18px);color:var(--ink)}
-.langchip{appearance:none;cursor:pointer;font-family:inherit;
-  display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;
-  background:#fff;border:1px solid var(--line);color:var(--ink);
-  font-weight:700;font-size:clamp(12px,2.7vw,14px);box-shadow:0 3px 10px rgba(10,58,40,.07);
-  transition:transform .16s ease,border-color .16s ease}
-.langchip:hover{transform:translateY(-1px);border-color:rgba(47,163,107,.45)}
-.langchip:focus-visible{outline:3px solid rgba(47,163,107,.55);outline-offset:2px}
-.langchip svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2.4;
-  stroke-linecap:round;stroke-linejoin:round;opacity:.65}
-
-/* --- the hero ------------------------------------------------------------- */
-.hero{padding:clamp(26px,6vw,64px) 0 clamp(30px,7vw,70px);text-align:center}
-.badge{display:inline-flex;align-items:center;gap:8px;
-  padding:8px 15px;border-radius:999px;background:rgba(10,58,40,.05);
-  border:1px solid var(--line);
-  font-weight:700;letter-spacing:.09em;text-transform:uppercase;
-  font-size:clamp(9.5px,2.1vw,11.5px);color:var(--ink2)}
-.badge svg{width:13px;height:13px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:2.6;
-  stroke-linecap:round;stroke-linejoin:round;color:#2FA36B}
-/* The campaign line. Five languages, so it wraps onto two or three lines and
-   has to hold together at every width - hence balance, not a hard clamp. */
-.rot{margin:20px 0 0;font-weight:800;letter-spacing:-.022em;line-height:1.1;
-  font-size:clamp(25px,6.1vw,54px);color:var(--ink);text-wrap:balance}
-/* Transliterated Indic copy contains long joined runs with no space in them:
-   the Tamil headline ends in a single word measuring 368px inside a 328px
-   column, which is what pushed the phone layout 18px past the viewport. No
-   wrapping rule can help a token with nowhere to break, and the headline is
-   only one of many - hence inherited here rather than pinned to .rot alone.
-   break-word engages solely when a word cannot fit the line, so Latin text and
-   every existing break lay out exactly as before. The zoom overlay is listed
-   because the blueprint is moved into it and sits outside .sheet. */
-.sheet,#zoombd{overflow-wrap:break-word}
-/* "Safety today, Vision 2035 tomorrow." - the whole page argument in four
-   words, stacked so the second half can be the 2035 green. */
-.kicker{margin:16px 0 0;font-weight:800;letter-spacing:-.01em;line-height:1.25;
-  font-size:clamp(17px,3.5vw,27px);color:var(--ink);text-wrap:balance}
-.kicker em{font-style:normal;color:var(--red)}
-.kicker b{color:#0F8F52}
-.sub{margin:18px auto 0;font-weight:500;line-height:1.55;
-  font-size:clamp(13.5px,2.85vw,19px);color:var(--ink2);
-  max-width:44em;text-wrap:pretty}
-/* --- the ask -------------------------------------------------------------- */
-.acts{display:flex;flex-direction:column;align-items:center;gap:13px;
-  margin-top:clamp(24px,4.5vw,34px)}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;
-  text-decoration:none;cursor:pointer;font-family:inherit;
-  padding:16px 30px;border-radius:999px;border:1px solid transparent;
-  font-weight:800;letter-spacing:.012em;
-  font-size:clamp(13px,2.9vw,16.5px);line-height:1.15;text-align:center;
-  transition:transform .18s ease, box-shadow .18s ease, background .18s ease}
-/* Two calls to action, deliberately split by meaning: red is the thing that is
-   urgent (Phase 1, the grievance), green is the thing it unlocks (Phase 2). */
-.btn-red{background:var(--red);color:#fff;
-  box-shadow:0 14px 32px rgba(198,40,40,.30), 0 3px 8px rgba(198,40,40,.18), inset 0 1px 0 rgba(255,255,255,.18)}
-.btn-red:hover{transform:translateY(-2px);background:#D32F2F;
-  box-shadow:0 20px 42px rgba(198,40,40,.34), 0 4px 10px rgba(198,40,40,.2), inset 0 1px 0 rgba(255,255,255,.18)}
-.btn-green{background:var(--cta);color:#fff;
-  box-shadow:0 14px 32px rgba(10,58,40,.30), 0 3px 8px rgba(10,58,40,.18), inset 0 1px 0 rgba(255,255,255,.16)}
-.btn-green:hover{transform:translateY(-2px);
-  box-shadow:0 20px 42px rgba(10,58,40,.34), 0 4px 10px rgba(10,58,40,.2), inset 0 1px 0 rgba(255,255,255,.16)}
-.btn:active{transform:translateY(0)}
-.btn:focus-visible{outline:3px solid rgba(47,163,107,.6);outline-offset:3px}
-.btn svg{width:16px;height:16px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:2.6;
-  stroke-linecap:round;stroke-linejoin:round}
-.note{margin:0;font-weight:600;font-size:clamp(11.5px,2.5vw,13.5px);
-  color:rgba(10,58,40,.55);max-width:34em;text-wrap:pretty}
-
-/* --- the footer ----------------------------------------------------------- */
-.foot{margin-top:clamp(36px,7vw,70px);
-  border-top:1px solid var(--line);
-  padding:26px 0 calc(26px + env(safe-area-inset-bottom))}
-.social{display:flex;justify-content:center;gap:8px}
-.social a{display:inline-flex;align-items:center;justify-content:center;
-  width:38px;height:38px;border-radius:50%;background:#fff;border:1px solid var(--line);
-  color:var(--ink);box-shadow:0 3px 10px rgba(10,58,40,.07);
-  transition:transform .16s ease, border-color .16s ease, color .16s ease}
-.social a:hover{transform:translateY(-2px);border-color:rgba(47,163,107,.5);color:#14764A}
-.social a:focus-visible{outline:3px solid rgba(47,163,107,.55);outline-offset:2px}
-.social svg{width:16px;height:16px;fill:currentColor}
-.fine{margin:16px 0 0;text-align:center;font-weight:600;
-  font-size:clamp(10.5px,2.2vw,12px);letter-spacing:.06em;
-  color:rgba(10,58,40,.42)}
-
-/* The language menu. A real listbox would be nicer, but a details/summary pop
-   needs no JS, is keyboard-reachable for free, and degrades to a disclosure. */
-.langmenu{position:relative;margin-left:auto}
-.langmenu[open] .langchip{border-color:rgba(47,163,107,.5)}
-.langlist{position:absolute;right:0;top:calc(100% + 8px);z-index:30;min-width:190px;margin:0;
-  padding:6px;list-style:none;border-radius:16px;background:#fff;
-  border:1px solid var(--line);box-shadow:0 18px 44px rgba(10,58,40,.18)}
-.langlist button{appearance:none;cursor:pointer;font-family:inherit;width:100%;text-align:left;
-  display:flex;align-items:baseline;gap:8px;padding:10px 12px;border:0;border-radius:11px;
-  background:transparent;color:var(--ink);font-weight:700;font-size:14px}
-.langlist button:hover{background:rgba(47,163,107,.10)}
-.langlist button[aria-current="true"]{background:rgba(10,58,40,.07)}
-.langlist button:focus-visible{outline:2px solid rgba(47,163,107,.6);outline-offset:-2px}
-.langlist .en{font-weight:600;letter-spacing:.07em;text-transform:uppercase;
-  font-size:10px;color:rgba(10,58,40,.45)}
-/* ===========================================================================
-   GUDALUR VISION 2035
-
-   The five pillars are real HTML, not text painted into an SVG.
-
-   That is a deliberate reversal of the app build, which drew the blueprint as a
-   1600x1000 inline SVG. It looked right on a desktop and had two real costs: a
-   translated pillar title longer than its card silently overflowed into the
-   card painted after it (which is what the textLength clamp was patching), and
-   on a 360px phone the whole sheet scaled down to unreadable. Real text in a
-   responsive grid cannot overflow its box - the browser reflows it - it stays
-   selectable, it is announced properly, and it is one DOM for the page and the
-   zoom view to share.
-   =========================================================================== */
-.v2035{padding:clamp(34px,7vw,72px) 0 clamp(20px,4vw,40px);
-  border-top:1px solid var(--line);scroll-margin-top:76px}
-.vhead{text-align:center}
-.vtitle{margin:18px 0 0;font-weight:800;letter-spacing:-.022em;line-height:1.08;
-  font-size:clamp(26px,5.6vw,50px);color:var(--ink);text-wrap:balance;
-  text-transform:uppercase}
-.vtitle span{color:#0F8F52}
-.vsub{margin:16px auto 0;max-width:46em;font-weight:500;line-height:1.55;
-  font-size:clamp(13.5px,2.85vw,18px);color:var(--ink2);text-wrap:pretty}
-
-/* Phase 1 callout. Red, boxed, and placed ABOVE the blueprint on purpose: the
-   immediate ask must be read before the twenty-year plan, not after it. */
-.callout{margin:clamp(22px,4vw,34px) 0 0;display:flex;align-items:center;gap:16px;
-  flex-wrap:wrap;text-align:left;
-  padding:18px 20px;border-radius:18px;
-  background:linear-gradient(180deg,rgba(198,40,40,.07),rgba(198,40,40,.03));
-  border:1px solid rgba(198,40,40,.22);
-  box-shadow:var(--shadow)}
-.callout .warn{flex:0 0 auto;width:38px;height:38px;border-radius:50%;
-  display:grid;place-items:center;background:rgba(198,40,40,.12);color:var(--red)}
-.callout .warn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2.3;
-  stroke-linecap:round;stroke-linejoin:round}
-.callout p{margin:0;flex:1 1 260px;font-weight:600;line-height:1.5;
-  font-size:clamp(13px,2.8vw,16px);color:var(--ink)}
-.callout p b{color:var(--red)}
-.callout .btn{padding:13px 22px;flex:0 0 auto}
-
-/* --- the blueprint sheet -------------------------------------------------- */
-.bptools{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
-  margin:clamp(26px,5vw,40px) 0 12px}
-.bphint{margin:0;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-  font-size:clamp(9.5px,2.1vw,11px);color:rgba(10,58,40,.45)}
-.bptools .btn{margin-left:auto;padding:11px 20px;
-  font-size:clamp(11.5px,2.5vw,13.5px)}
-.blueprint{position:relative;border-radius:24px;overflow:hidden;
-  background:var(--bp-ink);color:var(--bp-text);
-  border:1px solid rgba(10,58,40,.18);
-  box-shadow:0 26px 60px rgba(10,58,40,.24), 0 6px 16px rgba(10,58,40,.14)}
-/* A faint drafting grid, so the panel reads as paper rather than a black box. */
-.blueprint::before{content:"";position:absolute;inset:0;pointer-events:none;
-  background-image:
-    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
-  background-size:44px 44px}
-.bphead{position:relative;padding:clamp(20px,3.4vw,30px) clamp(18px,3.4vw,30px) 0}
-.bphead h3{margin:0;font-weight:800;letter-spacing:-.015em;line-height:1.12;
-  font-size:clamp(20px,3.6vw,30px);color:var(--bp-text)}
-.bphead .bpsub{margin:7px 0 0;font-weight:700;letter-spacing:.01em;
-  font-size:clamp(12.5px,2.6vw,16px);color:var(--bp-vision)}
-.bphead .bpgrev{margin:8px 0 0;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
-  font-size:clamp(9.5px,2.1vw,11px);color:var(--bp-urgent)}
-.pillars{position:relative;display:grid;gap:clamp(10px,1.6vw,16px);
-  grid-template-columns:repeat(5,minmax(0,1fr));
-  padding:clamp(18px,3.4vw,30px)}
-.pillar{position:relative;display:flex;flex-direction:column;
-  padding:16px 14px 14px;border-radius:16px;
-  background:var(--bp-char);border:1px solid var(--bp-line);
-  transition:transform .2s ease, border-color .2s ease, background .2s ease}
-.pillar::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;
-  border-radius:16px 16px 0 0;background:var(--acc)}
-.pillar:hover{transform:translateY(-3px);background:#1E1E25;
-  border-color:color-mix(in srgb, var(--acc) 55%, transparent)}
-.pnum{font-weight:800;letter-spacing:.14em;text-transform:uppercase;
-  font-size:10px;color:var(--acc)}
-.ptitle{margin:9px 0 0;font-weight:800;letter-spacing:-.005em;line-height:1.12;
-  font-size:clamp(15px,1.5vw,18px);color:var(--bp-text);
-  /* min-height lines the three item lists up across the row when one title
-     takes two lines and its neighbour takes one. */
-  min-height:2.24em;text-wrap:balance}
-.pitems{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
-.pitems li{position:relative;padding-left:13px;
-  font-weight:700;font-size:clamp(11.5px,1.15vw,13px);line-height:1.3;
-  color:var(--bp-text)}
-.pitems li::before{content:"";position:absolute;left:0;top:.45em;
-  width:5px;height:5px;border-radius:50%;background:var(--acc)}
-.pitems li span{display:block;font-weight:500;font-size:.86em;color:var(--bp-muted);margin-top:1px}
-.pmetric{margin:14px 0 0;padding-top:11px;border-top:1px solid var(--bp-line);
-  font-weight:600;line-height:1.3;font-size:clamp(10.5px,1.05vw,12px);color:var(--bp-muted)}
-.pmetric b{display:block;font-weight:800;font-size:1.18em;margin-top:3px;color:var(--acc)}
-
-/* --- the two-step roadmap -------------------------------------------------
-   Phase 1 is Phase 2's prerequisite, so the order is the argument: a connector
-   runs between them on wide screens, and on a phone they simply stack. */
-.road{position:relative;padding:0 clamp(18px,3.4vw,30px) clamp(20px,3.4vw,30px)}
-.road h4{position:relative;margin:0 0 4px;font-weight:800;letter-spacing:-.01em;
-  font-size:clamp(17px,2.6vw,22px);color:var(--bp-text)}
-.road .rnote{position:relative;margin:0 0 16px;font-weight:500;line-height:1.45;
-  font-size:clamp(12px,2.3vw,14px);color:var(--bp-muted)}
-.phases{position:relative;display:grid;gap:clamp(10px,1.6vw,16px);
-  grid-template-columns:1fr 1fr}
-.ph{position:relative;padding:16px 16px 15px;border-radius:16px;
-  background:var(--bp-char);border:1px solid var(--bp-line)}
-.ph::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;
-  border-radius:16px 0 0 16px;background:var(--acc)}
-.ph .plab{font-weight:800;letter-spacing:.12em;text-transform:uppercase;
-  font-size:10px;color:var(--acc)}
-.ph h5{margin:8px 0 0;font-weight:800;line-height:1.18;letter-spacing:-.005em;
-  font-size:clamp(14.5px,1.5vw,17px);color:var(--bp-text);text-wrap:balance}
-.ph p{margin:7px 0 0;font-weight:500;line-height:1.45;
-  font-size:clamp(11.5px,1.15vw,13px);color:var(--bp-muted)}
-.ph ul{margin:11px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px}
-.ph li{padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.05);
-  border:1px solid var(--bp-line);
-  font-weight:700;font-size:clamp(10px,1vw,11.5px);color:var(--bp-text)}
-/* --- the closing ask ------------------------------------------------------ */
-.hub{margin-top:clamp(30px,6vw,50px);text-align:center;
-  padding:clamp(24px,4.5vw,40px) clamp(18px,4vw,40px);border-radius:24px;
-  background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow)}
-.hub h3{margin:0;font-weight:800;letter-spacing:-.02em;line-height:1.15;
-  font-size:clamp(20px,3.6vw,30px);color:var(--ink);text-wrap:balance}
-.hub p{margin:12px auto 0;max-width:40em;font-weight:500;line-height:1.55;
-  font-size:clamp(13px,2.8vw,17px);color:var(--ink2);text-wrap:pretty}
-.hub .acts{margin-top:22px}
-.ghost{appearance:none;cursor:pointer;font-family:inherit;
-  display:inline-flex;align-items:center;justify-content:center;gap:9px;
-  padding:15px 26px;border-radius:999px;background:#fff;
-  border:1px solid var(--line);color:var(--ink);
-  font-weight:800;font-size:clamp(13px,2.9vw,16.5px);line-height:1.15;
-  box-shadow:0 3px 10px rgba(10,58,40,.07);
-  transition:transform .18s ease, border-color .18s ease}
-.ghost:hover{transform:translateY(-2px);border-color:rgba(47,163,107,.5)}
-.ghost:focus-visible{outline:3px solid rgba(47,163,107,.6);outline-offset:3px}
-.ghost svg{width:16px;height:16px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:2.2;
-  stroke-linecap:round;stroke-linejoin:round}
-.copied{color:#0F8F52}
-
-/* --- the zoom view --------------------------------------------------------
-   It reuses the one .blueprint panel rather than duplicating it, so the plan
-   exists once in the document. A fixed overlay with its own scroll is all that
-   is needed; the same node simply becomes the zoomed object. */
-.zoombd{position:fixed;inset:0;z-index:70;overflow:auto;-webkit-overflow-scrolling:touch;
-  /* The close button is fixed to the corner, so the overlay reserves a band at
-     the top for it. Without this the button sits on the panel's top-right
-     corner and clips its rounded edge. */
-  padding:clamp(56px,5vw,68px) clamp(14px,3vw,34px) clamp(14px,3vw,34px);display:none;
-  background:rgba(8,8,10,.72);
-  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
-body.zoomed .zoombd{display:block}
-.zoombd .blueprint{max-width:1500px;margin:0 auto}
-/* On a phone the panel is already full width and fully readable, so zooming it
-   would only make it harder to read; the button is hidden there instead. */
-.zclose{position:fixed;top:max(14px,env(safe-area-inset-top));right:14px;z-index:71;
-  width:42px;height:42px;border-radius:50%;display:grid;place-items:center;
-  background:#fff;border:1px solid var(--line);color:var(--ink);cursor:pointer;
-  box-shadow:0 8px 22px rgba(0,0,0,.3)}
-.zclose:focus-visible{outline:3px solid rgba(47,163,107,.6);outline-offset:2px}
-.zclose svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;
-  stroke-linecap:round}
-/* --- narrow phones and small tablets --------------------------------------
-   The five-across row only survives while each card is still wide enough to
-   read. 1100px is where a pillar card drops under ~190px and the item text
-   starts breaking mid-word, so that is the first thing to change. */
-@media (max-width:1100px){
-  .pillars{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .ptitle{min-height:0}
-}
-@media (max-width:760px){
-  .pillars{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .phases{grid-template-columns:1fr}
-  /* The zoom button is hidden here: on a phone the panel is already the full
-     width of the screen and completely legible, so "zoom" is a downgrade. */
-  #zoomBtn{display:none}
-  .zoombd .pillars{grid-template-columns:1fr}
-}
-@media (max-width:420px){
-  .wrap{padding-left:16px;padding-right:16px}
-  .brand{font-size:13px}
-  .btn{padding:15px 22px}
-  .callout{padding:16px;gap:13px}
-  .callout .warn{width:34px;height:34px}
-  .bptools{gap:10px}
-}
-/* Below ~520px a two-column card is about 150px wide, which forces every pillar
-   title onto three lines and leaves the item text at a size nobody reads
-   comfortably. The page scrolls anyway, so one column costs height, not effort. */
-@media (max-width:520px){
-  .pillars{grid-template-columns:1fr}
-  .ptitle{min-height:0}
-}
-
-/* --- reduced motion ------------------------------------------------------
-   Rev 11's reduced-motion story was that the reveal WAS motion, so it simply
-   removed the reveal. Rev 12 has no reveal to remove: the clouds and the bloom
-   are the only things that move, and they stop. Nothing is ever hidden. */
-@media (prefers-reduced-motion:reduce){
-  html{scroll-behavior:auto}
-  .cloud,.halo{animation:none !important}
-  .glyph,.vogname,.vogtag{transition:none !important;opacity:1 !important;filter:none !important;transform:none !important}
-  .bloom{transition:none !important;opacity:1 !important;transform:translate(-50%,-50%) !important}
-  .hint{transition:none !important;opacity:1 !important}
-  .btn:hover,.ghost:hover,.langchip:hover,.social a:hover{transform:none !important}
-  .pillar:hover{transform:none !important}
-}
-</style>
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Voice of Gudalur — two open grievances">
+<meta name="twitter:description" content="Follow up on grievance #18982473 and #19177921 through the official channels: 1100, cmcell@tn.gov.in, and the Mudhalvarin Mugavari portal.">
+<link rel="canonical" href="https://voiceofgudalur.space/">
+<link rel="stylesheet" href="/assets/vog.css">
+<script>
+/* Inline on purpose, and it is the only inline script on the page. The .rv
+   blocks are hidden by CSS solely because this line sets the .js class, so
+   nothing on this page can be left invisible - not if assets/vog-support.js is
+   slow, not if it 404s, not if it throws. If IntersectionObserver exists we
+   let it do the work; the timeout is the floor. _headers allows inline script
+   (script-src 'self' 'unsafe-inline'); if that ever changes, this moves into
+   vog-support.js and the .rv hiding moves to a class the file adds itself. */
+(function () {
+  var r = document.querySelectorAll('.rv'), i;
+  function show() { for (i = 0; i < r.length; i++) r[i].classList.add('in'); }
+  document.documentElement.classList.add('js');
+  if (!('IntersectionObserver' in window)) { show(); return; }
+  setTimeout(show, 3000);
+})();
+</script>
 </head>
-<body>
+<body data-i18n-full>
+<a class="skip" href="#main" data-t="skip">Skip to content</a>
 
-<div class="sky" aria-hidden="true">
-  <span class="cloud c1"></span>
-  <span class="cloud c2"></span>
-  <span class="cloud c3"></span>
-  <span class="cloud c4"></span>
-  <span class="cloud c5"></span>
-  <span class="halo"></span>
-</div>
-
-<!-- the mark condenses out of the cloud ----------------------------------- -->
-<div class="intro" id="intro">
-  <span class="bloom" aria-hidden="true"></span>
-  <div class="vog" role="img" aria-label="V O G, Voice of Gudalur">
-    <span class="glyph g0" aria-hidden="true">V</span><span class="glyph g1" aria-hidden="true">O</span><span class="glyph g2" aria-hidden="true">G</span>
-  </div>
-  <div class="vogname">Voice of Gudalur</div>
-  <div class="vogtag">Grievance 18982473</div>
-  <div class="hint">Tap to begin</div>
-</div>
-<!-- the page ---------------------------------------------------------------- -->
-<div class="sheet" id="sheet">
-
-  <div class="wrap">
-    <div class="bar">
-      <a class="mini-logo" href="https://ugtindia.space" target="_blank" rel="noopener noreferrer"><img src="media/logo-voice.webp" alt="Voice of Gudalur"></a>
-      <span class="brand">Voice of Gudalur</span>
-      <details class="langmenu" id="langmenu">
-        <summary class="langchip" id="langchip" aria-label="Change language">
-          <span id="langchipname">English</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-        </summary>
-        <ul class="langlist" id="langlist" aria-label="Languages"></ul>
-      </details>
+<header class="top">
+  <div class="topbar">
+    <div class="wrap topin">
+      <a class="brand" href="/">
+        <img src="/media/logo-voice.webp" alt="" width="40" height="40">
+        <span>Voice of Gudalur</span>
+      </a>
     </div>
   </div>
 
-  <div class="wrap">
-    <section class="hero" aria-labelledby="rot">
-      <span class="badge">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
-        Grievance #18982473 &middot; Priority 1 &middot; Phase 1
-      </span>
-      <!-- The one h1 on the page. The text is swapped by the script; it is not
-           built from per-word spans any more, because there is no narrator
-           driving it any more. -->
-      <h1 class="rot" id="rot" lang="en"></h1>
-      <p class="kicker"><em>Safety today,</em> <b>Vision 2035 tomorrow.</b></p>
-      <p class="sub" id="sub" lang="en"></p>
-
-      <div class="acts">
-        <a href="https://c.org/JnjH68G57Q" class="btn btn-red" id="signHero" target="_blank" rel="noopener noreferrer">
-          <span id="signHeroText">Sign Grievance #18982473</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7"/></svg>
-        </a>
-        <a href="#gudalur-vision-2035" class="btn btn-green" id="toVision">
-          <span>Explore Gudalur Vision 2035</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-        </a>
-        <p class="note">Human&ndash;wildlife conflict mitigation is Phase 1 &mdash; the foundation everything else stands on.</p>
-      </div>
-    </section>
-
+  <!-- The language row. `hidden` here and revealed by vog-support.js only once
+       it has built the buttons, so a browser without JavaScript sees one honest
+       English page instead of an empty control with a label over nothing. -->
+  <div class="wrap langbar" id="langPick" hidden>
+    <p class="langlab" data-t="navLang">Change language</p>
+    <ul class="langrow" id="langList"></ul>
   </div>
+</header>
+
+<main id="main">
+
+<!-- ============================================================ HERO -->
+<!-- The hero carries the grievances anchor: it is where both records are put side by
+     side, and the record pages link back here from their breadcrumb. The
+     section that used to carry this id is gone; the anchor is not. -->
+<div class="hero" id="grievances">
   <div class="wrap">
-    <section class="v2035" id="gudalur-vision-2035" aria-labelledby="vtitle" lang="en">
-      <div class="vhead">
-        <span class="badge">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
-          Submitted as Official Grievance for Gudalur Global Development
-        </span>
-        <h2 class="vtitle" id="vtitle">Gudalur Vision 2035:<br><span>A Future Where People &amp; Wildlife Thrive Together</span></h2>
-        <p class="vsub">A long-term development plan for Gudalur, The Nilgiris &mdash; five pillars, one grievance, two phases. Every signature on grievance #18982473 is a vote for it.</p>
-      </div>
+    <p class="eyebrow" data-t="heroEyebrow">Citizen action · Gudalur, The Nilgiris</p>
+    <h1 data-t="heroH1">Two grievances are open. Follow them up the way the government actually answers.</h1>
+    <p class="lede" data-t="heroLede">Voice of Gudalur is a citizen initiative. It does not file
+      anything, represent anyone, or speak for any government office. What it
+      does is hold two grievance IDs in the open, publish only what those
+      records actually say, and point you at the official channels you can use
+      yourself — in that order.</p>
 
-      <!-- The immediate ask sits above the twenty-year plan on purpose. -->
-      <div class="callout">
-        <span class="warn" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M12 9v5M12 17.5v.01"/><path d="M10.3 3.9L2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-        </span>
-        <p><b>Immediate priority:</b> Building a global town requires safe streets first. Establishing permanent solutions for human&ndash;wildlife conflict is Phase 1 of Vision 2035.</p>
-        <a href="https://c.org/JnjH68G57Q" class="btn btn-red" target="_blank" rel="noopener noreferrer">
-          <span>Sign now</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7"/></svg>
-        </a>
-      </div>
-
-      <div class="bptools">
-        <p class="bphint">Hover a pillar to highlight it</p>
-        <button type="button" class="btn btn-green" id="zoomBtn">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.2-4.2M11 8v6M8 11h6"/></svg>
-          <span>Zoom blueprint</span>
-        </button>
-      </div>
-
-      <div class="blueprint" id="blueprint">
-        <div class="bphead">
-          <h3>Gudalur Vision 2035 Blueprint</h3>
-          <p class="bpsub">A future where people &amp; wildlife thrive together</p>
-          <p class="bpgrev">Phase 1 grievance #18982473 &middot; Mudhalvarin Mugavari</p>
-        </div>
-
-        <div class="pillars">
-          <article class="pillar" style="--acc:#00E676">
-            <p class="pnum">Pillar 1</p>
-            <h4 class="ptitle">Education &amp; Tech</h4>
-            <ul class="pitems">
-              <li>AI Learning Hub<span>&amp; Digital Employment Centre</span></li>
-              <li>Youth Innovation<span>&amp; Tech Campus</span></li>
-              <li>High-Quality Schools<span>&amp; Colleges</span></li>
-            </ul>
-            <p class="pmetric">Target horizon<b>5,000+ local digital jobs</b></p>
-          </article>
-
-          <article class="pillar" style="--acc:#FF3B30">
-            <p class="pnum">Pillar 2</p>
-            <h4 class="ptitle">Healthcare &amp; Safety</h4>
-            <ul class="pitems">
-              <li>Government Medical College<span>Hospital &amp; Trauma Centre</span></li>
-              <li>Safe Streets<span>&amp; Smart Drainage</span></li>
-              <li>Rapid Response<span>Network &amp; Lighting</span></li>
-            </ul>
-            <p class="pmetric">Safety target<b>Zero conflict fatalities</b></p>
-          </article>
-
-          <article class="pillar" style="--acc:#CCFF00">
-            <p class="pnum">Pillar 3</p>
-            <h4 class="ptitle">Economy &amp; Empowerment</h4>
-            <ul class="pitems">
-              <li>Women-Led Startups<span>&amp; Incubation</span></li>
-              <li>Digital Workspaces<span>&amp; Remote Jobs</span></li>
-              <li>Thriving Farmers<span>&amp; Local Businesses</span></li>
-            </ul>
-            <p class="pmetric">Economic target<b>3x household income</b></p>
-          </article>
-
-          <article class="pillar" style="--acc:#00E676">
-            <p class="pnum">Pillar 4</p>
-            <h4 class="ptitle">Transit &amp; Tourism</h4>
-            <ul class="pitems">
-              <li>Modern Bus Terminal<span>&amp; Electric Transport</span></li>
-              <li>Cycling Lanes<span>&amp; Green Corridors</span></li>
-              <li>Tea Tourism Routes<span>&amp; Eco-Tourism</span></li>
-            </ul>
-            <p class="pmetric">Mobility target<b>Zero-carbon transit</b></p>
-          </article>
-
-          <article class="pillar" style="--acc:#00E676">
-            <p class="pnum">Pillar 5</p>
-            <h4 class="ptitle">Coexistence &amp; Ecology</h4>
-            <ul class="pitems">
-              <li>Protected Elephant<span>Corridors</span></li>
-              <li>Wildlife-Community Safety<span>Protocols</span></li>
-              <li>Clean Rivers &amp;<span>Green Spaces</span></li>
-            </ul>
-            <p class="pmetric">Coexistence target<b>Advanced mitigation systems</b></p>
-          </article>
-        </div>
-
-        <div class="road">
-          <h4>The Two-Step Strategy</h4>
-          <p class="rnote">Safe streets first. The global town second. Neither works without the other.</p>
-          <div class="phases">
-            <article class="ph" style="--acc:#FF3B30">
-              <p class="plab">Phase 1 &mdash; Now</p>
-              <h5>Human&ndash;Wildlife Conflict Mitigation</h5>
-              <p>The immediate safety priority carried by grievance #18982473.</p>
-              <ul>
-                <li>AI early warning systems</li>
-                <li>Rapid response teams</li>
-                <li>Solar barrier corridors</li>
-              </ul>
-            </article>
-            <article class="ph" style="--acc:#00E676">
-              <p class="plab">Phase 2 &mdash; Vision 2035</p>
-              <h5>Modern Infrastructure &amp; Global Hub</h5>
-              <p>The transformational plan, unlocked once Phase 1 is secured.</p>
-              <ul>
-                <li>AI hubs &amp; modern infrastructure</li>
-                <li>Government medical college</li>
-                <li>Sustainable global tourism</li>
-              </ul>
-            </article>
+    <div class="idgrid">
+      <article class="idcard">
+        <p class="kid" data-t="heroC1Kid">#18982473 · Safety</p>
+        <h2 data-t="heroC1Title">Human-wildlife conflict in Gudalur</h2>
+        <div class="figrow">
+          <div class="fig">
+            <p class="n">85</p>
+            <p class="l" data-t="figHuman">human deaths</p>
+            <p class="s" data-t="figRecorded">recorded in the grievance</p>
+          </div>
+          <div class="fig">
+            <p class="n">53</p>
+            <p class="l" data-t="figElephant">elephant deaths</p>
+            <p class="s" data-t="figRecorded">recorded in the grievance</p>
           </div>
         </div>
-      </div>
-    </section>
-  </div>
-
-  <div class="wrap">
-    <section class="hub" aria-labelledby="hubTitle">
-      <h3 id="hubTitle">Stand for Gudalur</h3>
-      <p>Support both our short-term safety priority and our long-term global vision. Sign the grievance today.</p>
-      <div class="acts">
-        <a href="https://c.org/JnjH68G57Q" class="btn btn-red" target="_blank" rel="noopener noreferrer">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-          <span>Sign Official Grievance</span>
-        </a>
-        <div class="row">
-          <a class="ghost" id="waBtn" href="https://wa.me/" target="_blank" rel="noopener noreferrer">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.6 7.3L3 20.5l1.8-5.2A8.5 8.5 0 1 1 21 11.5z"/><path d="M8.5 9.2c.3-.1.6 0 .8.4l.7 1.3c.1.3.1.5-.1.8l-.5.6c-.2.2-.2.4 0 .7a7 7 0 0 0 2.9 2.5c.3.1.5 0 .7-.1l.7-.9c.2-.2.4-.2.6-.1l1.4.7c.3.1.4.4.3.7-.2.7-.7 1.2-1.4 1.3-1.7.2-4.3-1.5-5.6-3.6-.6-1-.6-2.1.1-2.8z"/></svg>
-            <span id="waText">Share on WhatsApp</span>
-          </a>
-          <button type="button" class="ghost" id="copyBtn">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-            <span id="copyText">Copy link</span>
-          </button>
+        <p class="srcnote" data-t="heroC1Src">Source: grievance record #18982473, as held by the
+          petitioner. Figures are reproduced as recorded.</p>
+        <div class="acts">
+          <a class="btn btn-light" href="/grievances/18982473/" data-t="btnReadRecord">Read the record</a>
+          <a class="btn btn-light" href="#action" data-t="btnFollowUp">Follow it up</a>
         </div>
-      </div>
-    </section>
-  </div>
+      </article>
 
+      <article class="idcard g">
+        <p class="kid" data-t="heroC2Kid">#19177921 · Transformation</p>
+        <h2 data-t="heroC2Title">A long-term plan for Gudalur</h2>
+        <div class="figrow">
+          <div class="fig g">
+            <p class="l" data-t="figC2Title">Development, women's startups, youth job centres, skills academy and AI innovation centre</p>
+          </div>
+        </div>
+        <p class="srcnote" data-t="heroC2Src">Source: grievance record #19177921, as held by the
+          petitioner. No statistics are quoted for this grievance, because the
+          record carries none.</p>
+        <div class="acts">
+          <a class="btn btn-light" href="/grievances/19177921/" data-t="btnReadRecord">Read the record</a>
+          <a class="btn btn-light" href="#action" data-t="btnFollowUp">Follow it up</a>
+        </div>
+      </article>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================ TAKE ACTION (FIRST) -->
+<div class="sec" id="action">
   <div class="wrap">
-    <footer class="foot">
-      <div class="social">
-        <a href="https://www.youtube.com/@voiceforgudalur" target="_blank" rel="noopener noreferrer" title="YouTube" aria-label="Voice of Gudalur on YouTube"><svg viewBox="0 0 24 24"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.5 15.6V8.4L15.8 12l-6.3 3.6z"/></svg></a>
-        <a href="https://www.instagram.com/voiceofgudalur" target="_blank" rel="noopener noreferrer" title="Instagram" aria-label="Voice of Gudalur on Instagram"><svg viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.6 0 4.9.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1 .4 2.2.1 1.3.1 1.6.1 4.9s0 3.6-.1 4.9c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1 .4-2.2.4-1.3.1-1.6.1-4.9.1s-3.6 0-4.9-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.9c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1-.4 2.2-.4 1.3-.1 1.6-.1 4.9-.1zm0 1.8c-3.1 0-3.5 0-4.8.1-1.1.1-1.5.2-1.8.3-.5.2-.8.4-1.1.7-.3.3-.5.6-.7 1.1-.1.3-.3.8-.3 1.8-.1 1.2-.1 1.6-.1 4.8s0 3.5.1 4.8c.1 1.1.2 1.5.3 1.8.2.5.4.8.7 1.1.3.3.6.5 1.1.7.3.1.8.3 1.8.3 1.2.1 1.6.1 4.8.1s3.5 0 4.8-.1c1.1-.1 1.5-.2 1.8-.3.5-.2.8-.4 1.1-.7.3-.3.5-.6.7-1.1.1-.3.3-.8.3-1.8.1-1.2.1-1.6.1-4.8s0-3.5-.1-4.8c-.1-1.1-.2-1.5-.3-1.8-.2-.5-.4-.8-.7-1.1-.3-.3-.5-.6-1.1-.7-.3-.1-.8-.3-1.8-.3-1.2-.1-1.6-.1-4.8-.1zm0 3.1a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8zm0 8.1a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zm6.2-8.3a1.1 1.1 0 1 1-2.3 0 1.1 1.1 0 0 1 2.3 0z"/></svg></a>
-        <a href="https://www.instagram.com/universalguardtrust" target="_blank" rel="noopener noreferrer" title="Universal Guard Trust" aria-label="Universal Guard Trust on Instagram"><svg viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.6 0 4.9.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1 .4 2.2.1 1.3.1 1.6.1 4.9s0 3.6-.1 4.9c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1 .4-2.2.4-1.3.1-1.6.1-4.9.1s-3.6 0-4.9-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.7-1.4-.2-.4-.4-1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.9c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1-.4 2.2-.4 1.3-.1 1.6-.1 4.9-.1zm0 1.8c-3.1 0-3.5 0-4.8.1-1.1.1-1.5.2-1.8.3-.5.2-.8.4-1.1.7-.3.3-.5.6-.7 1.1-.1.3-.3.8-.3 1.8-.1 1.2-.1 1.6-.1 4.8s0 3.5.1 4.8c.1 1.1.2 1.5.3 1.8.2.5.4.8.7 1.1.3.3.6.5 1.1.7.3.1.8.3 1.8.3 1.2.1 1.6.1 4.8.1s3.5 0 4.8-.1c1.1-.1 1.5-.2 1.8-.3.5-.2.8-.4 1.1-.7.3-.3.5-.6.7-1.1.1-.3.3-.8.3-1.8.1-1.2.1-1.6.1-4.8s0-3.5-.1-4.8c-.1-1.1-.2-1.5-.3-1.8-.2-.5-.4-.8-.7-1.1-.3-.3-.5-.6-1.1-.7-.3-.1-.8-.3-1.8-.3-1.2-.1-1.6-.1-4.8-.1zm0 3.1a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8zm0 8.1a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zm6.2-8.3a1.1 1.1 0 1 1-2.3 0 1.1 1.1 0 0 1 2.3 0z"/></svg></a>
-        <a href="https://www.facebook.com/universalguardtrust" target="_blank" rel="noopener noreferrer" title="Facebook" aria-label="Universal Guard Trust on Facebook"><svg viewBox="0 0 24 24"><path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.4v7A10 10 0 0 0 22 12z"/></svg></a>
-      </div>
-      <p class="fine">VOICE OF GUDALUR &middot; UNIVERSAL GUARD TRUST</p>
-    </footer>
+    <p class="sec-intro" data-t="actIntro">Two official channels, in the order that
+      matters: call so you hear where the grievance stands, then write so there
+      is a dated record of your follow-up. Both are the government's own
+      channels. Neither is ours.</p>
+
+    <ol class="steps">
+      <li class="step main">
+        <p class="stno" data-t="actStep">Official step</p>
+        <h3 data-t="act1H">Call 1100 and quote the grievance ID</h3>
+        <p class="who" data-t="act1Who">Tamil Nadu CM Helpline</p>
+        <p data-t="act1Body">Toll free, 7 AM to 10 PM, Monday to Sunday, including
+          government holidays. This is the one channel that can tell you the
+          status of a grievance filed by any method — including one filed by
+          someone else, including one filed years ago. Have the grievance number
+          ready, and the mobile number that was used at the time if you have it.</p>
+        <div class="acts">
+          <a class="btn btn-red" href="tel:1100" aria-label="Call the Tamil Nadu CM Helpline on 1100" data-t-aria="ariaCall">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
+            <span data-t="act1Btn">Call 1100</span>
+          </a>
+        </div>
+        <p class="foot-note" data-t="act1Foot">Source: Tamil Nadu CM Helpline FAQ, questions 6, 13, 16 and 20.</p>
+      </li>
+
+      <li class="step">
+        <p class="stno" data-t="actStep">Official step</p>
+        <h3 data-t="act2H">Send a written follow-up by email</h3>
+        <p class="who" data-t="act2Who">cmcell@tn.gov.in — the CM Helpline cell</p>
+        <p data-t="act2Body">Email is one of the five channels the Helpline itself
+          publishes, and it is the only one that leaves you a written record with
+          a date on it. Each button opens Gmail in a new tab with the text already
+          written.</p>
+        <div class="acts">
+          <a class="btn btn-green" target="_blank" rel="noopener noreferrer" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=cmcell@tn.gov.in&amp;su=Follow-up%3A%20grievance%20ID%2018982473%20(Gudalur%2C%20Nilgiris)&amp;body=Respected%20Sir%20or%20Madam%2C%0A%0AI%20am%20following%20up%20on%20grievance%20ID%2018982473%20concerning%20human-wildlife%20conflict%20in%20Gudalur%2C%20Nilgiris%20district.%0A%0AI%20would%20like%20to%20know%20the%20latest%20action%20taken%20on%20this%20grievance%20and%20the%20stage%20it%20has%20reached.%20Please%20treat%20this%20as%20a%20request%20for%20a%20status%20update%20on%20an%20existing%20grievance%2C%20not%20as%20a%20new%20complaint.%0A%0AThank%20you.">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
+            <span data-t="act2Btn1">Follow up on #18982473</span>
+          </a>
+          <a class="btn btn-green" target="_blank" rel="noopener noreferrer" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=cmcell@tn.gov.in&amp;su=Follow-up%3A%20grievance%20ID%2019177921%20(Gudalur%2C%20Nilgiris)&amp;body=Respected%20Sir%20or%20Madam%2C%0A%0AI%20am%20following%20up%20on%20grievance%20ID%2019177921%20concerning%20a%20long-term%20development%20plan%20for%20the%20Gudalur%20area.%0A%0AI%20would%20like%20to%20know%20the%20latest%20action%20taken%20on%20this%20grievance%20and%20the%20stage%20it%20has%20reached.%20Please%20treat%20this%20as%20a%20request%20for%20a%20status%20update%20on%20an%20existing%20grievance%2C%20not%20as%20a%20new%20complaint.%0A%0AThank%20you.">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
+            <span data-t="act2Btn2">Follow up on #19177921</span>
+          </a>
+        </div>
+        <p class="foot-note" data-t="act2Foot">Source: Tamil Nadu CM Helpline FAQ, question 6. The
+          full text of each letter is on the record page for that grievance.</p>
+      </li>
+    </ol>
   </div>
 </div>
-<!-- the zoom view. Empty by design: the script moves the one .blueprint panel
-     in here and puts it back, so the plan is never in the document twice. -->
-<div class="zoombd" id="zoombd" role="dialog" aria-modal="true" aria-label="Gudalur Vision 2035 Blueprint" hidden>
-  <button type="button" class="zclose" id="zclose" aria-label="Close blueprint">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-  </button>
+
+<!-- =================================================== DOCUMENTS -->
+<div class="sec" id="documents">
+  <div class="wrap">
+    <p class="sec-intro" data-t="docsIntro">Three documents sit behind these two
+      grievances. Open one to read it, or save it to your phone — they are
+      published exactly as they stand, with nothing removed.</p>
+
+    <div class="grid2">
+      <div class="panelbox doccol">
+        <p class="crumbs" style="margin-bottom:10px"><span data-t="ph1lab">Phase 1 — Now</span></p>
+        <h3 data-t="docHead1">Safety · #18982473</h3>
+
+        <div class="docitem">
+          <div class="doctext">
+            <p class="docname" data-t="doc1aName">The government's reply</p>
+            <p class="docsig" data-t="doc1aWhat">The reply received from the
+              Government of Tamil Nadu to grievance #18982473. One page.</p>
+          </div>
+          <div class="docacts">
+            <a class="btn btn-out" href="/docs/safety-govt-reply.pdf" target="_blank" rel="noopener noreferrer">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+              <span data-t="btnRead">Read</span>
+            </a>
+            <a class="btn btn-out" href="/docs/safety-govt-reply.pdf" download="voice-of-gudalur-govt-reply-18982473.pdf">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              <span data-t="btnDownload">Download</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="docitem">
+          <div class="doctext">
+            <p class="docname" data-t="doc1bName">Our appeal for a permanent reply</p>
+            <p class="docsig" data-t="doc1bWhat">Our response to that reply,
+              appealing for a permanent answer rather than a case-by-case one.
+              Nine pages.</p>
+          </div>
+          <div class="docacts">
+            <a class="btn btn-out" href="/docs/safety-appeal-for-permanent-reply.pdf" target="_blank" rel="noopener noreferrer">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+              <span data-t="btnRead">Read</span>
+            </a>
+            <a class="btn btn-out" href="/docs/safety-appeal-for-permanent-reply.pdf" download="voice-of-gudalur-appeal-permanent-reply.pdf">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              <span data-t="btnDownload">Download</span>
+            </a>
+          </div>
+        </div>
+
+        <p class="srcnote" data-t="docSrc1">Source: Voice of Gudalur. The reply is
+          the government's; the appeal is ours.</p>
+      </div>
+
+      <div class="panelbox doccol">
+        <p class="crumbs" style="margin-bottom:10px"><span data-t="ph2lab">Phase 2 — Vision 2035</span></p>
+        <h3 data-t="docHead2">Transformation · #19177921</h3>
+
+        <div class="docitem">
+          <div class="doctext">
+            <p class="docname" data-t="doc2Name">Gudalur Transformation and Implementation Plan 2026</p>
+            <p class="docsig" data-t="doc2What">The full plan submitted with
+              grievance #19177921. Eight pages.</p>
+          </div>
+          <div class="docacts">
+            <a class="btn btn-out" href="/docs/gudalur-transformation-plan-2026.pdf" target="_blank" rel="noopener noreferrer">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+              <span data-t="btnRead">Read</span>
+            </a>
+            <a class="btn btn-out" href="/docs/gudalur-transformation-plan-2026.pdf" download="gudalur-transformation-plan-2026.pdf">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              <span data-t="btnDownload">Download</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="docitem">
+          <div class="doctext">
+            <p class="docname" data-t="docRecName">The grievance record itself</p>
+            <p class="docsig" data-t="docRecWhat">The filed record of #19177921,
+              as the petitioner holds it.</p>
+          </div>
+        </div>
+
+        <p class="srcnote" data-t="docSrc2">Source: Voice of Gudalur. The plan is a
+          proposal submitted for consideration, not an approved scheme.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ============================================== WHAT THE PAPERS REPORTED -->
+<!-- A dark band between the documents and the support card. The order is the
+     argument: the records come first, then the official channels, then the
+     documents, then what was actually printed about the people this is about -
+     and the only thing after that is the petition.
+
+     Every headline below is the outlet's own wording, linked to the full
+     report, and carries its outlet and date. We do not paraphrase a
+     newspaper and present it as the newspaper, for the same reason we do not
+     paraphrase a government record: the reader has to be able to check it. -->
+<div class="sec dark" id="news">
+  <div class="wrap">
+    <p class="seclab" data-t="newsLabel">What was reported</p>
+    <h2 data-t="newsH">This is not a number. These are people.</h2>
+    <p class="sec-intro" data-t="newsIntro">The grievance records carry the deaths as
+      figures. Newspapers carry them as names. Here is what was printed, in the
+      papers' own words, with the link to each report so you can read it
+      yourself.</p>
+
+    <div class="newsgrid">
+
+      <article class="newsitem">
+        <p class="newsout"><span data-t="newsOut1">The Hindu</span> · <span data-t="newsDate1">27 May 2026</span></p>
+        <h3 data-t="newsH3a">Schoolboy killed in elephant attack in Nilgiris</h3>
+        <span class="newstag" data-t="newsTag">As reported</span>
+        <p class="newsbody" data-t="newsB1">S. Misbah, 14, of Paakana Puthurvayal,
+          a Class VIII student, was killed by a wild elephant in the Bitherkad
+          forest range under the Gudalur division on the evening of 26 May.
+          Locals staged a protest demanding ₹50 lakh compensation for the
+          family.</p>
+        <a class="newsmore" target="_blank" rel="noopener noreferrer"
+          href="https://www.thehindu.com/news/national/tamil-nadu/schoolboy-killed-in-elephant-attack-in-nilgiris/article71028899.ece">
+          <span data-t="newsRead">Read the report</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg>
+        </a>
+      </article>
+
+      <article class="newsitem">
+        <p class="newsout"><span data-t="newsOut2">The Hindu</span> · <span data-t="newsDate2">26 April 2026</span></p>
+        <h3 data-t="newsH3b">Forest staff and a police officer assaulted after a man's death in Gudalur</h3>
+        <span class="newstag" data-t="newsTag">As reported</span>
+        <p class="newsbody" data-t="newsB2">T. Kalaiselvan, 45, died in an elephant
+          attack at O'Valley in Gudalur. When forest department staff went to
+          recover his body, an angry mob assaulted six of them and a police DSP
+          — the people sent to do this work, beaten while doing it.</p>
+        <a class="newsmore" target="_blank" rel="noopener noreferrer"
+          href="https://www.thehindu.com/news/cities/Coimbatore/six-forest-department-staff-police-dsp-assaulted-following-mans-death-in-elephant-attack-in-gudalur/article70908886.ece">
+          <span data-t="newsRead">Read the report</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg>
+        </a>
+      </article>
+
+      <article class="newsitem">
+        <p class="newsout"><span data-t="newsOut3">New Indian Express</span> · <span data-t="newsDate3">12 June 2026</span></p>
+        <h3 data-t="newsH3c">The Gudalur Peacekeepers</h3>
+        <span class="newstag" data-t="newsTag">As reported</span>
+        <p class="newsbody" data-t="newsB3">Gudalur sits where Tamil Nadu, Kerala
+          and Karnataka meet, on a corridor that runs through 31 villages and
+          more than 2,500 households. Forest staff walk these roads at night,
+          on foot, pushing elephants back. Over 500 movement alerts were
+          generated between January and June this year.</p>
+        <a class="newsmore" target="_blank" rel="noopener noreferrer"
+          href="https://www.newindianexpress.com/xplore/2026/Jun/12/the-gudalur-peacekeepers-2">
+          <span data-t="newsRead">Read the report</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg>
+        </a>
+      </article>
+
+      <article class="newsitem">
+        <p class="newsout"><span data-t="newsOut4">The Hindu</span> · <span data-t="newsDate4">2 June 2026</span></p>
+        <h3 data-t="newsH3d">Collector reviews measures after the child's death</h3>
+        <span class="newstag" data-t="newsTag">As reported</span>
+        <p class="newsbody" data-t="newsB4">After the fourteen-year-old was killed in
+          Gudalur, the Nilgiris Collector met officials of several departments
+          and ordered that compensation to the family be paid quickly. This site
+          does not publish a status for any grievance. This one is in the
+          newspaper, so it is here with its source.</p>
+        <a class="newsmore" target="_blank" rel="noopener noreferrer"
+          href="https://www.thehindu.com/news/cities/Coimbatore/collector-reviews-measures-to-reduce-negative-human-elephant-interactions-in-gudalur-division/article71052501.ece">
+          <span data-t="newsRead">Read the report</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg>
+        </a>
+      </article>
+
+    </div>
+
+    <div class="medcta">
+      <p data-t="newsCta">Every one of these reports names a place in Gudalur, and
+        every one of them ends the same way — a name, a family, a compensation
+        figure or a review meeting. None of them ends with the conflict being
+        over. The permanent answer has not been given yet. It has to be asked
+        for, and it has to be followed up.</p>
+      <div class="acts">
+        <a class="btn btn-red" href="#action" data-t="newsCtaAct">Follow up on the grievance</a>
+        <a class="btn btn-light" data-t="newsCtaSign" target="_blank" rel="noopener noreferrer"
+          href="https://www.change.org/p/%E0%AE%95%E0%AF%82%E0%AE%9F%E0%AE%B2%E0%AF%82%E0%AE%B0%E0%AF%8D-%E0%AE%B5%E0%AE%A9%E0%AE%B5%E0%AE%BF%E0%AE%B2%E0%AE%99%E0%AF%8D%E0%AE%95%E0%AF%81-%E0%AE%AE%E0%AF%8B%E0%AE%A4%E0%AE%B2%E0%AF%81%E0%AE%95%E0%AF%8D%E0%AE%95%E0%AF%81-%E0%AE%A8%E0%AE%BF%E0%AE%B0%E0%AE%A8%E0%AF%8D%E0%AE%A4%E0%AE%B0-%E0%AE%A4%E0%AF%80%E0%AE%B0%E0%AF%8D%E0%AE%B5%E0%AF%81-%E0%AE%B5%E0%AF%87%E0%AE%A3%E0%AF%8D%E0%AE%9F%E0%AF%81%E0%AE%AE%E0%AF%8D-resolve-gudalur-animal-crisis">Sign the petition</a>
+      </div>
+    </div>
+
+    <p class="srcnote" data-t="newsSrc">Source: the four reports linked above,
+      published by The Hindu and New Indian Express between April and June 2026.
+      Headlines are quoted as printed. We link to each report rather than
+      reproducing it, and we are not connected to either newspaper.</p>
+  </div>
 </div>
 
-<script>
-/* ===========================================================================
-   One script, no dependencies, no audio.
+</main>
 
-   What rev 11 had here and what happened to it:
+<footer class="foot">
+  <div class="wrap footin">
+    <nav class="footlinks" aria-label="Footer" data-t-aria="footAria">
+      <a href="/grievances/18982473/" data-t="footGr1">Grievance #18982473</a>
+      <a href="/grievances/19177921/" data-t="footGr2">Grievance #19177921</a>
+    </nav>
 
-     - an AudioContext, five <audio> tracks, five word-timing sidecars, a
-       speechSynthesis fallback and a requestAnimationFrame word reveal  -> all
-       deleted. Nothing is fetched at runtime any more, so the page reads
-       identically on a flaky connection and fully offline.
-     - a mandatory language picker  -> replaced by a device-language guess
-       plus a switcher in the header. Guessing respects the visitor's own
-       setting and is deterministic, so a visitor is never shown a language at
-       random, which is the problem the picker was introduced to solve.
-     - a "Voice" toggle persisted to localStorage  -> gone with the feature.
+    <div class="social">
+      <a href="https://www.youtube.com/@voiceforgudalur" target="_blank" rel="noopener noreferrer" title="Voice for Gudalur on YouTube" aria-label="Voice for Gudalur on YouTube">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23 12s0-3.9-.5-5.8a3 3 0 0 0-2.1-2.1C18.5 3.6 12 3.6 12 3.6s-6.5 0-8.4.5A3 3 0 0 0 1.5 6.2C1 8.1 1 12 1 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 8.4.5 8.4.5s6.5 0 8.4-.5a3 3 0 0 0 2.1-2.1C23 15.9 23 12 23 12zM9.8 15.4V8.6l5.9 3.4-5.9 3.4z"/></svg>
+      </a>
+      <a href="https://www.instagram.com/voiceofgudalur" target="_blank" rel="noopener noreferrer" title="Voice of Gudalur on Instagram" aria-label="Voice of Gudalur on Instagram">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c3.2 0 3.6 0 4.9.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.3 1 .4 2.2.1 1.3.1 1.7.1 4.9s0 3.6-.1 4.9c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1 .3-2.2.4-1.3.1-1.7.1-4.9.1s-3.6 0-4.9-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.3-1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.9c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1-.3 2.2-.4C8.4 2.2 8.8 2.2 12 2.2zm0 1.8c-3.1 0-3.5 0-4.8.1-1.1.1-1.7.2-2.1.4-.5.2-.9.4-1.2.8-.4.3-.6.7-.8 1.2-.2.4-.3 1-.4 2.1C2.6 8.5 2.6 8.9 2.6 12s0 3.5.1 4.8c.1 1.1.2 1.7.4 2.1.2.5.4.9.8 1.2.3.4.7.6 1.2.8.4.2 1 .3 2.1.4 1.3.1 1.7.1 4.8.1s3.5 0 4.8-.1c1.1-.1 1.7-.2 2.1-.4.5-.2.9-.4 1.2-.8.4-.3.6-.7.8-1.2.2-.4.3-1 .4-2.1.1-1.3.1-1.7.1-4.8s0-3.5-.1-4.8c-.1-1.1-.2-1.7-.4-2.1-.2-.5-.4-.9-.8-1.2-.3-.4-.7-.6-1.2-.8-.4-.2-1-.3-2.1-.4-1.3-.1-1.7-.1-4.8-.1zm0 3.1a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8zm0 8.1a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zm6.3-8.3a1.1 1.1 0 1 1-2.3 0 1.1 1.1 0 0 1 2.3 0z"/></svg>
+      </a>
+      <a href="https://www.instagram.com/universalguardtrust" target="_blank" rel="noopener noreferrer" title="Universal Guard Trust on Instagram" aria-label="Universal Guard Trust on Instagram">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c3.2 0 3.6 0 4.9.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.3 1 .4 2.2.1 1.3.1 1.7.1 4.9s0 3.6-.1 4.9c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1 .3-2.2.4-1.3.1-1.7.1-4.9.1s-3.6 0-4.9-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.3-1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.9c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1-.3 2.2-.4C8.4 2.2 8.8 2.2 12 2.2zm0 1.8c-3.1 0-3.5 0-4.8.1-1.1.1-1.7.2-2.1.4-.5.2-.9.4-1.2.8-.4.3-.6.7-.8 1.2-.2.4-.3 1-.4 2.1C2.6 8.5 2.6 8.9 2.6 12s0 3.5.1 4.8c.1 1.1.2 1.7.4 2.1.2.5.4.9.8 1.2.3.4.7.6 1.2.8.4.2 1 .3 2.1.4 1.3.1 1.7.1 4.8.1s3.5 0 4.8-.1c1.1-.1 1.7-.2 2.1-.4.5-.2.9-.4 1.2-.8.4-.3.6-.7.8-1.2.2-.4.3-1 .4-2.1.1-1.3.1-1.7.1-4.8s0-3.5-.1-4.8c-.1-1.1-.2-1.7-.4-2.1-.2-.5-.4-.9-.8-1.2-.3-.4-.7-.6-1.2-.8-.4-.2-1-.3-2.1-.4-1.3-.1-1.7-.1-4.8-.1zm0 3.1a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8zm0 8.1a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zm6.3-8.3a1.1 1.1 0 1 1-2.3 0 1.1 1.1 0 0 1 2.3 0z"/></svg>
+      </a>
+      <a href="https://www.facebook.com/universalguardtrust" target="_blank" rel="noopener noreferrer" title="Universal Guard Trust on Facebook" aria-label="Universal Guard Trust on Facebook">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.4v7A10 10 0 0 0 22 12z"/></svg>
+      </a>
+    </div>
 
-   The Vision 2035 copy is English only, matching how the app shipped it. It is
-   marked lang="en" in the markup so a screen reader pronounces it correctly
-   even when the rest of the page is in Tamil or Malayalam.
-   =========================================================================== */
-(function () {
-  'use strict';
+    <p class="disc" data-t="footDisc">Voice of Gudalur is a citizen initiative,
+      not a government portal. Nothing on this site is filed with, sent to, or
+      answered by any government office, and no one here can represent you to
+      one. The two grievance IDs and the figures beside them are reproduced from
+      the records held by their petitioners; the petitioner's own details are
+      withheld. The Tamil Nadu CM Helpline on 1100, cmcell@tn.gov.in and the
+      Mudhalvarin Mugavari portal are official channels named here for your own
+      use — we are not connected to them.</p>
+    <p class="fine" data-t="footSources">Sources: grievance records #18982473 and
+      #19177921 · Tamil Nadu CM Helpline FAQ</p>
+  </div>
+</footer>
 
-  var $ = function (id) { return document.getElementById(id); };
+<!-- The song. `muted` is not a stylistic choice: every current browser blocks
+     audible autoplay without a user gesture, so a muted start is the only kind
+     that actually plays by itself. vog-support.js unmutes it the moment the
+     reader asks. `loop` + `preload="metadata"` keeps the file off the critical
+     path - it is fetched when it starts, not before the page paints. -->
+<audio id="vogSong" src="/media/gudalur-theme.m4a" loop preload="metadata"></audio>
+<button type="button" class="audiobtn" id="vogSongBtn" aria-pressed="false"
+  aria-label="Play the background song" data-t-aria="audAria" hidden>
+  <svg class="wv" aria-hidden="true" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+  <svg class="mx" aria-hidden="true" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M22 9l-6 6"/><path d="M16 9l6 6"/></svg>
+  <span class="lbl" data-t="audLabel">Play song</span>
+</button>
 
-  /* --- the copy ------------------------------------------------------------
-     The campaign line and its paragraph, in the five languages the page has
-     always shipped. Index order matches LANGS below. */
-  // HEADS[0] carries a U+200B ZERO WIDTH SPACE, written as an escape so it stays
-  // visible here and survives editing. Its last word is a fused negation
-  // ("...adaindhathillai") 368px wide against a 328px column at a 360px viewport,
-  // and with no space in it no wrapping rule can break it somewhere readable. The
-  // hint sits on the morpheme boundary ahead of the negation suffix, giving
-  // "தோல்வியடைந்த / தில்லை" rather than wherever overflow-wrap happens to run out of
-  // room - which had left "லை." alone on a line of its own. Do not strip it
-  // expecting no change.
-  var HEADS = [
-    'மக்கள் ஒன்றிணைந்து தடுக்க முடியாத ஒரு சக்தியாக மாறும்போது, எதுவும் ஒருபோதும் தோல்வியடைந்த​தில்லை.',
-    'WHEN PEOPLE UNITE AS ONE UNSTOPPABLE FORCE, NOTHING HAS EVER FAILED.',
-    'ജനങ്ങൾ ഒരുമിച്ച് തടയാനാവാത്ത ഒരു ശക്തിയായി മാറുമ്പോൾ, ഒന്നും ഒരിക്കലും പരാജയപ്പെട്ടിട്ടില്ല.',
-    'ಜನರು ಒಗ್ಗೂಡಿ ತಡೆಯಲಾಗದ ಶಕ್ತಿಯಾಗಿ ಬದಲಾದಾಗ, ಯಾವುದೂ ಎಂದಿಗೂ ವಿಫಲವಾಗಿಲ್ಲ.',
-    'जब लोग एकजुट होकर एक अजेय शक्ति बन जाते हैं, तो कुछ भी कभी विफल नहीं हुआ।'
-  ];
-  var SUBS = [
-    '2009 முதல் 2026 வரை, தடுக்க முடியாத ஒரு உயிர் வாழ்வுப் போரில் சுமார் 7,800 மனிதர்களும் 1,600 காட்டு யானைகளும் இறந்துள்ளன. யானைகள் நடத்தலுக்கு அவசியமான இடம்பெயர்ச்சி வழித்தடங்கள் அடைப்பட்டதால் கூடலூர் இவ்வரத்தின் வலதுரமாகிறது. இந்த மனுகூறு எங்களது முறிவு நிலை: அந்த வழித்தடங்களை மீட்டுப் பெற்று, இந்த நாடு முழுவதிலும் இந்த அபாயத்தை நிறுத்தும் ஒரு பெருமான பேரணியைத் தொடங்க, கையொப்பமிடுங்கள்.',
-    'Between 2009 and 2026, about 7,800 people and 1,600 wild elephants have died in a war of survival that should never have been fought. Gudalur is the tragic heart of it: the migratory corridors elephants depend on have been blocked. This petition is our breaking point — sign it to restore those corridors, and to start a movement across India to stop this crisis for good.',
-    '2009 മുതൽ 2026 വരെ, തടയാക്കാത്ത ഒരു ജീവനുകൾക്കുള്ള പോരാട്ടത്തിൽ ഏകദേശം 7,800 മനുഷ്യരും 1,600 വന്യജീവിയായ ആനകളും മരിച്ചു. ആനങ്ങൾ നടക്കുന്ന വഴികൾ അടച്ചിയതിനാൽ ഗൂഡല്ലൂർ ഈ കൂടുതൽസംഭവത്തിന്റെ ദുഃഖകരമായ കേന്ദ്രമാണ്. ഈ പറിയിക്കുകയാണ് ഞങ്ങളുടെ അതിർപ്പ് നിമിഷം: ആ വഴികൾ തിരികുകയും രാജ്യമൊക്കെ ഈ അപകടം ശാശ്വതമാകുവിച്ചു അവസാനിപ്പിക്കാൻ ഒരു പ്രസ്ഥാനം തുടങ്ങാൻ ഒപ്പിടണം.',
-    '2009 ರಿಂದ 2026 ರವರೆಗೆ, ತಡೆಯಲಾಗದ ಒಂದು ಆಯ್ಕೆ ಜೀವನ ಸಂಘರ್ಷದಲ್ಲಿ ಸುಮಾರು 7,800 ಮನುಷ್ಯರು ಮತ್ತು 1,600 ಕಾಟು ಆನಗಳು ಸಾಯಿರುದ್ದಾರೆ. ಆನಗಳು ನಡೆಯುವ ವರ್ತಮಾಲಾ ಮಾರ್ಗಗಳು ಮುಚ್ಚಿದ್ದರೆಂದು ಗೂಡಲೂರು ಈ ರಕ್ತಪಾತದ ದುಃಖಕರವಾದ ಕೇಂದ್ರವಾಗಿದೆ. ಈ ಮನವಿಗೆ ನಮ್ಮ ಒಡಕ್ಕೆ ಹೊಂದಿನ ಸ್ವರಭಂಗಿ: ಆ ಮಾರ್ಗಗಳನ್ನು ಮರುಸಲು ಮತ್ತು ಈ ಅಪಾಯವನ್ನು ಶಾಶ್ವತವಾಗಿ ಕಡೆಗಟ್ಟಲು ರಾಷ್ಟ್ರದ ತುಂಬಾ ಒಂದು ಚಲನವನ್ನು ಆರಂಭಿಸಲು ಸಹಿ ಮಾಡಿ.',
-    '2009 से 2026 के बीच, रोके जा सकने वाली न होने वाली जीवन-रक्षा की इस लड़ाई में लगभग 7,800 लोग और 1,600 जंगली हाथी मारे गए। हाथियों के रास्ते बंद होने के कारण गूडलूर इस रक्तपात का दुखतम केंद्र बना हुआ है। यह याचना हमारी निर्णय-सीमा है: इन रास्तों को बहाल करने और पूरे भारत में इस संकट को हमेशा के लिए रोकने की आंदोलन शुरू करने के लिए हस्ताक्षर कीजिए।'
-  ];
-  var LANGS = ['ta-IN', 'en-IN', 'ml-IN', 'kn-IN', 'hi-IN'];
-  var NATIVE = ['தமிழ்', 'English', 'മലയാളം', 'ಕನ್ನಡ', 'हिंदी'];
-  var ENGLISH = ['Tamil', 'English', 'Malayalam', 'Kannada', 'Hindi'];
-  var N = HEADS.length;
-
-  var LANG_KEY = 'vog-lang';
-  function readStore(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
-  function writeStore(k, v) { try { window.localStorage.setItem(k, v); } catch (e) {} }
-
-  /* --- pick a language -----------------------------------------------------
-     A stored choice wins. Otherwise the browser's own preference is matched on
-     its primary subtag, so ta-IN / ta-LK / ta all land on Tamil. Anything we
-     do not have falls back to English rather than showing the visitor a page
-     they cannot read. */
-  function detect() {
-    var saved = parseInt(readStore(LANG_KEY), 10);
-    if (!isNaN(saved) && saved >= 0 && saved < N) return saved;
-    var want = '';
-    try { want = (navigator.languages && navigator.languages[0]) || navigator.language || ''; } catch (e) { want = ''; }
-    want = want.toLowerCase();
-    if (want) {
-      var sub = want.split('-')[0];
-      for (var i = 0; i < N; i++) {
-        if (LANGS[i].toLowerCase().split('-')[0] === sub) return i;
-      }
-    }
-    return 1;
-  }
-  var idx = detect();
-
-  var rot = $('rot'), sub = $('sub'), langchipname = $('langchipname');
-  var signHeroText = $('signHeroText'), langlist = $('langlist'), langmenu = $('langmenu');
-
-  function apply() {
-    var lang = LANGS[idx].split('-')[0];
-    rot.textContent = HEADS[idx];
-    sub.textContent = SUBS[idx];
-    rot.setAttribute('lang', lang);
-    sub.setAttribute('lang', lang);
-    langchipname.textContent = ENGLISH[idx];
-    signHeroText.textContent = (idx === 1) ? 'Sign Grievance #18982473' : 'Sign Petition #18982473';
-    writeStore(LANG_KEY, String(idx));
-    var btns = langlist.querySelectorAll('button');
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].setAttribute('aria-current', i === idx ? 'true' : 'false');
-    }
-  }
-
-  for (var k = 0; k < N; k++) {
-    (function (n) {
-      var li = document.createElement('li');
-      var b = document.createElement('button');
-      b.type = 'button';
-      var nat = document.createElement('span');
-      nat.lang = LANGS[n]; nat.textContent = NATIVE[n];
-      var en = document.createElement('span');
-      en.className = 'en'; en.textContent = ENGLISH[n];
-      b.appendChild(nat); b.appendChild(en);
-      b.addEventListener('click', function () {
-        idx = n;
-        apply();
-        langmenu.open = false;
-        b.focus();
-      });
-      li.appendChild(b);
-      langlist.appendChild(li);
-    })(k);
-  }
-  apply();
-
-  /* --- the zoom view -------------------------------------------------------
-     The panel is MOVED into the overlay, not copied, so the plan exists once in
-     the document and there is nothing to keep in sync. It is put back on close.
-     Focus is trapped by moving it to the close button and restoring it to the
-     button that opened it, and Escape closes - the three things a keyboard
-     visitor expects from a dialog. */
-  var blueprint = $('blueprint'), zoombd = $('zoombd');
-  var zoomBtn = $('zoomBtn'), zclose = $('zclose');
-  var anchor = null;
-  // Captured once, at load: the panel is only ever moved between this parent
-  // and the overlay, so remembering where it lives is all that is needed to put
-  // it back. No placeholder element and no duplicated markup.
-  var bpHome = blueprint ? blueprint.parentNode : null;
-
-  function openZoom() {
-    if (!zoombd || !blueprint) return;
-    anchor = document.activeElement;
-    zoombd.appendChild(blueprint);
-    zoombd.hidden = false;
-    document.body.classList.add('zoomed');
-    document.body.style.overflow = 'hidden';
-    zclose.focus();
-  }
-  function closeZoom() {
-    if (!document.body.classList.contains('zoomed')) return;
-    if (bpHome) bpHome.appendChild(blueprint);
-    zoombd.hidden = true;
-    document.body.classList.remove('zoomed');
-    document.body.style.overflow = '';
-    if (anchor && anchor.focus) anchor.focus();
-  }
-  if (zoomBtn) zoomBtn.addEventListener('click', openZoom);
-  if (zclose) zclose.addEventListener('click', closeZoom);
-  if (zoombd) {
-    zoombd.addEventListener('click', function (e) {
-      if (e.target === zoombd) closeZoom();   // a click on the backdrop
-    });
-  }
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') {
-      if (langmenu && langmenu.open) { langmenu.open = false; return; }
-      closeZoom();
-    }
-  });
-
-  /* --- share ---------------------------------------------------------------
-     WhatsApp is the channel this movement actually travels through, so it is
-     the primary share. Both it and the copy button build the same text, and
-     the page is included twice on purpose: once for the reader and once as the
-     literal link, because WhatsApp collapses previews on some clients. */
-  var SHARE = [
-    'WE REFUSE TO STAY SILENT. SAFETY TODAY, VISION 2035 TOMORROW.',
-    '',
-    'Gudalur Vision 2035 - a global eco-town where people and wildlife thrive together.',
-    'Phase 1 is human-wildlife conflict mitigation: grievance #18982473.',
-    'https://voiceofgudalur.space/#gudalur-vision-2035'
-  ].join('\n');
-
-  var waBtn = $('waBtn');
-  if (waBtn) waBtn.href = 'https://wa.me/?text=' + encodeURIComponent(SHARE);
-
-  var copyBtn = $('copyBtn'), copyText = $('copyText');
-  var copyTimer = 0;
-  function flashCopied(ok) {
-    copyText.textContent = ok ? 'Copied' : 'Press and hold to copy';
-    copyText.classList.toggle('copied', ok);
-    clearTimeout(copyTimer);
-    copyTimer = setTimeout(function () {
-      copyText.textContent = 'Copy link';
-      copyText.classList.remove('copied');
-    }, 2200);
-  }
-  if (copyBtn) copyBtn.addEventListener('click', function () {
-    var url = 'https://voiceofgudalur.space/#gudalur-vision-2035';
-    // The async clipboard API is not available on http:// or in every browser,
-    // so the old execCommand path stays as the fallback rather than being
-    // deleted along with the audio code.
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(
-        function () { flashCopied(true); },
-        function () { legacyCopy(url); }
-      );
-    } else {
-      legacyCopy(url);
-    }
-  });
-  function legacyCopy(text) {
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    ta.setAttribute('readonly', '');
-    ta.style.cssText = 'position:absolute;left:-9999px;top:0';
-    document.body.appendChild(ta);
-    ta.select();
-    var ok = false;
-    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
-    document.body.removeChild(ta);
-    flashCopied(ok);
-  }
-
-  /* --- the intro ----------------------------------------------------------- */
-  var intro = $('intro'), sheet = $('sheet');
-  var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  intro.classList.add('go');
-
-  function begin() {
-    intro.hidden = true;
-    sheet.classList.add('on');
-  }
-  var introTimer = setTimeout(begin, reduced ? 250 : 3400);
-  // Tapping the mark skips it. A visitor who taps must never have to wait.
-  intro.addEventListener('click', function () {
-    clearTimeout(introTimer);
-    begin();
-  });
-  /* A deep link to the plan, or a reload, should land on the plan and not on
-     the mark. The intro is the one thing on the page that would get in the way
-     of someone arriving from a shared link. */
-  if (window.location.hash === '#gudalur-vision-2035') {
-    clearTimeout(introTimer);
-    begin();
-  }
-})();
-</script>
+<!-- vog-i18n.js first: the copy table. vog-support.js then wires the language
+     switcher, the copy buttons and the support form. Both are same-origin and
+     root-relative so this page and /grievances/*/ can share them. -->
+<script src="/assets/vog-i18n.js"></script>
+<script src="/assets/vog-support.js"></script>
 </body>
 </html>
+

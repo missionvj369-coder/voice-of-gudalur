@@ -1,0 +1,26 @@
+node_modules/
+build/
+dist/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
+.DS_Store
+*.log
+.env*
+!.env.example
+!.env.staging.example
+preview_log.txt
+
+# Python bytecode cache
+__pycache__/
+*.pyc
+.netlify-node-deps-marker.json
+
+# Local petition-site verification harnesses (screenshots, videos, scratch
+# scripts) - never deployed, never committed (see docs/PETITION_SITE_LIVE_READINESS.md section 9)
+.tmp/
+
+# Local Netlify folder
+.netlify

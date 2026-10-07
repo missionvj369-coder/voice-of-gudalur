@@ -24,23 +24,66 @@
 /*.htm
   Content-Type: text/html; charset=utf-8
 
-# The hero film, its poster frame, the logo and the self-hosted font subsets.
-# None of these are content-hashed, so keep the TTL short enough that a
-# re-encoded asset is picked up within a day, with a long
+# The hero film, its poster frame, the logo, the background song and the
+# self-hosted font subsets. None of these are content-hashed, so keep the TTL
+# short enough that a re-encoded asset is picked up within a day, with a long
 # stale-while-revalidate tail so the swap never costs the visitor a wait.
 /media/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
+# The campaign song. The Content-Type is stated rather than assumed, for exactly
+# the reason it is stated on /docs/* below: with X-Content-Type-Options: nosniff
+# in force, a host that answered an .m4a with application/octet-stream makes the
+# browser download the file instead of playing it - and since the song starts
+# muted and the reader finds out whether it works by pressing the button, that
+# failure looks like a broken button rather than a wrong header.
+/media/gudalur-theme.m4a
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+  Content-Type: audio/mp4
+
 /fonts/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
-# Baseline security headers. The page is fully first-party by design: no
-# third-party script, no iframe, no remote font - the only outside hosts it
-# names are plain <a href> links a visitor may choose to follow (the petition
-# platform, the social profiles), which CSP does not restrict. So the frame and
-# image directives are closed to 'none'/local: nothing on this page can load
-# anything from another origin. If an embed is ever added back, re-open
-# frame-src (and img-src, for its thumbnail host) here at the same time.
+# The two grievance record pages, and the shared first-party assets they and the
+# homepage load. Same reasoning as /index.html applies: these pages are shared
+# over WhatsApp and Instagram, whose in-app browsers cache HTML aggressively,
+# and a stale copy of a grievance record is worse than a slow one. The assets
+# are unhashed (no ?v= fingerprint), so they get an hour rather than a day.
+/grievances/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/assets/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+# The three published PDFs (the government reply, our appeal, and the
+# Gudalur Transformation Plan). Browsers hand these to the built-in PDF viewer
+# rather than rendering them, so there is nothing here to cache aggressively;
+# one day covers a corrected upload without making a reader wait on a re-upload.
+#
+# The Content-Type is stated rather than assumed. Each document is offered
+# twice - "Read" opens it in the reader's own PDF viewer, "Download" saves it -
+# and the two only differ by that: no `download` attribute on Read, one on
+# Download. With `X-Content-Type-Options: nosniff` in force below, a host that
+# answered with application/octet-stream would make the browser download the
+# file instead of showing it, and Read would become a second Download button.
+# Netlify and Cloudflare both resolve .pdf to application/pdf on their own;
+# this line is what keeps that true on any host, and matches what the local
+# preview server is told to send.
+/docs/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+  Content-Type: application/pdf
+
+# Baseline security headers. The page is first-party by design: no third-party
+# script, no iframe, no remote font. It makes exactly one cross-origin request -
+# the POST to the support Worker that mints the Support ID - so connect-src names
+# that one origin and nothing else. The Worker replies with an
+# Access-Control-Allow-Origin for https://voiceofgudalur.space only, so a page
+# served from anywhere else is refused before a record can be written from it.
+# The official follow-up routes (tel:1100, the CM Helpline mailbox, the
+# Mudhalvarin Mugavari portal) are plain <a href> links, which CSP does not
+# restrict, so form-action stays 'self' and frame and img stay closed. If an
+# embed is ever added back, re-open frame-src (and img-src, for its thumbnail
+# host) here at the same time.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
