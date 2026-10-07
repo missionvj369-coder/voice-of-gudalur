@@ -181,7 +181,7 @@ window.VOG_I18N = {
   act2Btn2:          ["#19177921 தொடர்பாக தொடர்ந்து நடவடிக்கை", "Follow up on #19177921", "#19177921 സംബന്ധിച്ച് പിന്തുടരൽ", "#19177921 ಬಗ್ಗೆ ಮುಂದುವರಿಕೆ", "#19177921 पर पैरवी करें"],
   act2Body: [
     "மின்னஞ்சல் என்பது உதவி எண் தானே வெளியிடும் ஐந்து தொடர்பு வழிகளில் ஒன்று, மேலும் தேதியுடன் கூடிய எழுத்துப் பதிவை உங்களிடம் விட்டுச் செல்லும் ஒரே வழியும் இதுதான். ஒவ்வொரு பொத்தானும் புதிய தாவலில் Gmail-ஐத் திறந்து, உரையை ஏற்கனவே எழுதித் தரும்.",
-    "Email is one of the five channels the Helpline itself publishes, and it is the only one that leaves you a written record with a date on it. Each button opens Gmail in a new tab with the text already written.",
+    "Email is one of the five channels the Helpline itself publishes, and it is the only one that leaves you a written record with a date on it. Each button opens Gmail in a new tab with the text already written, and CCs the official cell.",
     "ഇമെയിൽ ഹെൽപ്പ്‌ലൈൻ സ്വയം പ്രസിദ്ധീകരിക്കുന്ന അഞ്ച് ചാനലുകളിൽ ഒന്നാണ്, തീയതിയോടു കൂടിയ രേഖ നിങ്ങളുടെ കയ്യിൽ നിൽക്കുന്ന ഏക വഴിയും ഇതുതന്നെയാണ്. ഓരോ ബട്ടണും പുതിയ ടാബിൽ Gmail തുറന്ന് വാചകം മുൻകൂട്ടി എഴുതി തരും.",
     "ಇಮೇಲ್ ಎಂಬುದು ಸಹಾಯವಾಣಿ ತಾನೇ ಪ್ರಕಟಿಸುವ ಐದು ಚಾನಲ್‌ಗಳಲ್ಲಿ ಒಂದು, ಜೊತೆಗೆ ದಿನಾಂಕದೊಂದಿಗೆ ಬರೆದ ದಾಖಲೆ ನಿಮ್ಮ ಕೈಯಲ್ಲಿ ಉಳಿಯುವ ಏಕೈಕ ಮಾರ್ಗವೂ ಇದು. ಪ್ರತಿ ಬಟನ್ ಹೊಸ ಟ್ಯಾಬ್‌ನಲ್ಲಿ Gmail ಅನ್ನು ತೆರೆದು ಪಠ್ಯವನ್ನು ಮೊದಲೇ ಬರೆದು ಕೊಡುತ್ತದೆ.",
     "ईमेल उस हेल्पलाइन के अपने प्रकाशित पाँच चैनलों में से एक है, और तारीख़ के साथ लिखित रिकॉर्ड आपके पास छोड़ने वाला एकमात्र माध्यम भी यही है। हर बटन नए टैब में Gmail खोलता है और पाठ पहले से लिखा होता है.",

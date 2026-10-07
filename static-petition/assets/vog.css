@@ -240,54 +240,13 @@ ul,ol{margin:0}
 .notice p{margin:14px 0 0;max-width:70ch;color:#4A3A18}
 .notice .tag{margin-top:0}
 
-/* --- dark status band ------------------------------------------------------ */
+/* --- the dark band ----------------------------------------------------------*/
 .dark{background:linear-gradient(168deg,var(--forest) 0%,var(--forest-2) 78%);color:#EFF6F1}
 .dark .seclab{color:var(--mint)}
 .dark h2{color:#fff}
 .dark .sec-intro{color:rgba(239,246,241,.8)}
-.statusbox{margin-top:26px;background:rgba(255,255,255,.05);
-  border:1px solid rgba(255,255,255,.16);border-left:4px solid var(--mint);
-  border-radius:var(--radius);padding:clamp(18px,3.2vw,28px);max-width:74ch}
-.statusbox h3{margin:0;color:#fff;font-size:clamp(1.05rem,2.6vw,1.35rem)}
-.statusbox p{margin:12px 0 0;color:rgba(239,246,241,.8)}
-.statusbox .acts{margin-top:18px}
-.statusbox .fine{margin-top:14px;font-size:13px;color:rgba(239,246,241,.62)}
 
-/* --- the support card ------------------------------------------------------ */
-.card{background:var(--card);color:var(--ink);border:1px solid var(--line);
-  border-radius:20px;padding:clamp(20px,4vw,34px);max-width:660px;margin-top:28px;
-  box-shadow:var(--shadow)}
-.card h3{margin:0 0 14px;font-size:clamp(1.15rem,2.8vw,1.45rem);letter-spacing:-.01em}
-.done h3{color:var(--green-dark)}
-.field{margin-bottom:18px}
-.field label{display:block;font-size:12.5px;font-weight:900;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ink-2);margin-bottom:7px}
-.field input{width:100%;padding:15px 16px;border:2px solid rgba(18,24,20,.16);
-  border-radius:12px;font-size:16px;font-family:inherit;background:#FCFCFA;color:var(--ink)}
-.field input::placeholder{color:#9AA39C}
-.field input:focus{outline:none;border-color:var(--green);
-  box-shadow:0 0 0 4px rgba(19,122,77,.18)}
-.field input[aria-invalid="true"]{border-color:var(--red)}
-.err{margin:8px 0 0;font-size:13.5px;font-weight:700;color:var(--red)}
-.err[hidden]{display:none}
-.hint{margin:8px 0 0;font-size:12.5px;color:var(--ink-2)}
-.apierr{display:flex;align-items:flex-start;gap:10px;margin:0 0 16px;padding:13px 15px;
-  background:rgba(194,43,31,.09);border:1px solid rgba(194,43,31,.34);border-radius:12px;
-  font-size:14px;font-weight:700;line-height:1.5;color:var(--red-dark)}
-.apierr[hidden]{display:none}
-.apierr svg{width:18px;height:18px;flex:none;margin-top:2px;fill:none;
-  stroke:currentColor;stroke-width:2.3;stroke-linecap:round}
-.done[hidden]{display:none}
-.done{outline:none}
-.doneidl{margin:0 0 7px;font-size:12.5px;font-weight:900;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--ink-2)}
-.idv{margin:0;font-family:var(--mono);font-size:clamp(1.25rem,4.4vw,1.7rem);
-  font-weight:700;letter-spacing:.06em;color:var(--green-dark);
-  background:var(--paper-2);border:1px dashed var(--line-2);border-radius:12px;
-  padding:14px 16px;word-break:break-all}
-.msgline{margin:16px 0 0;font-size:14.5px;color:var(--ink-2)}
-.msgline b{color:var(--ink)}
-.stored{margin:16px 0 0;font-size:13.5px;color:var(--ink-2)}
+/* --- record-page bits ------------------------------------------------------ */
 .rules{list-style:none;margin:20px 0 0;padding:0;display:grid;gap:10px}
 .rules li{position:relative;padding-left:26px;font-size:14.5px;color:var(--ink-2);
   line-height:1.55}
@@ -298,7 +257,6 @@ ul,ol{margin:0}
   border-radius:var(--radius);padding:clamp(18px,3.2vw,26px);margin-top:28px;max-width:70ch}
 .isnot h3{margin:0;font-size:clamp(1.05rem,2.6vw,1.3rem)}
 
-/* --- record-page bits ------------------------------------------------------ */
 .crumbs{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 18px;
   font-size:12.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
   color:var(--ink-2)}
@@ -394,7 +352,7 @@ ul,ol{margin:0}
 @media (max-width:620px){
   body{font-size:16px}
   .navlinks a[data-nav="action"]{display:none}
-  .acts .btn,.step .acts .btn,.statusbox .acts .btn,.docacts .btn{width:100%}
+  .acts .btn,.step .acts .btn,.docacts .btn{width:100%}
   .brand span{max-width:44vw}
 }
 @media (max-width:380px){
@@ -437,9 +395,9 @@ ul,ol{margin:0}
 .audiobtn .lbl{white-space:nowrap}
 
 /* --- what the papers say ---------------------------------------------------
-   A dark band between the documents and the support card: the records and the
-   official channels come first, the human cost lands last, and the only thing
-   after it is the petition. That order is the argument. */
+   A dark band after the documents, the last band on the page: the records
+   and the official channels come first, the human cost lands last, and the
+   only thing after it is the petition. That order is the argument. */
 .newsgrid{display:grid;gap:clamp(14px,2.4vw,20px);margin:30px 0 0;
   grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr))}
 /* four cards: two columns reads as a deliberate block and gives the body text
