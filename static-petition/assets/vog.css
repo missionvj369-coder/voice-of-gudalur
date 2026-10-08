@@ -8,7 +8,7 @@
    ========================================================================= */
 
 :root{
-  --crust:#F7EFE3; --skin:#F3E2D5; --card:#FFFFFF;
+  --crust:#F7EFE3; --skin:#F3E2D5; --card:#FFFFFF; --paper-2:#EFEAE0;
   --ink:#2A1F14; --ink-2:#5C4A38; --ink-3:#8A725C; --line:#D8C3A6; --line-2:#C6BFAE;
   --terracotta:#C65A2E; --terracotta-deep:#9C4220; --terracotta-soft:#E8C4A0;
   --ochre:#B98A2F; --amber:#8A5300; --amber-bg:#FBF1DC; --amber-line:#E7C98B;
@@ -77,8 +77,8 @@ ul,ol{margin:0}
 .btn svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;
   stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
 .btn:hover{transform:translateY(-2px)}
-.btn-terracotta{background:var(--terracotta);border-color:var(--terracotta);color:#fff}
-.btn-terracotta:hover{background:var(--terracotta-deep);border-color:var(--terracotta-deep);
+.btn-red{background:var(--terracotta);border-color:var(--terracotta);color:#fff}
+.btn-red:hover{background:var(--terracotta-deep);border-color:var(--terracotta-deep);
   box-shadow:0 10px 26px rgba(198,90,46,.32)}
 .btn-green{background:var(--green);border-color:var(--green);color:#fff}
 .btn-green:hover{background:var(--green-dark);border-color:var(--green-dark);
@@ -89,6 +89,7 @@ ul,ol{margin:0}
 .btn-light:hover{border-color:#fff;background:rgba(255,255,255,.08)}
 .btn-wide{width:100%}
 .btn[disabled],.btn.busy{opacity:.72;cursor:default;box-shadow:none;transform:none}
+.acts{display:flex;flex-wrap:wrap;gap:12px}
 /* --- sections -------------------------------------------------------------- */
 .sec{padding:clamp(44px,8.5vh,92px) 0;scroll-margin-top:78px}
 #grievances ~ .sec{padding:clamp(24px,4.5vh,48px) 0}
@@ -123,7 +124,8 @@ ul,ol{margin:0}
 .idcard.g{border-top-color:var(--mint)}
 .idcard .kid{font-family:var(--mono);font-size:13px;letter-spacing:.12em;
   color:var(--mint);text-transform:uppercase;font-weight:700}
-.idcard h2{margin:8px 0 0;color:#F7F4EC;font-size:clamp(1.2rem,3.2vw,1.6rem);",
+.idcard h2{margin:8px 0 0;color:#F7F4EC;font-size:clamp(1.2rem,3.2vw,1.6rem);
+  line-height:1.2}
 .idcard p{margin:12px 0 0;color:rgba(242,245,241,.76);font-size:15px}
 .idcard .acts{margin-top:18px}
 .srcnote{margin:14px 0 0;font-size:13px;color:var(--ink-2);line-height:1.55}
@@ -190,7 +192,8 @@ ul,ol{margin:0}
   color:var(--ink-2)}
 .tag{display:inline-block;margin-top:9px;font-size:10.5px;font-weight:900;
   letter-spacing:.16em;text-transform:uppercase;color:var(--amber);
-  border:1px solid var(--amber-line);background:var(--amber-bg);border-radius:99px;",
+  border:1px solid var(--amber-line);background:var(--amber-bg);border-radius:99px;
+  padding:3px 9px}
 /* --- action cards (the ordered official steps) ----------------------------- */
 .steps{list-style:none;margin:30px 0 0;padding:0;display:grid;gap:16px;counter-reset:st}
 .step{counter-increment:st;background:var(--card);border:1px solid var(--line);
@@ -236,6 +239,46 @@ ul,ol{margin:0}
 .dark .seclab{color:var(--mint)}
 .dark h2{color:#fff}
 .dark .sec-intro{color:rgba(239,246,241,.8)}
+.dark .srcnote{color:rgba(242,245,241,.6)}
+
+/* --- what the papers reported (the dark band's cards) ----------------------
+   Four cards: two columns reads as a deliberate block and gives the body text
+   room. auto-fit alone lands on three at desktop width and orphans the fourth. */
+.newsgrid{display:grid;gap:clamp(14px,2.4vw,20px);margin:30px 0 0;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr))}
+@media (min-width:760px){.newsgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.newsitem{display:flex;flex-direction:column;gap:10px;padding:20px 20px 18px;
+  border:1px solid rgba(255,255,255,.14);border-left:4px solid var(--terracotta);
+  border-radius:14px;background:rgba(255,255,255,.045)}
+/* outlet + date, set small and quiet so the headline is what reads first */
+.newsout{margin:0!important;font-family:var(--mono);font-size:12px!important;
+  letter-spacing:.06em;color:rgba(242,245,241,.66)!important}
+.newsitem h3{margin:0;color:#F7F4EC;font-size:1.06rem;line-height:1.28}
+.newsbody{margin:0!important;color:rgba(242,245,241,.8)!important;font-size:14.5px;
+  line-height:1.6;flex:1}
+/* "as reported" - marks the headline as the paper's wording, not our paraphrase.
+   align-self matters: the card is a column flexbox, so without it the pill
+   stretches the full card width instead of hugging its text. */
+.newstag{align-self:flex-start;display:inline-block;padding:3px 9px;border-radius:999px;
+  background:rgba(231,201,139,.14);border:1px solid rgba(231,201,139,.4);
+  color:#E7C98B;font-size:10.5px;font-weight:900;letter-spacing:.14em;
+  text-transform:uppercase}
+.newsmore{margin-top:2px;display:inline-flex;align-items:center;gap:7px;
+  align-self:flex-start;color:var(--mint);font-size:13.5px;font-weight:800;
+  text-decoration:none;border-bottom:2px solid rgba(62,213,152,.34);
+  padding-bottom:2px;min-height:32px}
+.newsmore:hover{border-bottom-color:var(--mint)}
+.newsmore svg{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;
+  stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* the close of the section: the ask, stated once, in plain words */
+.medcta{margin:clamp(26px,4vw,40px) 0 0;padding:clamp(22px,3.6vw,34px);
+  border-radius:var(--radius);background:rgba(251,241,220,.07);
+  border:1px solid rgba(231,201,139,.34)}
+.medcta p{margin:0;color:rgba(247,244,236,.9);font-size:clamp(1rem,2.2vw,1.16rem);
+  line-height:1.6;max-width:62ch}
+.medcta .acts{margin-top:18px}
+
 /* --- record-page bits ------------------------------------------------------ */
 .rules{list-style:none;margin:20px 0 0;padding:0;display:grid;gap:10px}
 .rules li{position:relative;padding-left:26px;font-size:14.5px;color:var(--ink-2);
@@ -293,16 +336,15 @@ ul,ol{margin:0}
 .fine{margin:0;font-size:11.5px;letter-spacing:.16em;color:rgba(255,255,255,.42);
   text-transform:uppercase}
 /* --- the language switcher, in the masthead --------------------------------
-   Pills, one per language, each labelled in its own script. The English name
-   the script also emits is hidden: at 360px five two-line buttons do not fit,
-   and a reader looking for their own language is looking for its own script. */
+   Pills, one per language, each labelled in its own script and nothing else:
+   at 360px five two-line buttons do not fit, and a reader looking for their
+   own language is looking for its own script. */
 .langrow{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
 .langbtn{display:inline-flex;align-items:center;justify-content:center;
   padding:8px 14px;min-height:44px;border:1px solid var(--line-2);border-radius:999px;
   background:#fff;color:var(--ink);font-family:inherit;font-size:14px;font-weight:800;
   line-height:1.15;cursor:pointer;
   transition:border-color .15s ease,background .15s ease,color .15s ease}
-.langbtn .en{display:none}
 .langbtn:hover{border-color:var(--ink)}
 .langbtn[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
 .langlab{margin:0 0 9px;font-size:11.5px;font-weight:900;letter-spacing:.16em;

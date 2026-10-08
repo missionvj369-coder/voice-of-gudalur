@@ -113,7 +113,6 @@
   var T = window.VOG_I18N || {};
   var LANGS = ['ta-IN', 'en-IN', 'ml-IN', 'kn-IN', 'hi-IN'];
   var NATIVE = ['தமிழ்', 'English', 'മലയാളം', 'ಕನ್ನಡ', 'हिंदी'];
-  var ENGLISH = ['Tamil', 'English', 'Malayalam', 'Kannada', 'Hindi'];
   var LANG_KEY = 'vog-lang';
   var N = LANGS.length;
 
@@ -187,11 +186,7 @@
         var nat = document.createElement('span');
         nat.lang = LANGS[n];
         nat.textContent = NATIVE[n];
-        var en = document.createElement('span');
-        en.className = 'en';
-        en.textContent = ENGLISH[n];
         b.appendChild(nat);
-        b.appendChild(en);
         b.addEventListener('click', function () { idx = n; applyLang(); b.focus(); });
         langList.appendChild(b);
       })(li);
