@@ -1,5 +1,5 @@
-/* ===========================================================================
-   Voice of Gudalur - one stylesheet for the three citizen-action pages
+﻿/* ===========================================================================
+   Voice of Gudalur — one stylesheet for the three citizen-action pages
    (/, /grievances/18982473/, /grievances/19177921/).
 
    Served from this origin and referenced with a root-relative path, so every
@@ -8,12 +8,12 @@
    ========================================================================= */
 
 :root{
-  --paper:#F7F5EF; --paper-2:#EFEAE0; --card:#FFFFFF;
-  --ink:#121814; --ink-2:#4C564E; --line:#DBD5C7; --line-2:#C6BFAE;
-  --red:#C22B1F; --red-dark:#95150E;
+  --crust:#F7EFE3; --skin:#F3E2D5; --card:#FFFFFF;
+  --ink:#2A1F14; --ink-2:#5C4A38; --ink-3:#8A725C; --line:#D8C3A6; --line-2:#C6BFAE;
+  --terracotta:#C65A2E; --terracotta-deep:#9C4220; --terracotta-soft:#E8C4A0;
+  --ochre:#B98A2F; --amber:#8A5300; --amber-bg:#FBF1DC; --amber-line:#E7C98B;
   --green:#137A4D; --green-dark:#0B5936; --mint:#3ED598;
-  --forest:#0B1410; --forest-2:#123020;
-  --amber:#8A5300; --amber-bg:#FBF1DC; --amber-line:#E7C98B;
+  --forest:#0B1410; --forest-2:#123020; --night:#1C140C;
   --radius:16px;
   --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,
          "Noto Sans Tamil","Noto Sans Malayalam","Noto Sans Kannada",
@@ -24,12 +24,14 @@
 
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+body{margin:0;background:var(--crust);color:var(--ink);font-family:var(--sans);
   font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
 img{max-width:100%;height:auto;display:block}
-a{color:var(--green-dark)}
+a{color:var(--terracotta-deep)}
+a:hover{color:var(--ink);text-decoration:underline}
+strong{color:var(--ink)}
 a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible,
-[tabindex]:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+[tabindex]:focus-visible{outline:3px solid var(--terracotta);outline-offset:3px}
 h1,h2,h3,h4{font-weight:900;letter-spacing:-.015em;line-height:1.1;margin:0}
 p{margin:0}
 ul,ol{margin:0}
@@ -57,9 +59,8 @@ ul,ol{margin:0}
 .navlinks{display:flex;align-items:center;gap:clamp(10px,2.4vw,26px)}
 .navlinks a{color:var(--ink-2);text-decoration:none;font-size:13.5px;font-weight:800;
   letter-spacing:.06em;text-transform:uppercase;padding:6px 0;border-bottom:2px solid transparent}
-.navlinks a:hover{color:var(--ink);border-bottom-color:var(--red)}
-
-/* The language row. Kept `hidden` in the markup and revealed by the script
+.navlinks a:hover{color:var(--ink);border-bottom-color:var(--terracotta)}
+/* --- the language row. Kept hidden in the markup and revealed by the script
    once it has actually built the buttons - an empty "Change language" label
    with nothing under it is worse than no switcher at all. */
 .langbar{padding:10px 0 0}
@@ -76,9 +77,9 @@ ul,ol{margin:0}
 .btn svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;
   stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
 .btn:hover{transform:translateY(-2px)}
-.btn-red{background:var(--red);border-color:var(--red);color:#fff}
-.btn-red:hover{background:var(--red-dark);border-color:var(--red-dark);
-  box-shadow:0 10px 26px rgba(194,43,31,.32)}
+.btn-terracotta{background:var(--terracotta);border-color:var(--terracotta);color:#fff}
+.btn-terracotta:hover{background:var(--terracotta-deep);border-color:var(--terracotta-deep);
+  box-shadow:0 10px 26px rgba(198,90,46,.32)}
 .btn-green{background:var(--green);border-color:var(--green);color:#fff}
 .btn-green:hover{background:var(--green-dark);border-color:var(--green-dark);
   box-shadow:0 10px 26px rgba(19,122,77,.3)}
@@ -88,19 +89,14 @@ ul,ol{margin:0}
 .btn-light:hover{border-color:#fff;background:rgba(255,255,255,.08)}
 .btn-wide{width:100%}
 .btn[disabled],.btn.busy{opacity:.72;cursor:default;box-shadow:none;transform:none}
-
 /* --- sections -------------------------------------------------------------- */
 .sec{padding:clamp(44px,8.5vh,92px) 0;scroll-margin-top:78px}
-/* The homepage runs as one continuous page and its section labels and
-   headings are gone, so the three blocks after the hero take a tighter
-   rhythm than the same blocks carry on a record page. Scoped through
-   #grievances, which only the home hero has, so /grievances/*/ is untouched. */
 #grievances ~ .sec{padding:clamp(24px,4.5vh,48px) 0}
 .rule{height:1px;background:var(--line);border:0;margin:0;position:relative}
 .rule::before{content:"";position:absolute;left:0;top:-1px;width:76px;height:3px;
-  background:var(--red)}
+  background:var(--terracotta)}
 .seclab{font-size:12px;font-weight:900;letter-spacing:.3em;text-transform:uppercase;
-  color:var(--red)}
+  color:var(--terracotta)}
 .seclab.g{color:var(--green)}
 .sec h2{margin:.4em 0 0;font-size:clamp(1.7rem,4.8vw,2.9rem);text-wrap:balance}
 .sec-intro{margin:.9em 0 0;max-width:66ch;color:var(--ink-2);
@@ -110,7 +106,7 @@ ul,ol{margin:0}
 /* --- hero ------------------------------------------------------------------ */
 .hero{position:relative;overflow:hidden;background:
   radial-gradient(900px 460px at 84% -14%,rgba(62,213,152,.16),transparent 62%),
-  radial-gradient(700px 400px at 2% 106%,rgba(194,43,31,.12),transparent 60%),
+  radial-gradient(700px 400px at 2% 106%,rgba(198,90,46,.12),transparent 60%),
   linear-gradient(180deg,var(--forest) 0%,#0D1611 55%,#0A110D 100%);
   color:#F2F5F1;padding:clamp(46px,9vh,96px) 0 clamp(48px,9vh,100px)}
 .hero .eyebrow{font-size:12px;font-weight:900;letter-spacing:.3em;
@@ -122,20 +118,17 @@ ul,ol{margin:0}
 .idgrid{display:grid;gap:16px;margin:34px 0 0;
   grid-template-columns:repeat(auto-fit,minmax(292px,1fr))}
 .idcard{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);
-  border-top:4px solid var(--red);border-radius:var(--radius);
+  border-top:4px solid var(--terracotta);border-radius:var(--radius);
   padding:clamp(18px,3vw,26px)}
 .idcard.g{border-top-color:var(--mint)}
 .idcard .kid{font-family:var(--mono);font-size:13px;letter-spacing:.12em;
   color:var(--mint);text-transform:uppercase;font-weight:700}
-.idcard h2{margin:8px 0 0;color:#F7F4EC;font-size:clamp(1.2rem,3.2vw,1.6rem);
-  line-height:1.2}
+.idcard h2{margin:8px 0 0;color:#F7F4EC;font-size:clamp(1.2rem,3.2vw,1.6rem);",
 .idcard p{margin:12px 0 0;color:rgba(242,245,241,.76);font-size:15px}
 .idcard .acts{margin-top:18px}
 .srcnote{margin:14px 0 0;font-size:13px;color:var(--ink-2);line-height:1.55}
 .hero .srcnote{color:rgba(242,245,241,.6)}
 .hero .srcnote.big{font-size:14px}
-/* a plain block, not a flex row: a flex child would be squeezed to its
-   min-content width and break "Before you read on:" one word per line */
 .hero-note{margin:22px 0 0;padding:13px 15px;background:rgba(251,241,220,.07);
   border:1px solid rgba(231,201,139,.34);border-radius:12px;
   color:rgba(242,245,241,.82);font-size:14.5px;max-width:70ch}
@@ -147,7 +140,7 @@ ul,ol{margin:0}
 .fig{background:var(--paper-2);border:1px solid var(--line);border-radius:12px;
   padding:14px 15px}
 .fig .n{font-size:clamp(1.55rem,4.4vw,2.1rem);font-weight:900;line-height:1;
-  color:var(--red)}
+  color:var(--terracotta)}
 .fig.g .n{color:var(--green)}
 .fig .l{margin:8px 0 0;font-size:13.5px;font-weight:700;color:var(--ink)}
 .fig .s{margin:5px 0 0;font-size:12px;color:var(--ink-2)}
@@ -178,7 +171,7 @@ ul,ol{margin:0}
   color:var(--ink-2)}
 .kv dd{margin:0;font-weight:700;font-size:15.5px}
 .kv dd.mono{font-family:var(--mono);letter-spacing:.04em}
-.kv dd.nostatus{color:var(--red)}
+.kv dd.nostatus{color:var(--terracotta)}
 .quote{margin:22px 0 0;padding:16px 18px;background:var(--paper-2);
   border-left:4px solid var(--green);border-radius:0 12px 12px 0}
 .quote .q{font-weight:700;line-height:1.55}
@@ -197,24 +190,22 @@ ul,ol{margin:0}
   color:var(--ink-2)}
 .tag{display:inline-block;margin-top:9px;font-size:10.5px;font-weight:900;
   letter-spacing:.16em;text-transform:uppercase;color:var(--amber);
-  border:1px solid var(--amber-line);background:var(--amber-bg);border-radius:99px;
-  padding:3px 9px}
-
+  border:1px solid var(--amber-line);background:var(--amber-bg);border-radius:99px;",
 /* --- action cards (the ordered official steps) ----------------------------- */
 .steps{list-style:none;margin:30px 0 0;padding:0;display:grid;gap:16px;counter-reset:st}
 .step{counter-increment:st;background:var(--card);border:1px solid var(--line);
   border-radius:var(--radius);padding:clamp(18px,3vw,26px);box-shadow:var(--shadow);
   border-left:4px solid var(--line-2)}
-.step.main{border-left-color:var(--red)}
+.step.main{border-left-color:var(--terracotta)}
 .step.last{border-left-color:var(--green);background:var(--paper-2)}
 .step .stno{display:flex;align-items:center;gap:10px;font-size:11.5px;font-weight:900;
   letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2)}
 .step .stno::before{content:counter(st);display:inline-flex;align-items:center;
-  justify-content:center;width:26px;height:26px;border-radius:50%;flex:none;
+  justify-content:center;width:26px;height:26px;border-radius:50%;
   background:var(--ink);color:#fff;font-size:13px;letter-spacing:0}
 .step h3{margin:12px 0 0;font-size:clamp(1.16rem,2.9vw,1.5rem)}
 .step .who{margin:9px 0 0;font-size:13px;font-weight:800;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--red)}
+  text-transform:uppercase;color:var(--terracotta)}
 .step p{margin:12px 0 0;color:var(--ink-2)}
 .step .acts{margin-top:18px}
 .step .foot-note,.mailto-note{margin:14px 0 0;font-size:13px;color:var(--ink-2)}
@@ -245,15 +236,14 @@ ul,ol{margin:0}
 .dark .seclab{color:var(--mint)}
 .dark h2{color:#fff}
 .dark .sec-intro{color:rgba(239,246,241,.8)}
-
 /* --- record-page bits ------------------------------------------------------ */
 .rules{list-style:none;margin:20px 0 0;padding:0;display:grid;gap:10px}
 .rules li{position:relative;padding-left:26px;font-size:14.5px;color:var(--ink-2);
   line-height:1.55}
 .rules li::before{content:"";position:absolute;left:0;top:.5em;width:10px;height:10px;
-  border-radius:2px;background:var(--red);transform:rotate(45deg)}
+  border-radius:2px;background:var(--terracotta);transform:rotate(45deg)}
 .rules li b{color:var(--ink)}
-.isnot{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--red);
+.isnot{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--terracotta);
   border-radius:var(--radius);padding:clamp(18px,3.2vw,26px);margin-top:28px;max-width:70ch}
 .isnot h3{margin:0;font-size:clamp(1.05rem,2.6vw,1.3rem)}
 
@@ -261,12 +251,12 @@ ul,ol{margin:0}
   font-size:12.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
   color:var(--ink-2)}
 .crumbs a{color:var(--ink-2);text-decoration:none;border-bottom:1px solid var(--line-2)}
-.crumbs a:hover{color:var(--red);border-color:var(--red)}
+.crumbs a:hover{color:var(--terracotta);border-color:var(--terracotta)}
 .phasegrid{display:grid;gap:14px;margin-top:22px;
   grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
 .phase{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
   padding:18px 19px;box-shadow:var(--shadow)}
-.phase.one{border-top:4px solid var(--red)}
+.phase.one{border-top:4px solid var(--terracotta)}
 .phase.two{border-top:4px solid var(--green)}
 .phase .pl{margin:0;font-size:11px;font-weight:900;letter-spacing:.2em;
   text-transform:uppercase;color:var(--ink-2)}
@@ -302,7 +292,6 @@ ul,ol{margin:0}
 .disc b{color:#fff}
 .fine{margin:0;font-size:11.5px;letter-spacing:.16em;color:rgba(255,255,255,.42);
   text-transform:uppercase}
-
 /* --- the language switcher, in the masthead --------------------------------
    Pills, one per language, each labelled in its own script. The English name
    the script also emits is hidden: at 360px five two-line buttons do not fit,
@@ -323,20 +312,11 @@ ul,ol{margin:0}
 .js .rv{opacity:0;transform:translateY(14px)}
 .js .rv.in{opacity:1;transform:none;transition:opacity .5s ease,transform .5s ease}
 
-/* --- responsive ------------------------------------------------------------
-   The nav sheds items as the screen narrows, but never all of them: Documents
-   goes first, then Take action, and Support stays at every width so the header
-   is never an empty bar. */
+/* --- responsive ------------------------------------------------------------ */
 @media (max-width:900px){
   .grid2{grid-template-columns:1fr}
   .navlinks a[data-nav="documents"]{display:none}
 }
-/* 360px legibility. The label sizes above are set for a desktop sidebar, where
-   10-11px reads as a whisper. Held against a phone screen they are the smallest
-   text on the page, and this site is read by people looking for a number to
-   dial, so nothing carrying meaning drops below 12.5px. Fixed here rather than
-   restated per rule: the tokens are shared, and a media query is one place to
-   audit them. */
 @media (max-width:620px){
   .tag{font-size:12.5px}
   .kv dt{font-size:12.5px;letter-spacing:.1em}
@@ -345,17 +325,10 @@ ul,ol{margin:0}
   .crumbs{font-size:13px}
   .step .who{font-size:12.5px}
   .footlinks{font-size:15px}
-  /* the copy button sits over a pre block and was landing at 36px tall - under
-     the 44px comfortable-tap floor that every other control here clears */
   .copybtn{min-height:44px;padding:12px 16px}
 }
 @media (max-width:620px){
   body{font-size:16px}
-  .navlinks a[data-nav="action"]{display:none}
-  .acts .btn,.step .acts .btn,.docacts .btn{width:100%}
-  .brand span{max-width:44vw}
-}
-@media (max-width:380px){
   .topin{min-height:58px}
   .brand{font-size:15px}
   .btn{font-size:14.5px;padding:13px 18px}
@@ -370,12 +343,7 @@ ul,ol{margin:0}
   .btn .spin{animation:none;border-top-color:rgba(255,255,255,.9)}
 }
 
-/* --- background music ------------------------------------------------------
-   The song is self-hosted and loops. It is started MUTED, because every current
-   browser refuses to autoplay audible media without a gesture - starting muted
-   is the only way "plays by itself" is honest, and the button below is how a
-   reader turns the sound on. Fixed bottom-right so it never pushes content, and
-   bottom padding keeps it clear of the iOS home indicator. */
+/* --- background music ------------------------------------------------------ */
 .audiobtn{position:fixed;right:clamp(12px,3vw,22px);bottom:clamp(12px,3vw,22px);
   z-index:15;display:inline-flex;align-items:center;gap:8px;min-height:44px;
   padding:10px 15px;border-radius:999px;border:1px solid rgba(255,255,255,.28);
@@ -386,58 +354,7 @@ ul,ol{margin:0}
 .audiobtn:hover{transform:translateY(-2px)}
 .audiobtn svg{width:19px;height:19px;flex:none;fill:none;stroke:currentColor;
   stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-/* one icon, two states: the bars are hidden while sound is on */
 .audiobtn .wv{display:none}
 .audiobtn[aria-pressed="true"] .wv{display:block}
 .audiobtn[aria-pressed="true"] .mx{display:none}
-/* The label is the button's whole accessible name in the visual sense, so it is
-   never truncated to nothing on a 360px screen. */
 .audiobtn .lbl{white-space:nowrap}
-
-/* --- what the papers say ---------------------------------------------------
-   A dark band after the documents, the last band on the page: the records
-   and the official channels come first, the human cost lands last, and the
-   only thing after it is the petition. That order is the argument. */
-.newsgrid{display:grid;gap:clamp(14px,2.4vw,20px);margin:30px 0 0;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr))}
-/* four cards: two columns reads as a deliberate block and gives the body text
-   room. auto-fit alone lands on three at desktop width and orphans the fourth. */
-@media (min-width:760px){.newsgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.newsitem{display:flex;flex-direction:column;gap:10px;padding:20px 20px 18px;
-  border:1px solid rgba(255,255,255,.14);border-left:4px solid var(--red);
-  border-radius:14px;background:rgba(255,255,255,.045)}
-/* outlet + date, set small and quiet so the headline is what reads first */
-.newsout{margin:0!important;font-family:var(--mono);font-size:12px!important;
-  letter-spacing:.06em;color:rgba(242,245,241,.66)!important}
-.newsitem h3{margin:0;color:#F7F4EC;font-size:1.06rem;line-height:1.28}
-.newsbody{margin:0!important;color:rgba(242,245,241,.8)!important;font-size:14.5px;
-  line-height:1.6;flex:1}
-/* "as reported" - marks the headline as the paper's wording, not our paraphrase.
-   align-self matters: the card is a column flexbox, so without it the pill
-   stretches the full card width instead of hugging its text. */
-.newstag{align-self:flex-start;display:inline-block;padding:3px 9px;border-radius:999px;
-  background:rgba(231,201,139,.14);border:1px solid rgba(231,201,139,.4);
-  color:#E7C98B;font-size:10.5px;font-weight:900;letter-spacing:.14em;
-  text-transform:uppercase}
-.newsmore{margin-top:2px;display:inline-flex;align-items:center;gap:7px;
-  align-self:flex-start;color:var(--mint);font-size:13.5px;font-weight:800;
-  text-decoration:none;border-bottom:2px solid rgba(62,213,152,.34);
-  padding-bottom:2px;min-height:32px}
-.newsmore:hover{border-bottom-color:var(--mint)}
-.newsmore svg{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;
-  stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-
-/* the close of the section: the ask, stated once, in plain words */
-.medcta{margin:clamp(26px,4vw,40px) 0 0;padding:clamp(22px,3.6vw,34px);
-  border-radius:var(--radius);background:rgba(251,241,220,.07);
-  border:1px solid rgba(231,201,139,.34)}
-.medcta p{margin:0;color:rgba(247,244,236,.9);font-size:clamp(1rem,2.2vw,1.16rem);
-  line-height:1.6;max-width:62ch}
-.medcta .acts{margin-top:18px}
-
-.btn .spin{display:none;width:17px;height:17px;border:2.5px solid rgba(255,255,255,.42);
-  border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
-.btn.busy .spin{display:inline-block}
-.btn.busy svg{display:none}
-@keyframes spin{to{transform:rotate(360deg)}}
-.acts{display:flex;flex-wrap:wrap;gap:12px}
