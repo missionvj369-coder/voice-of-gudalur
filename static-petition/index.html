@@ -45,6 +45,90 @@
 </head>
 <body data-i18n-full>
 <a class="skip" href="#main" data-t="skip">Skip to content</a>
+<!-- The intro film: one minute, six scenes - Gudalur at home, the problems
+     that stayed, the moment the change began, temporary fixes becoming
+     permanent, people taking responsibility, the title. `hidden` in the
+     markup: vog-support.js starts it (never without JavaScript, never under
+     prefers-reduced-motion), and while it runs the core site is locked
+     behind it - so a reader without JavaScript meets the site directly. -->
+<div class="intro" id="vogIntro" hidden>
+  <div class="istage" aria-hidden="true">
+    <div class="iscn iscn1"><svg viewBox="0 0 320 190" aria-hidden="true">
+      <circle class="isun" cx="226" cy="76" r="30" fill="#E8A33D"/>
+      <path d="M0 118Q58 88 116 112T234 108T320 118V190H0Z" fill="#163826"/>
+      <path class="ismist" d="M40 102H140M68 114H178" stroke="rgba(247,239,227,.3)" stroke-width="5" stroke-linecap="round" fill="none"/>
+      <path d="M0 148Q72 122 150 144T320 146V190H0Z" fill="#0F2A1D"/>
+      <path d="M0 170Q90 152 180 168T320 166V190H0Z" fill="#0B1410"/>
+      <g fill="#3ED598" opacity=".55"><circle cx="56" cy="166" r="4"/><circle cx="94" cy="172" r="5"/><circle cx="214" cy="170" r="4"/><circle cx="260" cy="164" r="5"/></g>
+    </svg></div>
+    <div class="iscn iscn2"><svg viewBox="0 0 320 190" aria-hidden="true">
+      <rect x="0" y="150" width="320" height="40" fill="#241A10"/>
+      <path d="M34 162l10 10 8-6 10 12M188 166l10 8 12-8" stroke="#3A2C1D" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <g><path d="M34 118a30 30 0 0 1 60 0" fill="none" stroke="#8A725C" stroke-width="7"/>
+         <path d="M38 118v20a26 11 0 0 0 52 0v-20" fill="#1C140C" stroke="#8A725C" stroke-width="6"/>
+         <path d="M52 128l8 8 10-6" stroke="#C65A2E" stroke-width="3" fill="none"/></g>
+      <g stroke="#5C4A38" stroke-width="5" fill="none" stroke-linecap="round"><path d="M150 150V98"/><path d="M150 118l-16-14M150 108l16-16M150 128l13-9"/></g>
+      <g><rect x="196" y="76" width="88" height="74" fill="#3A2C1D" stroke="#5C4A38" stroke-width="4"/>
+         <path d="M196 90h88M196 102h88M196 114h88M196 126h88M196 138h88" stroke="#5C4A38" stroke-width="3"/>
+         <rect x="232" y="132" width="16" height="13" rx="2" fill="#B98A2F"/></g>
+      <g class="isfig"><circle cx="292" cy="152" r="7" fill="#F3E2D5"/>
+         <path d="M292 159v14m0-8l-8 8m8-8l8 7m-8 3l-6 11m6-11l6 11" stroke="#F3E2D5" stroke-width="4" fill="none" stroke-linecap="round"/>
+         <rect x="301" y="160" width="13" height="11" rx="2" fill="#B98A2F"/></g>
+    </svg></div>
+    <div class="iscn iscn3"><svg viewBox="0 0 320 190" aria-hidden="true">
+      <circle cx="160" cy="84" r="56" fill="#C65A2E" opacity=".16"/>
+      <g class="ispaper"><rect x="126" y="40" width="70" height="86" rx="4" fill="#F7EFE3" transform="rotate(-4 161 83)"/>
+         <path d="M138 58h44M138 70h44M138 82h32M138 94h40" stroke="#8A725C" stroke-width="4" stroke-linecap="round" transform="rotate(-4 161 83)"/></g>
+      <g fill="#F3E2D5">
+        <g class="ippl ip1"><circle cx="54" cy="112" r="7"/><path d="M40 136c0-9 6-15 14-15s14 6 14 15z"/></g>
+        <g class="ippl ip2"><circle cx="92" cy="132" r="8"/><path d="M77 158c0-10 7-16 15-16s15 6 15 16z"/></g>
+        <g class="ippl ip3"><circle cx="230" cy="130" r="8"/><path d="M215 156c0-10 7-16 15-16s15 6 15 16z"/></g>
+        <g class="ippl ip4"><circle cx="268" cy="110" r="7"/><path d="M254 134c0-9 6-15 14-15s14 6 14 15z"/></g>
+        <g class="ippl ip5"><circle cx="160" cy="150" r="9"/><path d="M143 178c0-11 8-18 17-18s17 7 17 18z"/></g>
+      </g>
+      <path d="M16 182H304" stroke="rgba(247,239,227,.18)" stroke-width="3"/>
+    </svg></div>
+    <div class="iscn iscn4"><svg viewBox="0 0 320 190" aria-hidden="true">
+      <rect x="0" y="152" width="320" height="38" fill="#13291D"/>
+      <g><path d="M26 120a30 30 0 0 1 60 0" fill="none" stroke="#8A725C" stroke-width="7"/>
+         <path d="M30 120v22a26 11 0 0 0 52 0v-22" fill="#1C140C" stroke="#8A725C" stroke-width="6"/>
+         <rect class="iswater" x="36" y="126" width="40" height="22" rx="4" fill="#3ED598" opacity=".8"/></g>
+      <g class="istree"><path d="M160 154V104" stroke="#8A725C" stroke-width="8" stroke-linecap="round"/>
+         <g class="isleaves"><circle cx="160" cy="86" r="26" fill="#137A4D"/><circle cx="138" cy="102" r="17" fill="#1E8F5E"/><circle cx="182" cy="102" r="17" fill="#1E8F5E"/><circle cx="160" cy="68" r="15" fill="#3ED598" opacity=".9"/></g></g>
+      <g><rect x="228" y="74" width="84" height="78" fill="#3A2C1D" stroke="#5C4A38" stroke-width="4"/>
+         <rect class="isglow" x="232" y="78" width="76" height="70" fill="#E8A33D" opacity="0"/>
+         <g class="isshutter"><rect x="230" y="76" width="80" height="74" fill="#5C4A38"/>
+            <path d="M230 90h80M230 104h80M230 118h80M230 132h80" stroke="#3A2C1D" stroke-width="3"/></g></g>
+    </svg></div>
+    <div class="iscn iscn5"><svg viewBox="0 0 320 190" aria-hidden="true">
+      <circle cx="160" cy="94" r="72" fill="#C65A2E" opacity=".2"/>
+      <g class="iflag"><path d="M52 34V152" stroke="#F7EFE3" stroke-width="5" stroke-linecap="round"/>
+         <g class="iwave"><rect x="56" y="36" width="74" height="13" fill="#FF9933"/>
+            <rect x="56" y="49" width="74" height="13" fill="#F7EFE3"/>
+            <rect x="56" y="62" width="74" height="13" fill="#138808"/>
+            <circle cx="93" cy="55.5" r="5" fill="none" stroke="#1C4B8F" stroke-width="2"/></g></g>
+      <g fill="#F3E2D5">
+        <g class="ifig if1"><circle cx="138" cy="112" r="9"/><path d="M122 142c0-11 7-18 16-18s16 7 16 18z"/><path d="M151 128l10-14" stroke="#F3E2D5" stroke-width="5" stroke-linecap="round"/></g>
+        <g class="ifig if2"><circle cx="186" cy="104" r="9"/><path d="M170 134c0-11 7-18 16-18s16 7 16 18z"/><path d="M174 120l-9-15" stroke="#F3E2D5" stroke-width="5" stroke-linecap="round"/></g>
+        <g class="ifig if3"><circle cx="232" cy="114" r="9"/><path d="M216 144c0-11 7-18 16-18s16 7 16 18z"/><path d="M244 130l10-13" stroke="#F3E2D5" stroke-width="5" stroke-linecap="round"/></g>
+        <g class="ifig if4"><circle cx="278" cy="106" r="9"/><path d="M262 136c0-11 7-18 16-18s16 7 16 18z"/></g>
+      </g>
+      <rect x="0" y="176" width="320" height="14" fill="#0B1410"/>
+    </svg></div>
+    <div class="iscn iscn6"><p class="ititle">Voice of Gudalur</p></div>
+  </div>
+  <div class="icopy">
+    <p class="icpn" data-t="introCap1">Gudalur — our home in the Nilgiris.</p>
+    <p class="icpn" data-t="introCap2">The problems stayed. The young left.</p>
+    <p class="icpn" data-t="introCap3">Until Gudalur said: enough.</p>
+    <p class="icpn" data-t="introCap4">Step by step, the fixes became permanent.</p>
+    <p class="icpn" data-t="introCap5">Not by someone else — by us.</p>
+    <p class="icpn" data-t="introCap6">This is how a change begins.</p>
+  </div>
+  <div class="ibar" aria-hidden="true"><i></i></div>
+  <button type="button" class="iskip" id="vogIntroSkip" data-t="introSkip">Skip</button>
+</div>
+
 
 <header class="top">
   <div class="topbar">
@@ -393,15 +477,15 @@
   </div>
 </footer>
 
-<!-- The song. vog-support.js starts it the moment the page opens: audible
-     where the browser allows that, muted where it does not, with the reader's
-     first touch (Safari, iOS above all) doing the unmute - and the floating
-     button is the permanent mute/unmute control, icon only, no text. The
-     button stays `hidden` in the markup and is revealed by the script, so a
-     reader without JavaScript gets silence instead of a control that does
-     nothing. `loop` + `preload="metadata"` keeps the file off the critical
-     path - it is fetched when it starts, not before the page paints. -->
-<audio id="vogSong" src="/media/gudalur-new-path.m4a" loop preload="metadata"></audio>
+<!-- The song: sixty seconds, played once during the intro film and paused for
+     good when the film ends - there is deliberately no `loop`, so it can never
+     repeat, and nothing on the core site starts it again. vog-support.js
+     attempts audible playback first, falls back to a muted start where the
+     browser forbids sound without a gesture, and lets the reader's first
+     touch (Safari, iOS above all) unmute it. `preload="metadata"` keeps the
+     file off the critical path - it is fetched when it starts, not before
+     the page paints. -->
+<audio id="vogSong" src="/media/gudalur-new-path.m4a" preload="metadata"></audio>
 <button type="button" class="audiobtn" id="vogSongBtn" aria-pressed="false"
   aria-label="Play the background song" data-t-aria="audAria" hidden>
   <svg class="wv" aria-hidden="true" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>

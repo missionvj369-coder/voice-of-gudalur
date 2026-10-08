@@ -14,10 +14,11 @@
                     (vog-lang) the site has used since rev 12. A page marked
                     data-i18n-full on <body> is translated end to end and its
                     <html lang> follows the choice.
-     4. song      - the background song: started on its own when the page opens
-                    (audible where the browser allows that, muted where it does
-                    not, with the reader's first touch doing the unmute) and
-                    muted/unmuted by the floating button.
+     4. intro     - the one-minute film on the homepage, its one-shot song
+                    (attempted aloud, then muted, then unmuted by the first
+                    touch; faded out and paused when the film ends) and the
+                    floating sound button the film carries. The record pages
+                    are never interrupted: no film, no song, no button.
 
    It makes NO network request at all. The support card used to POST a name and
    a WhatsApp number to a Worker and mint a Support ID from the answer; that
@@ -200,35 +201,34 @@
   }
   applyLang();
 
-  /* --- 4. background song ----------------------------------------------------
-     The song starts on its own when the page opens, and the floating button is
-     how the reader mutes and unmutes it. What "on its own" may mean differs by
-     browser, so this runs a ladder:
+  /* --- 4. the intro film, and the song that plays once ----------------------
+     The homepage opens with a one-minute film - Gudalur at home, the problems
+     that stayed, the moment the change began, temporary fixes becoming
+     permanent, people taking responsibility, the title - and only then reveals
+     the core site. The record pages carry no film: a link opened to read a
+     grievance goes straight to the record, and nothing may stand in the way.
+     The markup carries the overlay `hidden`, so without JavaScript (or under
+     prefers-reduced-motion) every reader meets the site directly.
 
-       1. audible playback straight away - Chrome profiles with a high media
-          engagement (a returning visitor, some Android builds) allow this;
-       2. muted playback - the one state every browser permits without any
-          gesture at all;
-       3. the reader's first touch anywhere on the page - the gesture Safari
-          (desktop and iOS alike) insists on before it will unmute anything.
-
-     The button then covers every state: its own click is always a gesture, so
-     the sound can always be turned back on. When the sound is off, the element
-     is paused as well as muted - a file looping silently in the background is
-     a wasted download and a wasted battery on a phone.
-
-     The button stays `hidden` in the markup and is revealed below, so a reader
-     without JavaScript gets silence instead of a control that does nothing.
+     The song plays exactly once, during the film, and never repeats: there is
+     no loop, and finishIntro() fades it out and pauses it for good - nothing
+     on the core site starts it again. What a browser allows unprompted
+     differs: attempt audible first, fall back to muted, and let the reader's
+     first touch unmute - Safari (desktop and iOS alike) insists on that
+     gesture. Skipping the film counts as leaving, not as asking for sound, so
+     the skip button is excluded from that first touch; the sound button
+     toggles itself.
 
      NOTHING IS STORED. The privacy test in tests-static asserts that this file
-     writes exactly one key, vog-lang, and a remembered mute preference would
-     fail it - which is the right answer: a sound preference is not something to
-     keep on someone's phone. Reload, and the song starts on its own again.
+     writes exactly one key, vog-lang, and a remembered preference would fail
+     it - which is the right answer: a preference is not something to keep on
+     someone's phone. Reload, and the film - with its song - starts again.
 
-     Volume is low on purpose. This is background music on a page someone may be
-     reading on a phone in a tea estate; it should never be the loudest thing in
-     the room. */
-  var song = $('vogSong'), songBtn = $('vogSongBtn');
+     Volume is low on purpose. This is music under a one-minute film on a page
+     someone may be watching on a phone in a tea estate; it should never be
+     the loudest thing in the room. */
+  var song = $('vogSong'), songBtn = $('vogSongBtn'),
+      intro = $('vogIntro'), introSkip = $('vogIntroSkip');
 
   /* Called from applyLang() so the button's label follows the chosen language.
      Declared here and hoisted, so applyLang above can already reach it; the
@@ -243,20 +243,19 @@
     songBtn.setAttribute('lang', LANGS[idx]);
   }
 
-  if (song && songBtn) {
-    /* Whether the automatic unmute on the first touch is still pending. */
-    var songArmed = false;
-
+  if (intro && song && songBtn && !reduced) {
+    var introTimers = [], introDone = false, songArmed = false;
     song.volume = 0.28;
+    song.loop = false; /* belt and braces: the markup carries no loop either */
 
-    /* Autoplay can still be refused outright - data-saver mode, low-power
-       mode, or a browser that blocks it. play() returns a promise that
-       rejects in exactly those cases, so it is caught: an unhandled rejection
-       here would be a console error on an otherwise clean page. */
+    /* Autoplay can still be refused outright - data-saver, low power, a
+       browser that allows neither state. play() returns a promise that
+       rejects in exactly those cases, so it is caught: an unhandled
+       rejection here would be a console error on an otherwise clean page. */
     function songPlay() {
       var p = song.play();
       if (p && typeof p.catch === 'function') {
-        p.catch(function () { /* refused: the ladder above decides what is next */ });
+        p.catch(function () { /* refused: the ladder below decides */ });
       }
     }
 
@@ -269,8 +268,9 @@
     }
 
     function songOn() {
+      if (introDone) return; /* the film is over: the core site stays silent */
       songDisarm();
-      song.muted = false;  /* this gesture IS the one the policy wants */
+      song.muted = false;      /* this gesture IS the one the policy wants */
       song.currentTime = 0;
       songBtn.setAttribute('aria-pressed', 'true');
       songPaint();
@@ -280,15 +280,18 @@
     function songOff() {
       songBtn.setAttribute('aria-pressed', 'false');
       song.muted = true;
-      song.pause();        /* off means off - no silent loop burning battery */
+      song.pause();
       songPaint();
     }
 
     function songFirst(ev) {
-      /* A gesture that lands on the button is the button's own business: its
-         click handler below toggles too, and unmute-here followed by
-         toggle-after (touch fires before click) would cancel each other out. */
-      if (ev && ev.target && songBtn.contains(ev.target)) return;
+      /* The first touch anywhere starts the sound - except on the two buttons
+         that speak for themselves: skipping is leaving (and would cut the
+         song a beat later anyway), and the sound button toggles below. */
+      if (!ev || !ev.target) return;
+      if (ev.type === 'keydown' && ev.key === 'Escape') return;
+      if (introSkip && introSkip.contains(ev.target)) return;
+      if (songBtn.contains(ev.target)) return;
       songOn();
     }
 
@@ -300,13 +303,8 @@
       document.addEventListener('keydown', songFirst);
     }
 
-    songBtn.addEventListener('click', function () {
-      var on = songBtn.getAttribute('aria-pressed') === 'true';
-      if (on) songOff(); else songOn();
-    });
-
-    /* Ladder step 1: audible from the very first instant, where the browser
-       allows that. Steps 2 and 3 below run only if it is refused. */
+    /* Ladder step 1: audible from the very first instant where allowed;
+       steps 2 and 3 below run only if that is refused. */
     song.muted = false;
     var firstPlay = song.play();
     if (firstPlay && typeof firstPlay.then === 'function') {
@@ -314,11 +312,10 @@
         songBtn.setAttribute('aria-pressed', 'true'); /* already audible */
         songPaint();
       }, function () {
-        /* Step 2: a muted start needs no gesture... */
-        song.muted = true;
+        song.muted = true; /* step 2: a muted start needs no gesture... */
         songPlay();
-        songPaint();  /* still the "off" icon: nothing has been heard yet */
-        songArm();    /* ...and step 3 unmutes it on the reader's first touch */
+        songPaint();       /* still the "off" icon: nothing has been heard */
+        songArm();         /* ...and step 3 unmutes it on the first touch */
       });
     } else {
       /* A browser whose play() returns no promise behaves like the old
@@ -327,8 +324,72 @@
       songPaint();
     }
 
-    songBtn.hidden = false;
-    songPaint();
-  }
+    songBtn.addEventListener('click', function () {
+      var on = songBtn.getAttribute('aria-pressed') === 'true';
+      if (on) songOff(); else songOn();
+    });
+    song.addEventListener('ended', songOff); /* one play: it simply ends */
 
+    /* --- the film itself --------------------------------------------------- */
+    var SCENES = [0, 8000, 16000, 24000, 38000, 50000]; /* six windows, 60s */
+    var sceneNodes = intro.querySelectorAll('.iscn');
+    var capNodes = intro.querySelectorAll('.icpn');
+    var pageBlocks = document.querySelectorAll('header.top, main, footer');
+
+    function showScene(n) {
+      for (var k = 0; k < sceneNodes.length; k++) {
+        sceneNodes[k].classList.toggle('on', k === n);
+        if (capNodes[k]) capNodes[k].classList.toggle('on', k === n);
+      }
+    }
+
+    function songFadeOut(ms) {
+      songDisarm();
+      var v0 = song.volume, steps = 16, n = 0;
+      var iv = setInterval(function () {
+        n++;
+        song.volume = Math.max(0, v0 * (1 - n / steps));
+        if (n < steps) return;
+        clearInterval(iv);
+        song.pause();
+        try { song.currentTime = 0; } catch (e) { /* not seekable yet */ }
+        song.volume = v0;
+        songOff();
+      }, Math.max(25, Math.floor(ms / steps)));
+    }
+
+    function finishIntro() {
+      if (introDone) return;
+      introDone = true;
+      for (var k = 0; k < introTimers.length; k++) clearTimeout(introTimers[k]);
+      songFadeOut(500);
+      songBtn.hidden = true;
+      intro.classList.remove('run');
+      intro.hidden = true;
+      document.documentElement.classList.remove('ilock');
+      for (var b = 0; b < pageBlocks.length; b++) pageBlocks[b].removeAttribute('inert');
+    }
+
+    function startIntro() {
+      intro.hidden = false;
+      intro.classList.add('run');
+      document.documentElement.classList.add('ilock');
+      for (var b = 0; b < pageBlocks.length; b++) pageBlocks[b].setAttribute('inert', '');
+      showScene(0);
+      for (var s = 1; s < SCENES.length; s++) {
+        (function (n) {
+          introTimers.push(setTimeout(function () { showScene(n); }, SCENES[n]));
+        })(s);
+      }
+      introTimers.push(setTimeout(finishIntro, 60000));
+      if (introSkip) introSkip.addEventListener('click', finishIntro);
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape') finishIntro();
+      });
+      if (introSkip) introSkip.focus();
+      songBtn.hidden = false;
+    }
+
+    startIntro();
+  }
 })();

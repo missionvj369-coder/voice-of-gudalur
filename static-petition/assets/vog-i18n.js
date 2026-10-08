@@ -16,8 +16,9 @@
    and stay as they are in every language, because they are what a person
    types or dials.
 
-   193 keys, 965 strings, five per key. The background-song and news keys are
-   the newest. `newsOut*`, `newsDate*` and `newsH3*` repeat their English in all
+   200 keys, 1000 strings, five per key. The intro-film keys (introCap1-6,
+   introSkip) and the news keys are the newest. `newsOut*`, `newsDate*` and
+   `newsH3*` repeat their English in all
    five slots on purpose: an outlet name and a headline are quotations, and a
    translated quotation is one a reader cannot check against the original.
 
@@ -209,6 +210,13 @@ window.VOG_I18N = {
   newsRead:       ["செய்தியைப் படிக்கவும்", "Read the report", "റിപ്പോർട്ട് വായിക്കുക", "ವರದಿ ಓದಿ", "खबर पढ़ें"],
   audAria:        ["பின்னணிப் பாடலை இயக்கு", "Play the background song", "പശ്ചാത്തല പാട്ട് കടത്തുക", "ಹಿನ್ನೆಲೆ ಹಾಡು ಆಡಿ", "पृष्ठभूमि गाना चलाएँ"],
   audStopAria:    ["பின்னணிப் பாடலை நிறுத்து", "Stop the background song", "പശ്ചാത്തല പാട്ട് നിർത്തുക", "ಹಿನ್ನೆಲೆ ಹಾಡು ನಿಲ್ಲಿಸಿ", "पृष्ठभूमि गाना बंद करें"],
+  introCap1:      ["கூடலூர் — நீலகிரியில் எங்கள் வீடு.", "Gudalur — our home in the Nilgiris.", "ഗൂഡല്ലൂർ — നീലഗിരിയിലെ ഞങ്ങളുടെ വീട്.", "ಗೂಡಲೂರು — ನೀಲಗಿರಿಯಲ್ಲಿ ನಮ್ಮ ಮನೆ.", "गूडलूर — नीलगिरि में हमारा घर।"],
+  introCap2:      ["பிரச்சினைகள் நீடித்தன. இளைஞர்கள் சென்றனர்.", "The problems stayed. The young left.", "പ്രശ്നങ്ങൾ തുടർന്നു. യുവാക്കൾ പോയി.", "ಸಮಸ್ಯೆಗಳು ಉಳಿದವು. ಯುವಕರು ಹೋದರು.", "समस्याएँ बनी रहीं। नौजवान चले गए।"],
+  introCap3:      ["கூடலூர் ‘போதும்’ என்று சொல்லும் வரை.", "Until Gudalur said: enough.", "ഗൂഡല്ലൂർ ‘മതി’ പറയുന്നതുവരെ.", "ಗೂಡಲೂರು ‘ಸಾಕು’ ಹೇಳುವವರೆಗೆ.", "जब तक गूडलूर ने ‘बस’ नहीं कहा।"],
+  introCap4:      ["படிப்படியாக, தீர்வுகள் நிரந்தரமாயின.", "Step by step, the fixes became permanent.", "ഓരോ ഘട്ടംകൊണ്ടും പരിഹാരങ്ങൾ ശാശ്വതമായി.", "ಹಂತ ಹಂತವಾಗಿ, ಪರಿಹಾರಗಳು ಶಾಶ್ವತವಾದವು.", "कदम-दर-कदम, हल स्थायी बन गए।"],
+  introCap5:      ["வேறு யாராலும் அல்ல — நாங்களாகவே.", "Not by someone else — by us.", "മറ്റുള്ളവരാലല്ല — ഞങ്ങൾതന്നെ.", "ಬೇರೆಯವರಿಂದಲ್ಲ — ನಾವೇ.", "किसी और से नहीं — खुद हमसे।"],
+  introCap6:      ["இதுவே ஒரு மாற்றத்தின் தொடக்கம்.", "This is how a change begins.", "ഇതാണ് ഒരു മാറ്റത്തിന്റെ തുടക്കം.", "ಇದೇ ಬದಲಾವಣೆಯ ಆರಂಭ.", "यही है बदलाव की शुरुआत।"],
+  introSkip:      ["தாண்டவும்", "Skip", "വിട്ടേയ്ക്കൂ", "ಬಿಟ್ಟುಬಿಡಿ", "छोड़ें"],
 
   /* --- the reported deaths, one row per article -------------------------------
      The outlet name and the headline stay in the paper's own English in every

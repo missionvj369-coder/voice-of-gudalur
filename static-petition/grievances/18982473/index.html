@@ -290,20 +290,8 @@ Thank you.</pre>
   </div>
 </footer>
 
-<!-- The song. vog-support.js starts it the moment the page opens: audible
-     where the browser allows that, muted where it does not, with the reader's
-     first touch (Safari, iOS above all) doing the unmute - and the floating
-     button is the permanent mute/unmute control, icon only, no text. The
-     button stays `hidden` in the markup and is revealed by the script, so a
-     reader without JavaScript gets silence instead of a control that does
-     nothing. `loop` + `preload="metadata"` keeps the file off the critical
-     path - it is fetched when it starts, not before the page paints. -->
-<audio id="vogSong" src="/media/gudalur-new-path.m4a" loop preload="metadata"></audio>
-<button type="button" class="audiobtn" id="vogSongBtn" aria-pressed="false"
-  aria-label="Play the background song" data-t-aria="audAria" hidden>
-  <svg class="wv" aria-hidden="true" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-  <svg class="mx" aria-hidden="true" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M22 9l-6 6"/><path d="M16 9l6 6"/></svg>
-</button>
+<!-- No film and no song on a record page: a link opened to read a grievance
+     goes straight to the record. -->
 
 <!-- vog-i18n.js first: the copy table. vog-support.js then wires the language
      switcher, the copy buttons and the support form. Both are same-origin and
