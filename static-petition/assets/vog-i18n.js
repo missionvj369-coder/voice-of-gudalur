@@ -16,15 +16,17 @@
    and stay as they are in every language, because they are what a person
    types or dials.
 
-   195 keys, 975 strings, five per key. The background-song and news keys are
+   193 keys, 965 strings, five per key. The background-song and news keys are
    the newest. `newsOut*`, `newsDate*` and `newsH3*` repeat their English in all
    five slots on purpose: an outlet name and a headline are quotations, and a
    translated quotation is one a reader cannot check against the original.
 
-   `audStop` and `audStopAria` appear in no markup. The song button cannot use
-   data-t for them, because its label depends on whether the sound is currently
-   on - a state no attribute can carry - so vog-support.js paints that one
-   button itself and passes the key to t() from a ternary.
+   `audStopAria` appears in no markup. The song button cannot use data-t for
+   its label, because that label depends on whether the sound is currently on -
+   a state no attribute can carry - so vog-support.js paints that one button
+   itself and passes the key to t() from a ternary. The button is icon-only
+   now, so `audLabel` and `audStop` - its old visible text - were removed with
+   the text they labelled.
 
    `supTitle`, `supSubtitle`, `supLabel`, `supHead`, `supIntro`, `recSupIntro`
    and `btnSupport` were removed with the #support section. `supIdLabel`,
@@ -205,8 +207,6 @@ window.VOG_I18N = {
   ],
   newsTag:        ["அச்சிறப்பிட்டபடி", "As reported", "റിപ്പോർട്ട് പ്രകാരം", "ವರದಿಯಂತೆ", "जैसा छपा"],
   newsRead:       ["செய்தியைப் படிக்கவும்", "Read the report", "റിപ്പോർട്ട് വായിക്കുക", "ವರದಿ ಓದಿ", "खबर पढ़ें"],
-  audLabel:       ["பாடலை இயக்கு", "Play song", "പാട്ട് കടത്തുക", "ಹಾಡು ಆಡಿ", "गाना चलाएँ"],
-  audStop:        ["பாடலை நிறுத்து", "Stop song", "പാട്ട് നിർത്തുക", "ಹಾಡು ನಿಲ್ಲಿಸಿ", "गाना बंद करें"],
   audAria:        ["பின்னணிப் பாடலை இயக்கு", "Play the background song", "പശ്ചാത്തല പാട്ട് കടത്തുക", "ಹಿನ್ನೆಲೆ ಹಾಡು ಆಡಿ", "पृष्ठभूमि गाना चलाएँ"],
   audStopAria:    ["பின்னணிப் பாடலை நிறுத்து", "Stop the background song", "പശ്ചാത്തല പാട്ട് നിർത്തുക", "ಹಿನ್ನೆಲೆ ಹಾಡು ನಿಲ್ಲಿಸಿ", "पृष्ठभूमि गाना बंद करें"],
 

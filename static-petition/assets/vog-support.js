@@ -2,7 +2,7 @@
    Voice of Gudalur - the shared behaviour for all three citizen-action pages.
 
    Loaded with a single root-relative src from /, /grievances/18982473/ and
-   /grievances/19177921/, so every page reads its own depth. It does three
+   /grievances/19177921/, so every page reads its own depth. It does four
    things, in this order:
 
      1. reveal    - fades in .rv blocks as they scroll into view. Without JS
@@ -14,6 +14,10 @@
                     (vog-lang) the site has used since rev 12. A page marked
                     data-i18n-full on <body> is translated end to end and its
                     <html lang> follows the choice.
+     4. song      - the background song: started on its own when the page opens
+                    (audible where the browser allows that, muted where it does
+                    not, with the reader's first touch doing the unmute) and
+                    muted/unmuted by the floating button.
 
    It makes NO network request at all. The support card used to POST a name and
    a WhatsApp number to a Worker and mint a Support ID from the answer; that
@@ -197,17 +201,29 @@
   applyLang();
 
   /* --- 4. background song ----------------------------------------------------
-     One rule shapes all of this: a browser will not start audible media on its
-     own. Chrome, Safari and Firefox all require a gesture first. So the song is
-     started muted - that is the only state in which "plays by itself" is true -
-     and the floating button is how the reader turns the sound on. The button
-     stays `hidden` in the markup and is revealed below, so a reader without
-     JavaScript gets silence instead of a control that does nothing.
+     The song starts on its own when the page opens, and the floating button is
+     how the reader mutes and unmutes it. What "on its own" may mean differs by
+     browser, so this runs a ladder:
+
+       1. audible playback straight away - Chrome profiles with a high media
+          engagement (a returning visitor, some Android builds) allow this;
+       2. muted playback - the one state every browser permits without any
+          gesture at all;
+       3. the reader's first touch anywhere on the page - the gesture Safari
+          (desktop and iOS alike) insists on before it will unmute anything.
+
+     The button then covers every state: its own click is always a gesture, so
+     the sound can always be turned back on. When the sound is off, the element
+     is paused as well as muted - a file looping silently in the background is
+     a wasted download and a wasted battery on a phone.
+
+     The button stays `hidden` in the markup and is revealed below, so a reader
+     without JavaScript gets silence instead of a control that does nothing.
 
      NOTHING IS STORED. The privacy test in tests-static asserts that this file
      writes exactly one key, vog-lang, and a remembered mute preference would
      fail it - which is the right answer: a sound preference is not something to
-     keep on someone's phone. Reload, and the song starts muted again.
+     keep on someone's phone. Reload, and the song starts on its own again.
 
      Volume is low on purpose. This is background music on a page someone may be
      reading on a phone in a tea estate; it should never be the loudest thing in
@@ -217,48 +233,101 @@
   /* Called from applyLang() so the button's label follows the chosen language.
      Declared here and hoisted, so applyLang above can already reach it; the
      guard is what makes that safe on the very first call, before `song` is
-     assigned. */
+     assigned. The button is icon-only, so only the aria-label (and the
+     language it is spoken in) needs painting - the visible pair of svgs is
+     switched by CSS off aria-pressed. */
   function songPaint() {
     if (!song || !songBtn) return;
     var on = songBtn.getAttribute('aria-pressed') === 'true';
     songBtn.setAttribute('aria-label', t(on ? 'audStopAria' : 'audAria'));
     songBtn.setAttribute('lang', LANGS[idx]);
-    songBtn.lastElementChild.textContent = t(on ? 'audStop' : 'audLabel');
   }
 
   if (song && songBtn) {
-    song.volume = 0.28;
-    song.muted = true;            /* as a property too, not only the attribute */
+    /* Whether the automatic unmute on the first touch is still pending. */
+    var songArmed = false;
 
-    /* Autoplay can still be refused - data-saver mode, low-power mode, or a
-       browser that blocks it outright. play() returns a promise that rejects in
-       exactly those cases, so it is caught: the button simply waits for a click.
-       An unhandled rejection here would be a console error on an otherwise
-       clean page. */
-    function songStart() {
+    song.volume = 0.28;
+
+    /* Autoplay can still be refused outright - data-saver mode, low-power
+       mode, or a browser that blocks it. play() returns a promise that
+       rejects in exactly those cases, so it is caught: an unhandled rejection
+       here would be a console error on an otherwise clean page. */
+    function songPlay() {
       var p = song.play();
       if (p && typeof p.catch === 'function') {
-        p.catch(function () { /* refused: stay silent, no error surfaces */ });
+        p.catch(function () { /* refused: the ladder above decides what is next */ });
       }
+    }
+
+    function songDisarm() {
+      if (!songArmed) return;
+      songArmed = false;
+      document.removeEventListener('touchstart', songFirst);
+      document.removeEventListener('mousedown', songFirst);
+      document.removeEventListener('keydown', songFirst);
+    }
+
+    function songOn() {
+      songDisarm();
+      song.muted = false;  /* this gesture IS the one the policy wants */
+      song.currentTime = 0;
+      songBtn.setAttribute('aria-pressed', 'true');
+      songPaint();
+      songPlay();
+    }
+
+    function songOff() {
+      songBtn.setAttribute('aria-pressed', 'false');
+      song.muted = true;
+      song.pause();        /* off means off - no silent loop burning battery */
+      songPaint();
+    }
+
+    function songFirst(ev) {
+      /* A gesture that lands on the button is the button's own business: its
+         click handler below toggles too, and unmute-here followed by
+         toggle-after (touch fires before click) would cancel each other out. */
+      if (ev && ev.target && songBtn.contains(ev.target)) return;
+      songOn();
+    }
+
+    function songArm() {
+      if (songArmed) return;
+      songArmed = true;
+      document.addEventListener('touchstart', songFirst, { passive: true });
+      document.addEventListener('mousedown', songFirst);
+      document.addEventListener('keydown', songFirst);
     }
 
     songBtn.addEventListener('click', function () {
       var on = songBtn.getAttribute('aria-pressed') === 'true';
-      if (on) {
-        songBtn.setAttribute('aria-pressed', 'false');
-        song.muted = true;
-        song.pause();
-      } else {
-        songBtn.setAttribute('aria-pressed', 'true');
-        song.muted = false;        /* this click IS the gesture the policy wants */
-        song.currentTime = 0;
-        songStart();
-      }
-      songPaint();
+      if (on) songOff(); else songOn();
     });
 
+    /* Ladder step 1: audible from the very first instant, where the browser
+       allows that. Steps 2 and 3 below run only if it is refused. */
+    song.muted = false;
+    var firstPlay = song.play();
+    if (firstPlay && typeof firstPlay.then === 'function') {
+      firstPlay.then(function () {
+        songBtn.setAttribute('aria-pressed', 'true'); /* already audible */
+        songPaint();
+      }, function () {
+        /* Step 2: a muted start needs no gesture... */
+        song.muted = true;
+        songPlay();
+        songPaint();  /* still the "off" icon: nothing has been heard yet */
+        songArm();    /* ...and step 3 unmutes it on the reader's first touch */
+      });
+    } else {
+      /* A browser whose play() returns no promise behaves like the old
+         synchronous API: assume it started, and let the button correct it. */
+      songBtn.setAttribute('aria-pressed', 'true');
+      songPaint();
+    }
+
     songBtn.hidden = false;
-    songStart();                   /* muted, so this is allowed */
     songPaint();
   }
 

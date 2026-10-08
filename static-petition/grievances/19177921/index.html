@@ -287,17 +287,19 @@ Thank you.</pre>
   </div>
 </footer>
 
-<!-- The song. `muted` is not a stylistic choice: every current browser blocks
-     audible autoplay without a user gesture, so a muted start is the only kind
-     that actually plays by itself. vog-support.js unmutes it the moment the
-     reader asks. `loop` + `preload="metadata"` keeps the file off the critical
+<!-- The song. vog-support.js starts it the moment the page opens: audible
+     where the browser allows that, muted where it does not, with the reader's
+     first touch (Safari, iOS above all) doing the unmute - and the floating
+     button is the permanent mute/unmute control, icon only, no text. The
+     button stays `hidden` in the markup and is revealed by the script, so a
+     reader without JavaScript gets silence instead of a control that does
+     nothing. `loop` + `preload="metadata"` keeps the file off the critical
      path - it is fetched when it starts, not before the page paints. -->
-<audio id="vogSong" src="/media/gudalur-theme.m4a" loop preload="metadata"></audio><script>(function(){var s=document.getElementById("vogSong");if(!s)return;var once=!0;function first(){if(!once)return;once=!1;s.muted=true;s.play().catch(function(){});}document.addEventListener("touchstart",first,{once:!0});document.addEventListener("click",first,{once:!0});})();</script>
+<audio id="vogSong" src="/media/gudalur-new-path.m4a" loop preload="metadata"></audio>
 <button type="button" class="audiobtn" id="vogSongBtn" aria-pressed="false"
   aria-label="Play the background song" data-t-aria="audAria" hidden>
   <svg class="wv" aria-hidden="true" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
   <svg class="mx" aria-hidden="true" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M22 9l-6 6"/><path d="M16 9l6 6"/></svg>
-  <span class="lbl" data-t="audLabel">Play song</span>
 </button>
 
 <!-- vog-i18n.js first: the copy table. vog-support.js then wires the language

@@ -1,4 +1,4 @@
-﻿/* ===========================================================================
+/* ===========================================================================
    Voice of Gudalur — one stylesheet for the three citizen-action pages
    (/, /grievances/18982473/, /grievances/19177921/).
 
@@ -386,11 +386,17 @@ ul,ol{margin:0}
 }
 
 /* --- background music ------------------------------------------------------ */
-.audiobtn{position:fixed;right:clamp(12px,3vw,22px);bottom:clamp(12px,3vw,22px);
-  z-index:15;display:inline-flex;align-items:center;gap:8px;min-height:44px;
-  padding:10px 15px;border-radius:999px;border:1px solid rgba(255,255,255,.28);
+/* Icon-only now: a fixed 44x44 pill. The offsets clear the iPhone home
+   indicator and the rounded corners, since the head sets viewport-fit=cover;
+   the env() fallback keeps the calculation valid on older browsers. */
+.audiobtn{position:fixed;
+  right:calc(clamp(12px,3vw,22px) + env(safe-area-inset-right,0px));
+  bottom:calc(clamp(12px,3vw,22px) + env(safe-area-inset-bottom,0px));
+  z-index:15;display:inline-flex;align-items:center;justify-content:center;
+  min-height:44px;min-width:44px;padding:12px 14px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.28);
   background:rgba(11,20,16,.9);backdrop-filter:blur(8px);color:#fff;
-  font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;
+  cursor:pointer;
   box-shadow:0 8px 26px rgba(0,0,0,.28);transition:transform .18s ease}
 .audiobtn[hidden]{display:none}
 .audiobtn:hover{transform:translateY(-2px)}
@@ -399,4 +405,3 @@ ul,ol{margin:0}
 .audiobtn .wv{display:none}
 .audiobtn[aria-pressed="true"] .wv{display:block}
 .audiobtn[aria-pressed="true"] .mx{display:none}
-.audiobtn .lbl{white-space:nowrap}

@@ -35,9 +35,9 @@
 # the reason it is stated on /docs/* below: with X-Content-Type-Options: nosniff
 # in force, a host that answered an .m4a with application/octet-stream makes the
 # browser download the file instead of playing it - and since the song starts
-# muted and the reader finds out whether it works by pressing the button, that
-# failure looks like a broken button rather than a wrong header.
-/media/gudalur-theme.m4a
+# on its own as soon as the page opens, that failure would land as a silent
+# page rather than a wrong header.
+/media/gudalur-new-path.m4a
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
   Content-Type: audio/mp4
 
