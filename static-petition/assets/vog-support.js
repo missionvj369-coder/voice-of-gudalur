@@ -277,7 +277,10 @@
     function songOn() {
       if (introDone) return; /* the film is over: the core site stays silent */
       song.muted = false;
-      song.currentTime = 0;
+      /* Resume where it left off rather than restarting: the song has been
+         running underneath the film the whole time (muted, in step with the
+         scenes), so unmuting mid-film must stay on that beat, not jump back to
+         the first one. */
       songBtn.setAttribute('aria-pressed', 'true');
       songPaint();
       var p = song.play();
@@ -301,9 +304,11 @@
     function finishIntro() {
       if (introDone) return;
       introDone = true;
+      disarmGesture();
       for (var k = 0; k < introTimers.length; k++) clearTimeout(introTimers[k]);
       songFadeOut(500);
       songBtn.hidden = true;
+      if (introSkip) introSkip.hidden = true;
       intro.classList.remove('run');
       intro.hidden = true;
       lockPage(false);
@@ -328,20 +333,65 @@
       }
       introTimers.push(setTimeout(finishIntro, 60000));
       songBtn.hidden = false;
+      if (introSkip) introSkip.hidden = false;
     }
 
-    /* Autoplay with sound was refused (iOS Safari above all): the film stays on the
-       first frame, muted, until the user unmutes. No tap-to-start prompt. */
+    /* The first-touch unmute. Safari (desktop and iOS alike) refuses to begin
+       sound without a user gesture, so when audible autoplay is refused the film
+       is held muted and this one listener turns the song on at the reader's
+       first touch anywhere. The skip button - which ends the film - and the
+       sound button - which toggles itself - are left out, so a tap on either is
+       never swallowed here. `gestureArmed` guards against the touchstart +
+       mousedown pair that a single tap fires. */
+    var gestureArmed = false;
+    function unlockOnGesture(ev) {
+      var tgt = ev.target;
+      if (tgt && tgt.closest && (tgt.closest('#vogIntroSkip') || tgt.closest('#vogSongBtn'))) {
+        disarmGesture(); /* those controls do their own thing */
+        return;
+      }
+      if (!gestureArmed) return;
+      disarmGesture();
+      if (introDone) return;
+      song.muted = false;
+      songBtn.setAttribute('aria-pressed', 'true');
+      songPaint();
+      var p = song.play();
+      if (p && typeof p.catch === 'function') p.catch(songOff);
+    }
+    function attachGesture() {
+      gestureArmed = true;
+      window.addEventListener('touchstart', unlockOnGesture, { capture: true, passive: true });
+      window.addEventListener('mousedown', unlockOnGesture, { capture: true });
+    }
+    function disarmGesture() {
+      gestureArmed = false;
+      window.removeEventListener('touchstart', unlockOnGesture, { capture: true });
+      window.removeEventListener('mousedown', unlockOnGesture, { capture: true });
+    }
+
+    /* Autoplay with sound was refused (iOS Safari above all): the film runs on
+       its own, muted, while the silent song plays underneath in step with the
+       scenes, and the reader's first touch turns the sound on. There is no
+       tap-to-start prompt - the motion begins by itself. */
     function holdForSound() {
       song.muted = true;
       songPaint();
       runFilm();
+      /* Play the song muted so its timeline matches the film. Muted autoplay is
+         allowed even where audible autoplay is not, so the unmute on the first
+         gesture lands on the right beat instead of restarting the song. */
+      try { song.currentTime = 0; } catch (e) { /* not seekable yet */ }
+      var p = song.play();
+      if (p && typeof p.catch === 'function') p.catch(function () { /* silent hold */ });
+      attachGesture();
     }
 
-    /* Sound by default: try audible autoplay the instant the page opens. Where a
-       browser allows it (desktop, Android) the film runs with sound right away;
-       where it refuses (iOS Safari) the film stays on the first frame, muted,
-       and the user unmutes via the song button. No tap-to-start prompt. */
+    /* Sound by default: try audible autoplay the instant the page opens, from the
+       very first beat. Where a browser allows it (desktop, Android) the film runs
+       with sound right away; where it refuses (iOS Safari) the film runs muted
+       and the reader's first touch anywhere turns the sound on. No tap-to-start
+       prompt. */
     function audible() {
       if (settled) return; settled = true;
       songBtn.setAttribute('aria-pressed', 'true'); /* audible already */
@@ -355,6 +405,7 @@
       holdForSound();
     }
     song.muted = false;
+    try { song.currentTime = 0; } catch (e) { /* not seekable yet */ }
     var firstPlay = song.play();
     if (firstPlay && typeof firstPlay.then === 'function') {
       firstPlay.then(audible, needGesture);
@@ -368,5 +419,15 @@
       if (on) songOff(); else songOn();
     });
     song.addEventListener('ended', songOff); /* one play: it simply ends */
+
+    /* Skip ends the film at once and reveals the site - the same way reaching the
+       60-second mark does. It is a way of leaving the film, not a request for
+       sound, so it does not unmute: the song simply stops. */
+    if (introSkip) {
+      introSkip.addEventListener('click', function () {
+        if (introDone) return;
+        finishIntro();
+      });
+    }
   }
 })();

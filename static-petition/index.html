@@ -125,7 +125,12 @@
     <p class="icpn" data-t="introCap5">Not by someone else — by us.</p>
     <p class="icpn" data-t="introCap6">This is how a change begins.</p>
   </div>
-  
+
+  <!-- Skip the film. Shown by vog-support.js while the film runs, hidden again
+       the moment it ends (or the reader taps it); it ends the film the same way
+       reaching the 60-second mark does. -->
+  <button type="button" class="iskip" id="vogIntroSkip" data-t="introSkip" hidden>Skip</button>
+
   <div class="ibar" aria-hidden="true"><i></i></div>
 </div>
 
