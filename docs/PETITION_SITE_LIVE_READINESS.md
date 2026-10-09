@@ -77,7 +77,7 @@ in their own language, and is not ambushed by audio they turned off last time.
   gate fails if any of those numbers reappear.
 - The English headline is exactly the campaign line: *"WHEN PEOPLE UNITE AS ONE
   UNSTOPPABLE FORCE, NOTHING HAS EVER FAILED."*
-- The CTA is `https://c.org/JnjH68G57Q` with `rel="noopener noreferrer"`, and
+- The CTA is `https://c.org/MfJgz7FNsH` with `rel="noopener noreferrer"`, and
   reads "JOIN THE FORCE & SIGN PETITION #18982473" in English,
   "SIGN PETITION #18982473" in the other four.
 - No emoji or pictographs anywhere in the copy.
@@ -783,7 +783,7 @@ heading, the five-language `supSubtitle`, and a single `SUPPORT` button linking 
 petition:
 
 ```
-https://www.change.org/p/கூடலூர்-வனவிலங்கு-மோதலுக்கு-நிரந்தர-தீர்வு-வேண்டும்-resolve-gudalur-animal-crisis
+https://c.org/MfJgz7FNsH
 ```
 
 The slug came with a `/dashboard/home?met=mg` suffix. That path is the creator's own editor,

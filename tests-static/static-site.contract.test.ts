@@ -141,7 +141,7 @@ describe('the official channels are the primary action', () => {
       const start =
         html.indexOf('id="action"') === -1 ? html.indexOf('tel:1100') : html.indexOf('id="action"');
       expect(start, 'this page has no official channel to anchor the order').toBeGreaterThan(-1);
-      const petition = html.indexOf('https://www.change.org/p/');
+      const petition = html.indexOf('https://c.org/MfJgz7FNsH');
       expect(petition).toBeGreaterThan(-1);
       expect(start).toBeLessThan(petition);
     }
@@ -262,7 +262,7 @@ describe('no cross-origin request at all, and none added by accident', () => {
       'https://www.instagram.com',
       'https://www.facebook.com',
       'https://mail.google.com',
-      'https://www.change.org',
+      'https://c.org',
       /* The news section links to the reports it quotes. These are two named
          publications, added deliberately and nothing else: the point of this
          list is that a reader can see every destination before clicking, so a
@@ -330,7 +330,7 @@ describe('the page still works with JavaScript switched off', () => {
   it('the petition is still one click away, as a plain link out', () => {
     for (const html of ALL_PAGES) {
       expect(html).not.toMatch(/<form\b/);
-      expect(html).toMatch(/href="https:\/\/www\.change\.org\/p\/[^"]+"/);
+      expect(html).toMatch(/href="https:\/\/c\.org\/MfJgz7FNsH"/);
       expect(html).toMatch(/target="_blank" rel="noopener noreferrer"/);
     }
   });

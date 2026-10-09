@@ -6,7 +6,7 @@ Allow: /
 Disallow:
 
 # Sitemaps
-Sitemap: https://onegudalur.org/sitemap.xml
+Sitemap: https://voiceofgudalur.space/sitemap.xml
 
 # Crawl-delay for polite crawling
 Crawl-delay: 5
