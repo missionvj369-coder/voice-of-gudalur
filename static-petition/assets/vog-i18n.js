@@ -16,8 +16,8 @@
    and stay as they are in every language, because they are what a person
    types or dials.
 
-   200 keys, 1000 strings, five per key. The intro-film keys (introCap1-6,
-   introSkip) and the news keys are the newest. `newsOut*`, `newsDate*` and
+   201 keys, 1005 strings, five per key. The intro-film keys (introCap1-6,
+   introSkip, introStart) and the news keys are the newest. `newsOut*`, `newsDate*` and
    `newsH3*` repeat their English in all
    five slots on purpose: an outlet name and a headline are quotations, and a
    translated quotation is one a reader cannot check against the original.
@@ -217,6 +217,7 @@ window.VOG_I18N = {
   introCap5:      ["வேறு யாராலும் அல்ல — நாங்களாகவே.", "Not by someone else — by us.", "മറ്റുള്ളവരാലല്ല — ഞങ്ങൾതന്നെ.", "ಬೇರೆಯವರಿಂದಲ್ಲ — ನಾವೇ.", "किसी और से नहीं — खुद हमसे।"],
   introCap6:      ["இதுவே ஒரு மாற்றத்தின் தொடக்கம்.", "This is how a change begins.", "ഇതാണ് ഒരു മാറ്റത്തിന്റെ തുടക്കം.", "ಇದೇ ಬದಲಾವಣೆಯ ಆರಂಭ.", "यही है बदलाव की शुरुआत।"],
   introSkip:      ["தாண்டவும்", "Skip", "വിട്ടേയ്ക്കൂ", "ಬಿಟ್ಟುಬಿಡಿ", "छोड़ें"],
+  introStart:     ["ஒலியுடன் தொடங்க தொடவும்", "Tap to start with sound", "ശബ്ദത്തോടെ തുടങ്ങാൻ തൊടൂ", "ಧ್ವನಿಯೊಂದಿಗೆ ಪ್ರಾರಂಭಿಸಲು ತಟ್ಟಿ", "ध्वनि के साथ शुरू करने के लिए छुएँ"],
 
   /* --- the reported deaths, one row per article -------------------------------
      The outlet name and the headline stay in the paper's own English in every

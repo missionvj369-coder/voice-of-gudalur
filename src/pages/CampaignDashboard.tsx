@@ -1,0 +1,309 @@
+/**
+ * Voice of Gudalur — Public Campaign Dashboard (view-only).
+ *
+ * This is the single public frontpage. It is INTENTIONALLY read-only:
+ *   • No sign-up / login / registration forms
+ *   • No media gallery (posters, videos)
+ *   • No action buttons (signing lives in the new app)
+ *   • No menus — the Shell renders a clean header only
+ *
+ * Live data is pulled from /stats.json every 15 seconds. The frontend NEVER
+ * queries CockroachDB directly — it only reads the authoritative JSON served
+ * by the backend from the maintained petition_stats aggregate.
+ */
+import React from 'react';
+import { useLanguage } from '../context/LanguageContext';
+import { petitionApi } from '../services/api';
+import { GrievanceTicket } from '../components/GrievanceTicket';
+import { CorridorMap } from '../components/CorridorMap';
+import { ActivismHero } from '../components/ActivismHero';
+import { Vision2035Section } from '../components/Vision2035Section';
+import { useNavigate } from 'react-router-dom';
+import { Users, Globe, BarChart3, Activity, ScrollText, PenLine } from 'lucide-react';
+
+interface DashboardStats {
+  total: number;
+  signers: number;       // residents who signed the petition (Gudalur + Outside)
+  validations: number;
+  communityReach: number;
+  external: number;      // external supporters
+  gudalur: number;
+  outsideGudalur: number;
+  places: Array<{ place: string; count: number }>;
+  updatedAt: string;
+}
+
+/** Format a number with Indian-thousands separators. */
+function fmt(n: number): string {
+  return n.toLocaleString('en-IN');
+}
+
+/** Animated counter that ticks toward a target value (ease-out). */
+function AnimatedCount({ value }: { value: number }) {
+  const start = React.useRef<number | null>(null);
+  const [display, setDisplay] = React.useState(value);
+  React.useEffect(() => {
+    if (value === display) return;
+    const begin = display;
+    const delta = value - begin;
+    const animate = (t: number) => {
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(Math.round(begin + delta * eased));
+      if (t < 1) requestAnimationFrame(() => animate(t + 1 / 25));
+    };
+    requestAnimationFrame(() => animate(0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  return <>{fmt(display)}</>;
+}
+
+export const CampaignDashboard: React.FC = () => {
+  const { t } = useLanguage();
+  const navigate = useNavigate();
+  const POLL_INTERVAL = 15_000; // 15 seconds per spec
+
+  const [stats, setStats] = React.useState<DashboardStats | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let alive = true;
+    let timer: ReturnType<typeof setInterval>;
+
+    // Snapshot-first via petitionApi.signStats() (CDN-cached /data/stats.json),
+    // then live /stats.json endpoint. On Netlify the SPA fallback would
+    // otherwise intercept /stats.json and return HTML instead of JSON.
+    const fetchStats = async () => {
+      try {
+        // 1) Snapshot-first: instant, always available, no DB hit. The snapshot
+        //    already carries the full metric set (gudalur/outside split, reach).
+        const snap = await petitionApi.signStats();
+        if (alive && snap) {
+          const next: DashboardStats = {
+            total: Number(snap.total) || 0,
+            signers: Number(snap.signers ?? snap.total) || 0,
+            validations: Number(snap.validations ?? snap.total) || 0,
+            communityReach: Number(snap.communityReach ?? snap.total) || 0,
+            external: Number(snap.external ?? 0) || 0,
+            gudalur: Number(snap.gudalur ?? 0) || 0,
+            outsideGudalur: Number(snap.outsideGudalur ?? 0) || 0,
+            places: snap.places ?? [],
+            updatedAt: snap.updatedAt || new Date().toISOString(),
+          };
+          // Monotonic counters: never let a partial source regress a good value.
+          setStats((prev) => (prev && next.total < prev.total ? prev : next));
+          setLoading(false);
+          return;
+        }
+      } catch { /* snapshot unavailable — fall through to live */ }
+
+      // 2) Live endpoint (serverless function, needs DB).
+      try {
+        const res = await fetch('/stats.json', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const ct = res.headers.get('content-type') ?? '';
+        if (!ct.startsWith('application/json')) throw new Error('Not JSON');
+        const data: DashboardStats = await res.json();
+        if (alive) {
+          // Monotonic: a live response may lag the snapshot — never regress.
+          setStats((prev) => (prev && Number(data?.total) < prev.total ? prev : data));
+          setLoading(false);
+        }
+      } catch {
+        setLoading(false); // never flash to zero on network blip — keep last stats
+      }
+    };
+
+    void fetchStats();
+    timer = setInterval(fetchStats, POLL_INTERVAL);
+    return () => { alive = false; clearInterval(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const total = stats?.total ?? 0;
+  const signers = stats?.signers ?? 0;
+  const gudalur = stats?.gudalur ?? 0;
+  const outsideGudalur = stats?.outsideGudalur ?? 0;
+  const validations = stats?.validations ?? 0;
+  const communityReach = stats?.communityReach ?? 0;
+  const external = stats?.external ?? 0;
+
+  return (
+    <div className="mx-auto max-w-4xl space-y-4 pb-16">
+      {/* ── Hero: the demand, not the number. ── */}
+      <ActivismHero />
+
+      {/* ── Hero: live signature counter ── */}
+      <div className="text-center space-y-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest text-[#9CA3AF]">
+            {t('home.live').replace('{n}', fmt(total))}
+          </p>
+          {/* A <p>, not an <h1>: the page's single h1 is the activist headline in
+              <ActivismHero /> above. Two h1s per document confuses screen-reader
+              users navigating by heading and dilutes the document outline. */}
+          <p className="text-5xl font-black text-[#E8F5E9] tracking-tighter leading-tight mt-1">
+            <AnimatedCount value={total} />
+          </p>
+          <p className="text-sm text-[#9CA3AF] mt-1">
+            {loading ? t('home.loading') : `${stats?.updatedAt || ''}`}
+          </p>
+        </div>
+
+        {/* Pulse dot + LIVE indicator */}
+        <div className="flex items-center gap-2 mt-1">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8DC63F] opacity-60"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#AED581]"></span>
+          </span>
+          <span className="text-[10px] font-black text-[#AED581] uppercase tracking-widest">LIVE</span>
+        </div>
+      </div>
+
+       {/* ── Top-line numbers: Petitions Signed + Supporters ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 mb-2">
+          {/* Petitions Signed — the Right-to-Life sign ledger */}
+          <div className="rounded-xl border border-[#1B5E20]/40 bg-[#1B5E20]/20 backdrop-blur-sm p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#A5D6A7] mb-1">
+              {t('home.petitions')}
+            </p>
+            <h2 className="text-4xl font-bold text-[#E8F5E9]">
+              <AnimatedCount value={signers} />
+            </h2>
+            <p className="text-sm text-[#9CA3AF] mt-1">
+              {gudalur} from Gudalur · {outsideGudalur} from outside · {validations} validations
+            </p>
+          </div>
+
+          {/* Supporters — external (non-resident) supporters */}
+          <div className="rounded-xl border border-[#1B5E20]/40 bg-[#1B5E20]/20 backdrop-blur-sm p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#A5D6A7] mb-1">
+              {t('home.supporters')}
+            </p>
+            <h2 className="text-4xl font-bold text-[#E8F5E9]">
+              <AnimatedCount value={external} />
+            </h2>
+            <p className="text-sm text-[#9CA3AF] mt-1">
+              {t('home.supportersSub')}
+            </p>
+          </div>
+        </div>
+
+        {/* ── BREAKDOWN CARDS ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+          <MetricCard
+            icon={<Users size={20} className="text-[#A7F3D0]" />}
+            label="Gudalur (Nilgiris)"
+            value={gudalur}
+            sub="Petition signers from Gudalur taluk"
+          />
+          <MetricCard
+            icon={<Users size={20} className="text-[#6EE7B7]" />}
+            label="Outside Gudalur"
+            value={outsideGudalur}
+            sub="Residents outside The Nilgiris"
+          />
+          <MetricCard
+            icon={<Globe size={20} className="text-[#D1FAE5]" />}
+            label="Community Reach"
+            value={communityReach}
+            sub="Signed + external supporters"
+          />
+        </div>
+
+       {/* ── GUDALUR VISION 2035 ───────────────────────────────────────────
+           Sits directly under the live action tracker ON PURPOSE: the
+           tracker says "this many people are already in", and this says
+           "here is what they are in it for". Phase 1 (the grievance) is
+           called out at the top of the section before the vision itself. */}
+        <Vision2035Section />
+
+       {/* ── About the Movement (from media/about — brought to front page) ── */}
+       <section className="space-y-6">
+         <div className="text-center">
+           <h2 className="text-2xl font-serif font-bold text-[#E8F5E9]">
+             {t('abt.title')}
+           </h2>
+           <p className="text-sm text-[#9CA3AF] mt-1">{t('abt.sub')}</p>
+         </div>
+
+         {/* Why Voice of Gudalur exists */}
+         <div className="rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8 space-y-4">
+           <h3 className="text-xl font-serif font-bold text-[#F5F5F5]">
+             {t('abt.why_title')}
+           </h3>
+           <p className="text-sm text-[#E6F7E6] leading-relaxed">{t('abt.why_1')}</p>
+           <p className="text-sm text-[#E6F7E6] leading-relaxed">{t('abt.why_2')}</p>
+           <p className="text-sm text-[#E6F7E6] leading-relaxed">{t('abt.why_3')}</p>
+         </div>
+
+         {/* Closed-corridor GIS map */}
+         <div className="rounded-3xl border border-white/10 bg-white/5 p-6 space-y-4">
+           <h3 className="text-xl font-serif font-bold text-[#F5F5F5]">
+             {t('abt.corr_title')}
+           </h3>
+           <p className="text-sm text-[#E6F7E6]">{t('abt.corr_sub')}</p>
+           <CorridorMap />
+         </div>
+
+         {/* Grievance ALREADY SUBMITTED */}
+         <GrievanceTicket />
+
+         {/* Privacy note */}
+         <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center">
+           <p className="text-xs text-[#AED581]/80 leading-relaxed max-w-xl mx-auto">
+             {t('abt.privacy')}
+           </p>
+         </div>
+
+         {/* Support this grievance — sign petition CTA */}
+         <div className="rounded-3xl border border-amber-200/40 bg-gradient-to-br from-amber-50/90 to-orange-50/80 p-6 text-center space-y-4">
+           <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
+             <ScrollText size={26} className="text-white" />
+           </div>
+           <h3 className="text-lg font-black text-slate-800">{t('abt.support_title')}</h3>
+           <p className="text-sm text-slate-700 max-w-md mx-auto">{t('abt.support_sub')}</p>
+           <p className="text-xs text-slate-500">{t('abt.grv_btn')}</p>
+           <button
+             type="button"
+             onClick={() => navigate('/sign-petition')}
+             className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:opacity-95 cursor-pointer"
+           >
+             <PenLine size={16} /> {t('abt.sign_cta')}
+           </button>
+           <p className="text-xs text-slate-400">{t('abt.grv_note')}</p>
+         </div>
+       </section>
+     </div>
+  );
+};
+
+export default CampaignDashboard;
+
+/** ── Metric card sub-component ── */
+function MetricCard({
+  icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  sub: string;
+}) {
+  return (
+    <div className="rounded-xl border border-[#AED581]/30 bg-[#0A3D0A]/60 p-2.5 text-center">
+      <div className="flex items-center justify-center gap-1 mb-1">
+        {icon}
+        <span className="text-[10px] font-bold text-[#AED581] uppercase tracking-widest">
+          {label}
+        </span>
+      </div>
+      <div className="text-xl font-black text-[#FDE047] tracking-tight">
+        {fmt(value)}
+      </div>
+      <p className="text-[10px] text-[#C8E6C9] mt-0.5">{sub}</p>
+    </div>
+  );
+}
+

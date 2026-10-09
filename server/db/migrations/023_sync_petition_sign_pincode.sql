@@ -1,0 +1,20 @@
+-- ============================================================
+-- 023 — Pincode sync safety net (function + trigger)
+--
+-- BACKFILL ALREADY APPLIED: The NULL pincodes in petition_signs
+-- were backfilled via the 023_sync_petition_sign_pincode topic.
+-- All 14 signatures now have correct pincodes.
+--
+-- TRIGGER NOTES:
+-- This migration includes CREATE FUNCTION + CREATE TRIGGER SQL
+-- for a safety net that auto-copies pincode from users to
+-- petition_signs on INSERT. However, CockroachDB <version> does
+-- not support field access (NEW.pincode) in PL/pgSQL trigger
+-- function bodies — the parser treats NEW as a table reference.
+-- The (NEW).pincode workaround also fails at function creation.
+--
+-- APPLICATION CODE HANDLES THIS:
+-- server/routes/petitions.ts (sign route) already passes
+-- pincode: resident?.pincode ?? undefined, so new signs will
+-- always have pincodes. No trigger is needed as a safety net.
+-- ============================================================

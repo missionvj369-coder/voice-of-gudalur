@@ -125,6 +125,10 @@
     <p class="icpn" data-t="introCap5">Not by someone else — by us.</p>
     <p class="icpn" data-t="introCap6">This is how a change begins.</p>
   </div>
+  <button type="button" class="iplay" id="vogIntroPlay" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>
+    <span data-t="introStart">Tap to start with sound</span>
+  </button>
   <div class="ibar" aria-hidden="true"><i></i></div>
   <button type="button" class="iskip" id="vogIntroSkip" data-t="introSkip">Skip</button>
 </div>
@@ -477,15 +481,16 @@
   </div>
 </footer>
 
-<!-- The song: sixty seconds, played once during the intro film and paused for
-     good when the film ends - there is deliberately no `loop`, so it can never
-     repeat, and nothing on the core site starts it again. vog-support.js
-     attempts audible playback first, falls back to a muted start where the
-     browser forbids sound without a gesture, and lets the reader's first
-     touch (Safari, iOS above all) unmute it. `preload="metadata"` keeps the
-     file off the critical path - it is fetched when it starts, not before
-     the page paints. -->
-<audio id="vogSong" src="/media/gudalur-new-path.m4a" preload="metadata"></audio>
+<!-- The song: sixty seconds of AAC in .m4a - the one combination every browser
+     here decodes, Safari and iOS included (the previous file was Opus-in-.m4a,
+     which plays nowhere on Apple hardware). Played once during the intro
+     film, never repeated: no `loop`, and vog-support.js fades it out and
+     pauses it for good when the film ends. Sound starts unmuted, but every
+     browser - Safari most strictly - demands a tap before a decibel, so the
+     film holds on a tap-to-start prompt and the tap that begins it carries
+     the sound with it. `preload="auto"` buffers during that hold, so the
+     first downbeat lands on the tap instead of after it. -->
+<audio id="vogSong" src="/media/gudalur-new-path.m4a" preload="auto"></audio>
 <button type="button" class="audiobtn" id="vogSongBtn" aria-pressed="false"
   aria-label="Play the background song" data-t-aria="audAria" hidden>
   <svg class="wv" aria-hidden="true" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>

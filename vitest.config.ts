@@ -1,0 +1,19 @@
+import { defineConfig } from 'vitest/config';
+
+// Vitest config — unit tests only (fast, hermetic).
+// Playwright E2E lives in /tests and is run separately (npx playwright test).
+// tests-static/ holds the contract test for the published site in
+// /static-petition, which vitest reads straight off disk as text.
+export default defineConfig({
+  test: {
+    include: ['src/**/*.test.{ts,tsx}', 'server/**/*.test.ts', 'tests-static/**/*.test.ts'],
+    exclude: ['node_modules/**', 'dist/**', 'tests/**'],
+    environment: 'node',
+    reporters: ['default'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/lib/**', 'src/services/**'],
+      reporter: ['text', 'json', 'html'],
+    },
+  },
+});

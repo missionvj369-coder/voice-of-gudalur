@@ -1,0 +1,19 @@
+# Voice of Gudalur — local staging verification of the production image.
+# Mirrors how Coolify will run the container (env injected, one persistent
+# process, healthcheck, graceful stop). NOT a production deployment file:
+# real deployments get their environment from Coolify, never from this file.
+services:
+  app:
+    build: .
+    image: voice-of-gudalur:staging
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Cloudflare → Coolify Traefik → container is ONE proxy hop.
+      TRUST_PROXY_HOPS: "1"
+    stop_grace_period: 30s
+    restart: unless-stopped

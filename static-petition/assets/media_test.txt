@@ -1,0 +1,21 @@
+﻿
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90mD:/voice of gudalur[39m
+
+ [32mΓ£ô[39m server/routes/media.contract.test.ts[2m > [22memergency media regression pins[2m > [22m/api/media/:id/file never issues a permanent 301[32m 3[2mms[22m[39m
+ [32mΓ£ô[39m server/routes/media.contract.test.ts[2m > [22memergency media regression pins[2m > [22mredirect responses are no-store (expiring URLs are never pinned)[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m server/routes/media.contract.test.ts[2m > [22memergency media regression pins[2m > [22mpublic list is whitelisted via the presenter and hard-bounded[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m server/routes/media.contract.test.ts[2m > [22memergency media regression pins[2m > [22mpublic-grant diagnostic is admin-only and leaks no credentials[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m server/routes/media.contract.test.ts[2m > [22memergency media regression pins[2m > [22mservice worker cache is versioned and error pages are never cached[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m server/routes/media.contract.test.ts[2m > [22memergency media regression pins[2m > [22mexternal supporter flow remains intact[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m server/routes/media.contract.test.ts[2m > [22memergency media regression pins[2m > [22mAadhaar-gated signing remains intact[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m server/routes/media.contract.test.ts[2m > [22memergency media regression pins[2m > [22mSignPetitionPage fetches a bounded window and never blocks on media[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m server/routes/media.contract.test.ts[2m > [22memergency media regression pins[2m > [22mgallery cards never auto-preload video and fail independently[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m server/routes/media.contract.test.ts[2m > [22memergency media regression pins[2m > [22mpublic-grant health probe is bounded and cached (not per item)[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m server/routes/media.contract.test.ts[2m > [22memergency media regression pins[2m > [22mpublic aggregate reads are TTL-cached (manifesto + wildlife) with edge headers[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m server/routes/media.contract.test.ts[2m > [22memergency media regression pins[2m > [22m/api/wildlife/voice stays public (no auth introduced by caching)[32m 0[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m12 passed[39m[22m[90m (12)[39m
+[2m   Start at [22m 01:19:48
+[2m   Duration [22m 503ms[2m (transform 51ms, setup 0ms, import 80ms, tests 9ms, environment 1ms)[22m
+
