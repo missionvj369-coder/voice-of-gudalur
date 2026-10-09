@@ -1,0 +1,64 @@
+﻿
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90mD:/voice of gudalur[39m
+
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mno WhatsApp support flow anywhere[2m > [22mhome has no WhatsApp link[32m 3[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mno WhatsApp support flow anywhere[2m > [22mgr18982473 has no WhatsApp link[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mno WhatsApp support flow anywhere[2m > [22mgr19177921 has no WhatsApp link[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mno WhatsApp support flow anywhere[2m > [22mthe shared script has no WhatsApp link[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mno WhatsApp support flow anywhere[2m > [22mnothing offers to send or share a Support ID[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mno WhatsApp support flow anywhere[2m > [22mthe language table carries no WhatsApp flow strings[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe official channels are the primary action[2m > [22mhome links to the CM Helpline on 1100[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe official channels are the primary action[2m > [22mhome cites the CM Helpline FAQ it relies on[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe official channels are the primary action[2m > [22mgr18982473 links to the CM Helpline on 1100[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe official channels are the primary action[2m > [22mgr18982473 cites the CM Helpline FAQ it relies on[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe official channels are the primary action[2m > [22mgr19177921 links to the CM Helpline on 1100[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe official channels are the primary action[2m > [22mgr19177921 cites the CM Helpline FAQ it relies on[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe official channels are the primary action[2m > [22mthe homepage offers a follow-up by email for both grievances[32m 3[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe official channels are the primary action[2m > [22mevery email address is the one the Helpline publishes[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe official channels are the primary action[2m > [22mthe record pages stay a two-step route, without the portal step[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe official channels are the primary action[2m > [22mthe official channels come before any petition link in the source order[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mgrievance facts stay sourced and never cross over[2m > [22mthe homepage and the records name both grievance IDs[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mgrievance facts stay sourced and never cross over[2m > [22mthe two loss figures are labelled with the record they came from[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mgrievance facts stay sourced and never cross over[2m > [22m#19177921 does not borrow the figures from #18982473[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mgrievance facts stay sourced and never cross over[2m > [22mno page asserts a status for either grievance[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mgrievance facts stay sourced and never cross over[2m > [22mthe registry and the pages agree, letter for letter[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mgrievance facts stay sourced and never cross over[2m > [22mneither letter claims an outcome[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mprivacy: no personal data is collected, and none is stored[2m > [22mthe pages say the personal details are withheld[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mprivacy: no personal data is collected, and none is stored[2m > [22mno page publishes a Support ID-shaped example[32m 0[2mms[22m[39m
+ [31m├ù[39m tests-static/static-site.contract.test.ts[2m > [22mprivacy: no personal data is collected, and none is stored[2m > [22mthe script stores the language choice and nothing else[32m 9[2mms[22m[39m
+[31m   ΓåÆ expected Set{ undefined } to deeply equal Set{ 'vog-lang' }[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mprivacy: no personal data is collected, and none is stored[2m > [22mthe script makes no request of its own[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mprivacy: no personal data is collected, and none is stored[2m > [22mno page collects a name or a number any more[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mprivacy: no personal data is collected, and none is stored[2m > [22mthe form never asks for a government credential[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mno cross-origin request at all, and none added by accident[2m > [22mconnect-src names nothing off-origin, because the page fetches nothing[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mno cross-origin request at all, and none added by accident[2m > [22mthe only cross-origin destinations are links a reader opens themselves[32m 2[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mno cross-origin request at all, and none added by accident[2m > [22mevery absolute URL on the pages is an expected one[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mno cross-origin request at all, and none added by accident[2m > [22mthe stylesheet pulls in nothing remote[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mno cross-origin request at all, and none added by accident[2m > [22massets are referenced root-relative so both page depths work[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mno cross-origin request at all, and none added by accident[2m > [22mthe record pages are covered by a revalidate-every-time cache rule[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe page still works with JavaScript switched off[2m > [22mhome carries its own copy, not just an empty shell[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe page still works with JavaScript switched off[2m > [22mhome has no duplicate element ids[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe page still works with JavaScript switched off[2m > [22mhome opens every external link safely[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe page still works with JavaScript switched off[2m > [22mgr18982473 carries its own copy, not just an empty shell[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe page still works with JavaScript switched off[2m > [22mgr18982473 has no duplicate element ids[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe page still works with JavaScript switched off[2m > [22mgr18982473 opens every external link safely[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe page still works with JavaScript switched off[2m > [22mgr19177921 carries its own copy, not just an empty shell[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe page still works with JavaScript switched off[2m > [22mgr19177921 has no duplicate element ids[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe page still works with JavaScript switched off[2m > [22mgr19177921 opens every external link safely[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe page still works with JavaScript switched off[2m > [22mthe petition is still one click away, as a plain link out[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe page still works with JavaScript switched off[2m > [22mno page carries the removed support section back[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe page still works with JavaScript switched off[2m > [22mthe reveal animation can never leave content invisible[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe language table matches the markup it is meant to translate[2m > [22mevery data-t key used on a page exists in the table[32m 9[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe language table matches the markup it is meant to translate[2m > [22mthe English column matches the static text, so no-JS readers are served[32m 6[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe language table matches the markup it is meant to translate[2m > [22mthe table is still five languages, indexed Tamil first[32m 10[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe citizen-action structure is the same on every page[2m > [22mevery page carries the full-page marker and the masthead language row[32m 1[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe citizen-action structure is the same on every page[2m > [22mno page links to the status section that no longer exists[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe citizen-action structure is the same on every page[2m > [22mthe home hero carries the grievances anchor the record pages point at[32m 0[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe citizen-action structure is the same on every page[2m > [22mthe three published PDFs exist, are real PDFs, and home offers each[32m 3[2mms[22m[39m
+ [32mΓ£ô[39m tests-static/static-site.contract.test.ts[2m > [22mthe citizen-action structure is the same on every page[2m > [22mthe PDFs get a cache rule of their own[32m 0[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m53 passed[39m[22m[90m (54)[39m
+[2m   Start at [22m 01:20:04
+[2m   Duration [22m 567ms[2m (transform 80ms, setup 0ms, import 118ms, tests 69ms, environment 0ms)[22m
+
