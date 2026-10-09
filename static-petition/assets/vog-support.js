@@ -274,6 +274,18 @@
       songPaint();
     }
 
+    /* Call play() without ever throwing. Old iOS Safari rejects autoplay by
+       throwing synchronously rather than rejecting a promise, and an unguarded
+       throw inside a gesture or a timer callback would abort the rest of that
+       callback. Returns the play() promise when there is one, else null. */
+    function tryPlay() {
+      try {
+        return song.play();
+      } catch (e) {
+        return null;
+      }
+    }
+
     function songOn() {
       if (introDone) return; /* the film is over: the core site stays silent */
       song.muted = false;
@@ -283,7 +295,7 @@
          the first one. */
       songBtn.setAttribute('aria-pressed', 'true');
       songPaint();
-      var p = song.play();
+      var p = tryPlay();
       if (p && typeof p.catch === 'function') p.catch(songOff);
     }
 
@@ -356,7 +368,7 @@
       song.muted = false;
       songBtn.setAttribute('aria-pressed', 'true');
       songPaint();
-      var p = song.play();
+      var p = tryPlay();
       if (p && typeof p.catch === 'function') p.catch(songOff);
     }
     function attachGesture() {
@@ -382,7 +394,7 @@
          allowed even where audible autoplay is not, so the unmute on the first
          gesture lands on the right beat instead of restarting the song. */
       try { song.currentTime = 0; } catch (e) { /* not seekable yet */ }
-      var p = song.play();
+      var p = tryPlay();
       if (p && typeof p.catch === 'function') p.catch(function () { /* silent hold */ });
       attachGesture();
     }
@@ -406,12 +418,22 @@
     }
     song.muted = false;
     try { song.currentTime = 0; } catch (e) { /* not seekable yet */ }
-    var firstPlay = song.play();
+    /* tryPlay() never throws (old iOS Safari refuses autoplay by throwing
+       synchronously, which would otherwise tear down this whole script - no
+       film, no animation, no switcher). It returns a promise on modern
+       browsers, undefined on old ones that started without one, or null when
+       the call was refused outright. */
+    var firstPlay = tryPlay();
     if (firstPlay && typeof firstPlay.then === 'function') {
       firstPlay.then(audible, needGesture);
       setTimeout(needGesture, 700); /* if play() neither settles, fall back to muted */
+    } else if (firstPlay) {
+      /* No promise (old Safari): it did not throw, so assume the audible
+         autoplay it returned undefined for actually began. */
+      audible();
     } else {
-      audible(); /* old synchronous play(): assume it started */
+      /* play() threw: autoplay was refused outright. Fall back to muted. */
+      needGesture();
     }
 
     songBtn.addEventListener('click', function () {

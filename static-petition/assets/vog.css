@@ -423,7 +423,7 @@ ul,ol{margin:0}
 .istage{position:absolute;top:0;right:0;left:0;bottom:28%;display:flex;align-items:center;justify-content:center}
 .iscn{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;align-items:center;justify-content:center;
   will-change:opacity,transform;
-  opacity:0;transition:opacity .9s ease}
+  opacity:0;-webkit-transition:opacity .9s ease;transition:opacity .9s ease}
 .iscn svg{width:min(88vw,540px);height:auto;max-height:100%;display:block}
 .intro.run .iscn.on{opacity:1}
 .icopy{position:relative;z-index:2;min-height:5.6em}
@@ -432,7 +432,7 @@ ul,ol{margin:0}
   margin:0 auto;max-width:30ch;text-align:center;color:#F7EFE3;
   font-size:clamp(17px,4.4vw,21px);font-weight:800;line-height:1.45;
   text-shadow:0 2px 16px rgba(0,0,0,.6);opacity:0;transform:translateY(12px);
-  transition:opacity .7s ease,transform .7s ease}
+  -webkit-transition:opacity .7s ease,transform .7s ease;transition:opacity .7s ease,transform .7s ease}
 .icpn.on{opacity:1;transform:none}
 .ibar{position:absolute;top:0;left:0;right:0;height:3px;z-index:3;
   background:rgba(247,239,227,.14)}
@@ -465,64 +465,76 @@ ul,ol{margin:0}
 /* scene 1 - dawn over the hills */
 .iscn1 .isun{transform:translate(0,46px);opacity:0}
 .iscn1.on .isun{-webkit-animation:isunrise 7s cubic-bezier(.22,.61,.36,1) .4s forwards;animation:isunrise 7s cubic-bezier(.22,.61,.36,1) .4s forwards}
+@-webkit-keyframes isunrise{to{-webkit-transform:translate(0,-6px);transform:translate(0,-6px);opacity:1}}
 @keyframes isunrise{to{transform:translate(0,-6px);opacity:1}}
-.iscn1 .ismist{animation:ismist 7s ease-in-out infinite alternate}
+.iscn1 .ismist{-webkit-animation:ismist 7s ease-in-out infinite alternate;animation:ismist 7s ease-in-out infinite alternate}
+@-webkit-keyframes ismist{from{-webkit-transform:translateX(-14px);transform:translateX(-14px)}to{-webkit-transform:translateX(14px);transform:translateX(14px)}}
 @keyframes ismist{from{transform:translateX(-14px)}to{transform:translateX(14px)}}
 /* scene 2 - the problems that stayed; the young walking out of frame */
-.iscn2.on .isfig{animation:iwalk 7s ease-in-out 1s forwards}
+.iscn2.on .isfig{-webkit-animation:iwalk 7s ease-in-out 1s forwards;animation:iwalk 7s ease-in-out 1s forwards}
+@-webkit-keyframes iwalk{to{-webkit-transform:translate(52px,-3px);transform:translate(52px,-3px);opacity:.15}}
 @keyframes iwalk{to{transform:translate(52px,-3px);opacity:.15}}
 /* scene 3 - the letter, and the people it gathered */
 .iscn3 .ispaper{transform:translateY(70px);opacity:0}
-.iscn3.on .ispaper{animation:ipaper 2.6s cubic-bezier(.22,.61,.36,1) .3s forwards}
+.iscn3.on .ispaper{-webkit-animation:ipaper 2.6s cubic-bezier(.22,.61,.36,1) .3s forwards;animation:ipaper 2.6s cubic-bezier(.22,.61,.36,1) .3s forwards}
+@-webkit-keyframes ipaper{to{-webkit-transform:none;transform:none;opacity:1}}
 @keyframes ipaper{to{transform:none;opacity:1}}
 .iscn3 .ippl{opacity:0;transform:translateY(24px)}
-.iscn3.on .ippl{animation:irise 1.4s ease forwards}
-.iscn3.on .ip1{animation-delay:.9s}
-.iscn3.on .ip2{animation-delay:1.4s}
-.iscn3.on .ip3{animation-delay:1.9s}
-.iscn3.on .ip4{animation-delay:2.4s}
-.iscn3.on .ip5{animation-delay:2.9s}
+.iscn3.on .ippl{-webkit-animation:irise 1.4s ease forwards;animation:irise 1.4s ease forwards}
+.iscn3.on .ip1{-webkit-animation-delay:.9s;animation-delay:.9s}
+.iscn3.on .ip2{-webkit-animation-delay:1.4s;animation-delay:1.4s}
+.iscn3.on .ip3{-webkit-animation-delay:1.9s;animation-delay:1.9s}
+.iscn3.on .ip4{-webkit-animation-delay:2.4s;animation-delay:2.4s}
+.iscn3.on .ip5{-webkit-animation-delay:2.9s;animation-delay:2.9s}
+@-webkit-keyframes irise{to{opacity:1;-webkit-transform:none;transform:none}}
 @keyframes irise{to{opacity:1;transform:none}}
 /* scene 4 - temporary becomes permanent: the well fills, the tree grows,
    the shutter rolls up */
 .iscn4 .istree{transform-box:fill-box;transform-origin:50% 100%;
   transform:scaleY(.22);opacity:.5}
-.iscn4.on .istree{animation:igrow 7s cubic-bezier(.34,1.28,.64,1) .5s forwards}
+.iscn4.on .istree{-webkit-animation:igrow 7s cubic-bezier(.34,1.28,.64,1) .5s forwards;animation:igrow 7s cubic-bezier(.34,1.28,.64,1) .5s forwards}
+@-webkit-keyframes igrow{to{-webkit-transform:scaleY(1);transform:scaleY(1);opacity:1}}
 @keyframes igrow{to{transform:scaleY(1);opacity:1}}
 .iscn4 .isleaves{opacity:0}
-.iscn4.on .isleaves{animation:ifade 3s ease 3.6s forwards}
+.iscn4.on .isleaves{-webkit-animation:ifade 3s ease 3.6s forwards;animation:ifade 3s ease 3.6s forwards}
 .iscn4 .iswater{transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(0)}
-.iscn4.on .iswater{animation:ifill 5s ease 1.4s forwards}
+.iscn4.on .iswater{-webkit-animation:ifill 5s ease 1.4s forwards;animation:ifill 5s ease 1.4s forwards}
+@-webkit-keyframes ifill{to{-webkit-transform:scaleY(1);transform:scaleY(1)}}
 @keyframes ifill{to{transform:scaleY(1)}}
 .iscn4 .isshutter{transform-box:fill-box;transform-origin:50% 0}
-.iscn4.on .isshutter{animation:iopen 4s ease 4.4s forwards}
+.iscn4.on .isshutter{-webkit-animation:iopen 4s ease 4.4s forwards;animation:iopen 4s ease 4.4s forwards}
+@-webkit-keyframes iopen{to{-webkit-transform:scaleY(0);transform:scaleY(0)}}
 @keyframes iopen{to{transform:scaleY(0)}}
-.iscn4 .isglow{animation:ifade 2s ease 5.6s forwards}
+.iscn4 .isglow{-webkit-animation:ifade 2s ease 5.6s forwards;animation:ifade 2s ease 5.6s forwards}
+@-webkit-keyframes ifade{to{opacity:1}}
 @keyframes ifade{to{opacity:1}}
 /* scene 5 - by us: the flag, the people */
 .iscn5 .ifig{opacity:0;transform:translateY(34px)}
-.iscn5.on .ifig{animation:irise 1.6s ease forwards}
-.iscn5.on .if1{animation-delay:.3s}
-.iscn5.on .if2{animation-delay:.9s}
-.iscn5.on .if3{animation-delay:1.5s}
-.iscn5.on .if4{animation-delay:2.1s}
+.iscn5.on .ifig{-webkit-animation:irise 1.6s ease forwards;animation:irise 1.6s ease forwards}
+.iscn5.on .if1{-webkit-animation-delay:.3s;animation-delay:.3s}
+.iscn5.on .if2{-webkit-animation-delay:.9s;animation-delay:.9s}
+.iscn5.on .if3{-webkit-animation-delay:1.5s;animation-delay:1.5s}
+.iscn5.on .if4{-webkit-animation-delay:2.1s;animation-delay:2.1s}
 .iscn5 .iflag{transform-box:fill-box;transform-origin:10% 60%;
   transform:scale(.62);opacity:0}
-.iscn5.on .iflag{animation:iflagin 2s cubic-bezier(.22,.61,.36,1) 3.4s forwards}
+.iscn5.on .iflag{-webkit-animation:iflagin 2s cubic-bezier(.22,.61,.36,1) 3.4s forwards;animation:iflagin 2s cubic-bezier(.22,.61,.36,1) 3.4s forwards}
+@-webkit-keyframes iflagin{to{-webkit-transform:scale(1);transform:scale(1);opacity:1}}
 @keyframes iflagin{to{transform:scale(1);opacity:1}}
 .iscn5 .iwave{transform-box:fill-box;transform-origin:0 50%}
-.iscn5.on .iwave{animation:iwave 2.2s ease-in-out 5.4s infinite alternate}
+.iscn5.on .iwave{-webkit-animation:iwave 2.2s ease-in-out 5.4s infinite alternate;animation:iwave 2.2s ease-in-out 5.4s infinite alternate}
+@-webkit-keyframes iwave{to{-webkit-transform:skewY(-5deg) translateX(4px);transform:skewY(-5deg) translateX(4px)}}
 @keyframes iwave{to{transform:skewY(-5deg) translateX(4px)}}
 /* scene 6 - the title */
 .iscn6 .ititle{opacity:0;transform:scale(.9);letter-spacing:.16em}
-.iscn6.on .ititle{animation:ititle 2.4s cubic-bezier(.22,.61,.36,1) .4s forwards}
+.iscn6.on .ititle{-webkit-animation:ititle 2.4s cubic-bezier(.22,.61,.36,1) .4s forwards;animation:ititle 2.4s cubic-bezier(.22,.61,.36,1) .4s forwards}
+@-webkit-keyframes ititle{to{opacity:1;-webkit-transform:none;transform:none;letter-spacing:-.02em}}
 @keyframes ititle{to{opacity:1;transform:none;letter-spacing:-.02em}}
 /* the film is motion by definition; under reduced motion it never plays */
 @media (prefers-reduced-motion:reduce){
   /* the film still tells its story: every scene snaps to its finished state
      instead of tweening into it, and the progress bar keeps real time */
-  .iscn,.icpn,.iscn *{transition-duration:.01s!important}
-  .iscn *,.icpn{animation-duration:.01s!important;animation-delay:0s!important;animation-iteration-count:1!important;animation-name:none!important}
+  .iscn,.icpn,.iscn *{-webkit-transition-duration:.01s!important;transition-duration:.01s!important}
+  .iscn *,.icpn{-webkit-animation-duration:.01s!important;animation-duration:.01s!important;-webkit-animation-delay:0s!important;animation-delay:0s!important;-webkit-animation-iteration-count:1!important;animation-iteration-count:1!important;-webkit-animation-name:none!important;animation-name:none!important}
 }
 @media (max-width:420px){
   .istage{inset:0 0 32% 0}
