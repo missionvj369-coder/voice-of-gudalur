@@ -1,26 +1,50 @@
+# VOICE OF GUDALUR — static petition page only.
+#
+# The repo intentionally holds one deployable static page (static-petition/)
+# and nothing else. The full civic-safety app (React + Vite frontend, Express
+# backend, Netlify functions, Playwright suite) has been retired, so everything
+# it produced is ignored here and must never come back into version control.
+
+# ── Node / build tooling ───────────────────────────────────────
 node_modules/
-build/
+.npm/
+.yarn/
+.pnpm-store/
+package-lock.json
+
+# ── Build output ───────────────────────────────────────────────
 dist/
-coverage/
+build/
+.vite/
+*.tsbuildinfo
+_vite.log
+*.log
+
+# ── Test artifacts ─────────────────────────────────────────────
 test-results/
 playwright-report/
 blob-report/
+coverage/
+.nyc_output/
 
-.DS_Store
-*.log
-.env*
+# ── Secrets — never commit ─────────────────────────────────────
+.env
+.env.*
 !.env.example
-!.env.staging.example
-preview_log.txt
+*.pem
+*.key
 
-# Python bytecode cache
-__pycache__/
-*.pyc
-.netlify-node-deps-marker.json
+# ── Deploy / host state ────────────────────────────────────────
+# Local Netlify CLI state (site links, built function bundles, plugins).
+.netlify/
 
-# Local petition-site verification harnesses (screenshots, videos, scratch
-# scripts) - never deployed, never committed (see docs/PETITION_SITE_LIVE_READINESS.md section 9)
-.tmp/
+# ── Editor / OS cruft ──────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
 
-# Local Netlify folder
-.netlify
+# ── Scratch files from local inspection ────────────────────────
+tmp_*.txt
