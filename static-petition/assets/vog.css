@@ -439,16 +439,8 @@ ul,ol{margin:0}
 .ibar i{display:block;height:100%;width:0;
   background:linear-gradient(90deg,var(--terracotta),var(--mint))}
 .intro.run .ibar i{-webkit-animation:ibarfill 60s linear forwards;animation:ibarfill 60s linear forwards}
-.intro[data-state="holding"] .ibar i{-webkit-animation-play-state:paused;animation-play-state:paused}
 @-webkit-keyframes ibarfill{to{width:100%}}
 @keyframes ibarfill{to{width:100%}}
-.iskip{touch-action:manipulation;position:absolute;z-index:5;
-  top:calc(14px + env(safe-area-inset-top,0px));
-  right:calc(14px + env(safe-area-inset-right,0px));
-  min-height:44px;padding:10px 18px;border-radius:999px;cursor:pointer;
-  border:1px solid rgba(247,239,227,.4);background:rgba(11,20,16,.55);
-  color:#F7EFE3;font-family:inherit;font-size:14px;font-weight:800}
-.iskip:hover{background:rgba(11,20,16,.85)}
 .ititle{margin:0;font-size:clamp(34px,9vw,58px);font-weight:900;
   letter-spacing:-.02em;color:#F7EFE3;text-align:center;
   text-shadow:0 4px 30px rgba(0,0,0,.5)}
@@ -513,25 +505,10 @@ ul,ol{margin:0}
      instead of tweening into it, and the progress bar keeps real time */
   .iscn,.icpn,.iscn *{transition-duration:.01s!important}
   .iscn *,.icpn{animation-duration:.01s!important;animation-delay:0s!important;animation-iteration-count:1!important;animation-name:none!important}
-  .iplay{animation:none!important}
 }
 @media (max-width:420px){
   .istage{inset:0 0 32% 0}
-  .iskip{padding:10px 14px;font-size:13.5px}
 }
-/* tap-to-begin prompt: shown only while the film holds for a sound gesture */
-.iplay{touch-action:manipulation;position:absolute;z-index:6;
-  top:50%;left:50%;transform:translate(-50%,-50%);
-  display:inline-flex;align-items:center;gap:10px;
-  min-height:48px;padding:14px 26px;border-radius:999px;cursor:pointer;
-  border:1px solid rgba(247,239,227,.55);background:rgba(11,20,16,.78);
-  color:#F7EFE3;font-family:inherit;font-size:clamp(15px,4vw,17px);font-weight:800;
-  box-shadow:0 10px 34px rgba(0,0,0,.45);animation:ipulse 1.7s ease-in-out infinite}
-.iplay[hidden]{display:none}
-.iplay svg{width:22px;height:22px;flex:none;fill:currentColor}
-.iplay:hover{background:rgba(11,20,16,.92)}
-@keyframes ipulse{0%,100%{transform:translate(-50%,-50%) scale(1)}
-  50%{transform:translate(-50%,-50%) scale(1.05)}}
 
 /* iOS: kill the 300ms tap delay and double-tap zoom everywhere */
 button,a{touch-action:manipulation}

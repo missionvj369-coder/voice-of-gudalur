@@ -117,7 +117,7 @@
          alone keeps the language it was written in. */
   var T = window.VOG_I18N || {};
   var LANGS = ['ta-IN', 'en-IN', 'ml-IN', 'kn-IN', 'hi-IN'];
-  var NATIVE = ['α«ñα««α«┐α«┤α»ì', 'English', 'α┤«α┤▓α┤»α┤╛α┤│α┤é', 'α▓òα▓¿α│ìα▓¿α▓í', 'αñ╣αñ┐αñéαñªαÑÇ'];
+  var NATIVE = ['தமிழ்', 'English', 'മലയാളം', 'ಕನ್ನಡ', 'हिंदी'];
   var LANG_KEY = 'vog-lang';
   var N = LANGS.length;
 
@@ -228,8 +228,7 @@
      someone may be watching on a phone in a tea estate; it should never be
      the loudest thing in the room. */
   var song = $('vogSong'), songBtn = $('vogSongBtn'),
-      intro = $('vogIntro'), introSkip = $('vogIntroSkip'),
-      introPlay = $('vogIntroPlay');
+      intro = $('vogIntro'), introSkip = $('vogIntroSkip');
 
   /* Called from applyLang() so the button's label follows the chosen language.
      Declared here and hoisted, so applyLang above can already reach it; the
@@ -329,26 +328,20 @@
       }
       introTimers.push(setTimeout(finishIntro, 60000));
       songBtn.hidden = false;
-      if (introPlay) introPlay.hidden = true;
-      if (introSkip) introSkip.addEventListener('click', finishIntro);
-      document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') finishIntro(); });
-      if (introSkip) introSkip.focus();
     }
 
-    /* Autoplay with sound was refused (iOS Safari above all): hold on the first
-       frame behind a tap-to-start prompt. The single gesture it asks for begins
-       the film and the song together, so sound is never a later surprise. */
+    /* Autoplay with sound was refused (iOS Safari above all): the film stays on the
+       first frame, muted, until the user unmutes. No tap-to-start prompt. */
     function holdForSound() {
-      intro.hidden = false;
-      void intro.offsetHeight;
-      lockPage(true);
-      if (introPlay) introPlay.hidden = false;
+      song.muted = true;
+      songPaint();
+      runFilm();
     }
 
     /* Sound by default: try audible autoplay the instant the page opens. Where a
        browser allows it (desktop, Android) the film runs with sound right away;
-       where it refuses (iOS Safari) holdForSound() shows the prompt and the tap
-       begins the film with sound. */
+       where it refuses (iOS Safari) the film stays on the first frame, muted,
+       and the user unmutes via the song button. No tap-to-start prompt. */
     function audible() {
       if (settled) return; settled = true;
       songBtn.setAttribute('aria-pressed', 'true'); /* audible already */
@@ -365,23 +358,9 @@
     var firstPlay = song.play();
     if (firstPlay && typeof firstPlay.then === 'function') {
       firstPlay.then(audible, needGesture);
-      setTimeout(needGesture, 700); /* if play() neither settles, fall back to the prompt */
+      setTimeout(needGesture, 700); /* if play() neither settles, fall back to muted */
     } else {
       audible(); /* old synchronous play(): assume it started */
-    }
-
-    /* The tap-to-start prompt: the gesture that begins film and sound together. */
-    if (introPlay) {
-      introPlay.addEventListener('click', function () {
-        introPlay.hidden = true;
-        song.muted = false;
-        song.currentTime = 0;
-        songBtn.setAttribute('aria-pressed', 'true');
-        songPaint();
-        var p = song.play();
-        if (p && typeof p.catch === 'function') p.catch(songOff);
-        runFilm();
-      });
     }
 
     songBtn.addEventListener('click', function () {
