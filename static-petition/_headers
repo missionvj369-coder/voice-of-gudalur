@@ -47,11 +47,14 @@
 # The two grievance record pages, and the shared first-party assets they and the
 # homepage load. Same reasoning as /index.html applies: these pages are shared
 # over WhatsApp and Instagram, whose in-app browsers cache HTML aggressively,
-# and a stale copy of a grievance record is worse than a slow one. The assets
-# are unhashed (no ?v= fingerprint), so they get an hour rather than a day.
+# and a stale copy of a grievance record is worse than a slow one.
 /grievances/*
   Cache-Control: public, max-age=0, must-revalidate
 
+# The shared CSS/JS. Every page now references these with a ?v=N fingerprint, so
+# a deploy bumps N and the new URL is fetched fresh the instant it ships - which
+# is what keeps this long TTL safe. Bump the ?v= on vog.css, vog-i18n.js and
+# vog-support.js together in all three pages whenever any of them changes.
 /assets/*
   Cache-Control: public, max-age=3600, stale-while-revalidate=86400
 
