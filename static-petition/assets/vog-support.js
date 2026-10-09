@@ -426,7 +426,18 @@
     var firstPlay = tryPlay();
     if (firstPlay && typeof firstPlay.then === 'function') {
       firstPlay.then(audible, needGesture);
-      setTimeout(needGesture, 700); /* if play() neither settles, fall back to muted */
+      /* Safety net only, for a browser whose play() promise neither resolves
+         nor rejects. Decide from the element's real state instead of assuming
+         failure: a 60s .m4a on a cold load can take longer than this to buffer,
+         and muting before it settles would be permanent - the later resolve is
+         ignored once `settled` is set, so audible autoplay that was only slow
+         (desktop, Android) gets silenced for good. If it is genuinely playing,
+         keep the sound; only if it is still paused was autoplay refused. */
+      setTimeout(function () {
+        if (settled) return;
+        if (!song.paused) { audible(); return; }
+        needGesture();
+      }, 1200);
     } else if (firstPlay) {
       /* No promise (old Safari): it did not throw, so assume the audible
          autoplay it returned undefined for actually began. */
