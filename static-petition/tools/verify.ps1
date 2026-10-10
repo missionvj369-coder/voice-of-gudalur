@@ -112,7 +112,7 @@ foreach ($fn in @('clamp(', 'env(', 'min(')) {
   Ok ($n -gt 0) "$fn still used ($n) - so the fallbacks above it matter"
 }
 # every rule that positions with clamp()+env() must have a plain declaration earlier
-foreach ($sel in @('.iskip', '.icpn', '.audiobtn', '.iscta')) {
+foreach ($sel in @('.iskip', '.icpn', '.audiobtn')) {
   $fallback = [regex]::Match($css, "(?m)^$([regex]::Escape($sel))\{(?![^}]*clamp)[^}]*\}")
   Ok $fallback.Success "$sel has a plain-value declaration before the clamp one"
 }
@@ -126,8 +126,8 @@ Ok ($css -match '\--terracotta-press:#7E3517;') 'the press state is darker still
 # AA for a 12px label. Every small-text use of it has to be the deep value.
 # [^}] crosses newlines in .NET, so one pattern covers a rule written over
 # several lines - and a selector that appears more than once is checked properly.
-foreach ($sel in @('\.seclab\{', '\.step \.who\{', '\.kv dd\.nostatus\{', '\.crumbs a:hover\{')) {
-  Ok ($css -match "$sel[^}]*terracotta-deep") "$sel uses the AA-passing terracotta"
+foreach ($sel in @(@('.seclab{','.seclab'), @('.step .who{','.step .who'), @('.kv dd.nostatus{','.kv dd.nostatus'), @('.crumbs a:hover{','.crumbs a:hover'))) {
+  Ok ($css -match "$([regex]::Escape($sel[0]))[^}]*terracotta-deep") "$($sel[1]) uses the AA-passing terracotta"
 }
 # The one place bright --terracotta is still allowed: .fig .n is 1.55rem/24.8px
 # at weight 900, which is WCAG "large text", where 3:1 is the bar and 3.75:1
@@ -135,30 +135,23 @@ foreach ($sel in @('\.seclab\{', '\.step \.who\{', '\.kv dd\.nostatus\{', '\.cru
 Ok ($css -match '\.fig \.n\{[^}]*font-size:clamp\(1\.55rem[^}]*color:var\(--terracotta\)') '.fig .n is large text, so the bright terracotta is allowed there'
 
 Write-Output '== tap targets are at least 44px =='
-foreach ($pair in @(@('.iskip','min-height:44px'), @('.social a','height:44px'), @('.newsmore','min-height:44px'), @('.iscta','min-height:48px'))) {
+foreach ($pair in @(@('.iskip','min-height:44px'), @('.social a','height:44px'), @('.newsmore','min-height:44px'))) {
   Ok ($css -match ("$([regex]::Escape($pair[0]))\{[^}]*(?:\r?\n[^}]*)?$([regex]::Escape($pair[1]))")) "$($pair[0]) is at least 44px"
 }
 
-Write-Output '== the sound call to action =='
-Ok ($css -match '\.iscta\{') '.iscta is styled'
-Ok ($css -match '\.iscta\[hidden\]\{display:none\}') '.iscta honours [hidden]'
-Ok ($html0 -match 'id="vogSoundCta"') '#vogSoundCta exists in the markup'
-Ok ($html0 -match 'id="vogSoundCta"[^>]*data-t-aria="audCtaAria"') 'the CTA carries its aria-label key'
-# data-t must NOT sit on the button itself: applyLang() sets textContent, which
-# would delete the icon
-Ok (-not ($html0 -match 'id="vogSoundCta" data-t=')) 'data-t is not on the CTA button (it would wipe the icon)'
-Ok ($html0 -match '<span class="isctalbl" data-t="audCta">') 'the CTA label is the data-t element'
+Write-Output '== sound is on by default, and the corner button is the only control =='
+# There is deliberately no second "play with sound" button. A browser that
+# refuses autoplay has to be handed a real gesture by definition, and more
+# on-screen chrome cannot supply one; the fixed corner button is the manual
+# control, and the first touch anywhere else is the gesture.
+Ok (-not ($css -match '\.iscta')) '.iscta is gone from the stylesheet'
+Ok (-not ($html0 -match 'id="vogSoundCta"')) '#vogSoundCta is gone from the markup'
+Ok ($html0 -match 'id="vogSongBtn"') 'the corner sound button is the one control'
+Ok ($sup -match 'var firstPlay = tryPlay\(\);') 'play() is asked for at page open, unmuted'
 $i18n = Read 'assets\vog-i18n.js'
-foreach ($k in @('audCta', 'audCtaAria')) {
-  $m = [regex]::Match($i18n, "(?m)^ {2}$k`:\s*\[(.*?)\],")
-  Ok $m.Success "$k is in the copy table"
-  if ($m.Success) {
-    $n = ([regex]::Matches($m.Groups[1].Value, '",\s*"')).Count + 1
-    Ok ($n -eq 5) "$k has all five languages (found $n)"
-  }
-}
+Ok (-not ($i18n -match 'audCta')) 'the audCta copy keys are gone from the table'
 
-Write-Output '== sound starts unmuted, and the page says so when it cannot =='
+Write-Output '== the song still starts unmuted, and a gesture unlocks it where refused =='
 Ok ($sup -match 'song\.muted = false;') 'the element is unmuted before the first play()'
 Ok ($sup -match 'function setSound\(on\)') 'one function owns what "the sound is on" means'
 Ok ($sup -match 'songBtn\.setAttribute\(''aria-pressed'', soundOn \? ''true'' : ''false''\)') 'the icon follows that one state'

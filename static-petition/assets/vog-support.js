@@ -218,12 +218,12 @@
      learned to trust - the play() promise rejects, the film runs silently, and
      the reader's first touch anywhere turns the sound on.
 
-     That refusal is announced rather than hidden. #vogSoundCta appears, because
-     a silent film with one small icon in the corner reads as "this site is
-     mute", which is the opposite of what is true: it is the browser's policy,
-     not the page's choice, and the page says so out loud. Skipping the film
-     counts as leaving, not as asking for sound, so the skip button is excluded
-     from the first-touch unmute; the sound button toggles itself.
+     That refusal cannot be answered with another button on the page: a browser
+     that refuses autoplay has to be handed a real gesture by definition, and
+     more on-screen chrome would not supply one. The fixed sound button in the
+     corner is the manual control for the same thing, so it stays and nothing
+     else was added. Skipping the film counts as leaving, not as asking for
+     sound, so the skip button is excluded from the first-touch unmute.
 
      The song plays exactly once, during the film, and never repeats: there is
      no loop, and finishIntro() fades it out and pauses it for good - nothing on
@@ -239,8 +239,7 @@
      someone may be watching on a phone in a tea estate; it should never be the
      loudest thing in the room. */
   var song = $('vogSong'), songBtn = $('vogSongBtn'),
-      intro = $('vogIntro'), introSkip = $('vogIntroSkip'),
-      soundCta = $('vogSoundCta');
+      intro = $('vogIntro'), introSkip = $('vogIntroSkip');
 
   /* Called from applyLang() so the button's label follows the chosen language.
      Declared here and hoisted, so applyLang above can already reach it; the
@@ -262,8 +261,7 @@
     var FILM_MS = 24000;
     var SCENES = [0, 4000, 8000, 12000, 16000, 20000]; /* six windows, 24s */
     var introTimers = [], introDone = false, filmStarted = false,
-        settled = false, soundOn = false, gestureArmed = false,
-        ctaOffered = false;
+        settled = false, soundOn = false, gestureArmed = false;
     song.volume = 0.28;
     song.loop = false; /* belt and braces: the markup carries no loop either */
 
@@ -285,14 +283,12 @@
       }
     }
 
-    /* The one place that decides what "the sound is on" means, so the element,
-       the icon button and the visible call to action can never disagree with
-       each other. The CTA is an offer, and an offer is shown until it is taken. */
+    /* The one place that decides what "the sound is on" means, so the element
+       and the icon button can never disagree with each other. */
     function setSound(on) {
       soundOn = !!on;
       song.muted = !soundOn;
       songBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
-      if (soundCta) soundCta.hidden = soundOn || introDone || !ctaOffered;
       songPaint();
     }
 
@@ -310,7 +306,6 @@
 
     function songOn() {
       if (introDone) return; /* the film is over: the core site stays silent */
-      ctaOffered = false;
       setSound(true);
       var p = tryPlay();
       if (p && typeof p.catch === 'function') p.catch(songOff);
@@ -343,7 +338,6 @@
       songFadeOut(500);
       songBtn.hidden = true;
       if (introSkip) introSkip.hidden = true;
-      if (soundCta) soundCta.hidden = true;
       intro.classList.remove('run');
       intro.hidden = true;
       lockPage(false);
@@ -369,7 +363,6 @@
       introTimers.push(setTimeout(finishIntro, FILM_MS));
       songBtn.hidden = false;
       if (introSkip) introSkip.hidden = false;
-      if (soundCta && !soundOn && ctaOffered) soundCta.hidden = false;
       armLeave();
       songPaint();
     }
@@ -380,8 +373,8 @@
        pointerdown, touchstart, mousedown and click are every event a browser
        counts as user activation for audio. They are attached before play() is
        attempted, so a tap that lands while the promise is still pending is
-       never missed. The sound button toggles itself and the CTA has its own
-       handler, so a tap on either is never swallowed here.
+       never missed. The sound button toggles itself, so a tap on it is never
+       swallowed here.
 
        Plain `true` rather than an options object: it works on every browser
        that has addEventListener at all. `gestureArmed` guards against the
@@ -389,7 +382,7 @@
     function unlockOnGesture(ev) {
       if (!gestureArmed) return;
       var tgt = ev.target;
-      if (tgt && tgt.closest && (tgt.closest('#vogSongBtn') || tgt.closest('#vogSoundCta'))) return;
+      if (tgt && tgt.closest && tgt.closest('#vogSongBtn')) return;
       disarmGesture();
       if (introDone) return;
       songOn();
@@ -414,13 +407,13 @@
        the film ends there and then instead of holding them for another beat.
        Skip is that same wish said in words; this is that same wish done.
        Tab, Enter and typing are deliberately not navigation keys: a keyboard
-       reader reaching the CTA must be able to activate it without the film
-       vanishing from under them. */
+       reader needs the sound button and the skip button to stay reachable
+       without the film vanishing from under them. */
     function leaveFilm(ev) {
       if (introDone || !filmStarted) return;
       if (ev && ev.type === 'keydown') {
         var tgt = ev.target;
-        if (tgt && tgt.closest && tgt.closest('#vogSoundCta, #vogIntroSkip, #vogSongBtn')) return;
+        if (tgt && tgt.closest && tgt.closest('#vogIntroSkip, #vogSongBtn')) return;
         var k = ev.keyCode || ev.which || 0;
         if (k < 32 || k > 40) return; /* space, page up/down, end, home, arrows */
       }
@@ -445,7 +438,6 @@
     }
     function needGesture() {
       if (settled) return; settled = true;
-      ctaOffered = true;
       setSound(false);
       runFilm();
     }
@@ -454,12 +446,6 @@
       var on = songBtn.getAttribute('aria-pressed') === 'true';
       if (on) songOff(); else songOn();
     });
-    if (soundCta) {
-      soundCta.addEventListener('click', function () {
-        if (introDone) return;
-        songOn();
-      });
-    }
     song.addEventListener('ended', songOff); /* one play: it simply ends */
 
     if (introSkip) {

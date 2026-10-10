@@ -124,7 +124,6 @@ body{font-size:16px;line-height:1.6}
 .iskip{left:16px;bottom:16px;font-size:14px;padding:8px 18px}
 .ititle{font-size:34px}
 .audiobtn{right:12px;bottom:12px}
-.iscta{left:20px;right:20px;bottom:96px;font-size:15px;padding:13px 22px}
 .srcnote{margin:14px 0 0}
 .hero-note{margin:22px 0 0;padding:13px 15px}
 
@@ -145,7 +144,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible,
 @supports not selector(:focus-visible){
   a:focus,button:focus,summary:focus,input:focus,[tabindex]:focus{
     outline:3px solid var(--terracotta);outline-offset:3px}
-  .iskip:focus,.iscta:focus,.copybtn:focus{outline:3px solid #fff;outline-offset:3px}
+  .iskip:focus,.copybtn:focus{outline:3px solid #fff;outline-offset:3px}
 }
 h1,h2,h3,h4{font-weight:900;letter-spacing:-.015em;line-height:1.1;margin:0}
 p{margin:0}
@@ -506,7 +505,7 @@ ul,ol{margin:0}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   .js .rv{opacity:1!important;-webkit-transform:none!important;transform:none!important;transition:none!important}
-  .btn,.social a,.copybtn,.langbtn,.iskip,.iscta,.audiobtn{-webkit-transition:none!important;transition:none!important}
+  .btn,.social a,.copybtn,.langbtn,.iskip,.audiobtn{-webkit-transition:none!important;transition:none!important}
   .btn:hover,.social a:hover{-webkit-transform:none!important;transform:none!important}
   .btn .spin{animation:none;border-top-color:rgba(255,255,255,.9)}
 }
@@ -574,30 +573,6 @@ ul,ol{margin:0}
 .intro.run .ibar i{-webkit-animation:ibarfill 24s linear forwards;animation:ibarfill 24s linear forwards}
 @-webkit-keyframes ibarfill{to{width:100%}}
 @keyframes ibarfill{to{width:100%}}
-/* --- "Play with sound" ------------------------------------------------------
-   Shown only when a browser refused to start the song by itself. Sound is the
-   default on this page; when it does not arrive, the reason is the browser's
-   autoplay policy, and this is the page saying so out loud rather than leaving
-   the reader to guess at a small icon in the corner. Sits above the caption and
-   clear of the fixed sound button. */
-.iscta{position:absolute;z-index:6;left:50%;
-  bottom:calc(clamp(96px,15vh,120px) + env(safe-area-inset-bottom,0px));
-  -webkit-transform:translateX(-50%);transform:translateX(-50%);
-  display:inline-flex;align-items:center;justify-content:center;gap:10px;
-  min-height:48px;padding:13px 26px;border-radius:999px;
-  border:1px solid rgba(247,239,227,.4);
-  background:var(--terracotta-deep);color:#fff;
-  font-family:inherit;font-size:clamp(14.5px,3.6vw,16px);font-weight:800;
-  letter-spacing:.01em;cursor:pointer;touch-action:manipulation;
-  -webkit-tap-highlight-color:transparent;
-  box-shadow:0 10px 30px rgba(0,0,0,.4);
-  -webkit-transition:opacity .4s ease,transform .18s ease,background .18s ease;
-  transition:opacity .4s ease,transform .18s ease,background .18s ease}
-.iscta[hidden]{display:none}
-.iscta:hover{background:var(--terracotta-press)}
-.iscta:focus-visible{outline:3px solid #fff;outline-offset:3px}
-.iscta svg{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;
-  stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 /* Skip the film. Bottom-left, clear of the fixed sound button (bottom-right)
    and of the iPhone home indicator; icon-less text, large enough to tap. */
 .iskip{position:absolute;z-index:5;

@@ -25,7 +25,7 @@
 <meta name="twitter:description" content="Follow up on grievance #18982473 and #19177921 through the official channels: 1100, cmcell@tn.gov.in, and the Mudhalvarin Mugavari portal.">
 <meta name="twitter:image" content="https://voiceofgudalur.space/media/bg-stats.jpg">
 <link rel="canonical" href="https://voiceofgudalur.space/">
-<link rel="stylesheet" href="/assets/vog.css?v=4">
+<link rel="stylesheet" href="/assets/vog.css?v=5">
 <!-- The one inline <script> on the site. The .rv blocks are hidden by CSS
      solely because this line sets the .js class, so nothing on this page can
      be left invisible - not if assets/vog-support.js is slow, not if it 404s,
@@ -123,17 +123,6 @@
     <p class="icpn" data-t="introCap5">Not by someone else — by us.</p>
     <p class="icpn" data-t="introCap6">This is how a change begins.</p>
   </div>
-
-  <!-- Only ever shown when a browser refused to start the song by itself - iOS
-       Safari above all. Sound is the default on this page: it is asked for the
-       instant the page opens, and the reader's first touch anywhere turns it on
-       too. This button is the loud version of that. A silent film with a small
-       icon in the corner is not an invitation; this is. -->
-  <button type="button" class="iscta" id="vogSoundCta"
-    data-t-aria="audCtaAria" hidden>
-    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-    <span class="isctalbl" data-t="audCta">Play with sound</span>
-  </button>
 
   <!-- Skip the film. Shown by vog-support.js while the film runs, hidden again
        the moment it ends (or the reader taps it); it ends the film the same way
@@ -501,8 +490,9 @@
      browser allows audible autoplay (desktop, Android, most in-app browsers) the
      film opens with the first downbeat already audible. Where it refuses - iOS
      Safari, and desktop Chrome or Firefox on a domain they have not learned to
-     trust yet - the film runs silently for the first tap and any touch anywhere
-     turns the sound on, with #vogSoundCta as the visible version of that offer.
+     trust yet - the film runs silently until the first tap, and any touch
+     anywhere turns the sound on. The fixed sound button in the corner is the
+     manual control for the same thing.
      `preload="auto"` buffers while the film plays, so the downbeat lands on the
      tap rather than after it. -->
 <audio id="vogSong" src="/media/gudalur-new-path.m4a" preload="auto"></audio>
@@ -515,7 +505,7 @@
 <!-- vog-i18n.js first: the copy table. vog-support.js then wires the language
      switcher, the copy buttons and the support form. Both are same-origin and
      root-relative so this page and /grievances/*/ can share them. -->
-<script src="/assets/vog-i18n.js?v=4"></script>
-<script src="/assets/vog-support.js?v=4"></script>
+<script src="/assets/vog-i18n.js?v=5"></script>
+<script src="/assets/vog-support.js?v=5"></script>
 </body>
 </html>
