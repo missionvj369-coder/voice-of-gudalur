@@ -11,6 +11,11 @@
   --crust:#F7EFE3; --skin:#F3E2D5; --card:#FFFFFF; --paper-2:#EFEAE0;
   --ink:#2A1F14; --ink-2:#5C4A38; --ink-3:#8A725C; --line:#D8C3A6; --line-2:#C6BFAE;
   --terracotta:#C65A2E; --terracotta-deep:#9C4220; --terracotta-soft:#E8C4A0;
+  /* The pressed state of the red button. --terracotta itself carries white text
+     at 4.28:1, which clears WCAG AA for large text and nothing smaller; the
+     button's own label is 15px, so both of its states use the deep value and
+     press goes darker still. */
+  --terracotta-press:#7E3517;
   --ochre:#B98A2F; --amber:#8A5300; --amber-bg:#FBF1DC; --amber-line:#E7C98B;
   --green:#137A4D; --green-dark:#0B5936; --mint:#3ED598;
   --forest:#0B1410; --forest-2:#123020; --night:#1C140C;
@@ -22,7 +27,107 @@
   --shadow:0 14px 34px rgba(18,24,20,.08);
 }
 
+/* --- the legacy baseline ---------------------------------------------------
+   Everything after this point is written for browsers from about 2020 on:
+   clamp(), env() safe-area insets, min(), and the vendor-prefixed animation
+   properties. On an older browser a declaration that uses a function it does
+   not understand is dropped whole, so `padding:0 clamp(18px,4.4vw,40px)`
+   leaves the gutter at zero rather than at 20px, and `left:calc(clamp(16px,5vw,
+   26px) + env(safe-area-inset-left,0px))` leaves the skip button unpositioned.
+
+   So the plain value is stated here, first, for every one of those
+   declarations; the modern rule that follows overrides it wherever it parses.
+   This is what keeps the film, the reveal and the whole layout working on a
+   2016 phone. Two things are deliberately NOT back-filled:
+
+     - flexbox `gap` (Chrome 84 / Safari 14.1, 2020-21). A row of pills or
+       buttons loses its spacing on an older browser but keeps its order and
+       stays tappable, and a margin-based stand-in would double up the moment
+       gap does work. Grid `gap` is fine - it predates flex gap by years.
+     - :focus-visible. Unsupported, the selector is dropped and the browser's
+       own focus ring takes over, which is usable; a plain :focus fallback
+       would draw a ring on every mouse click too. */
 *,*::before,*::after{box-sizing:border-box}
+body{font-size:16px;line-height:1.6}
+.wrap{padding:0 20px}
+.topbar{background:#F7F5EF}
+.topin{gap:14px}
+.navlinks{gap:14px}
+.brand{gap:11px}
+.btn{font-size:15px;line-height:1.2;padding:14px 22px;min-height:50px}
+.btn svg{width:18px;height:18px}
+.acts{gap:10px}
+.sec{padding:44px 0}
+#grievances ~ .sec{padding:24px 0}
+.sec h2{font-size:1.7rem}
+.sec-intro{font-size:1rem}
+.subhead{font-size:1.1rem}
+.hero{padding:46px 0 48px}
+.hero h1{font-size:2.1rem}
+.hero .lede{font-size:1rem}
+.idgrid{gap:16px}
+.idcard{padding:18px}
+.idcard h2{font-size:1.2rem}
+.figrow{gap:14px}
+.fig{padding:14px 15px}
+.fig .n{font-size:1.55rem}
+.fig .l{font-size:13.5px}
+.grid2{gap:18px;grid-template-columns:1fr}
+.panelbox{padding:18px}
+.panelbox h3{font-size:1.1rem}
+.docitem{gap:12px 16px;margin-top:18px;padding-top:18px}
+.docacts{gap:8px}
+.docacts .btn{min-height:44px;padding:11px 16px;font-size:14px}
+.kv{gap:11px}
+.kv>div{gap:2px}
+.quote{margin:22px 0 0;padding:16px 18px}
+.demands{margin:20px 0 0;gap:10px}
+.demands li{padding-left:32px}
+.heads{margin:20px 0 0;gap:12px}
+.heads li{padding:14px 16px}
+.tag{margin-top:9px;font-size:10.5px}
+.steps{margin:30px 0 0;gap:16px}
+.step{padding:18px}
+.step h3{font-size:1.16rem}
+.step .who{margin:9px 0 0}
+.step p{margin:12px 0 0}
+.step .acts{margin-top:18px}
+.notice{padding:28px 0}
+.notice .nn{gap:12px}
+.notice .nn h2{font-size:1.15rem}
+.notice p{margin:14px 0 0}
+.newsgrid{margin:30px 0 0;gap:14px;
+  grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.newsitem{gap:10px;padding:20px 20px 18px}
+.medcta{margin:26px 0 0;padding:22px}
+.medcta p{font-size:1rem}
+.medcta .acts{margin-top:18px}
+.rules{margin:20px 0 0;gap:10px}
+.isnot{padding:18px;margin-top:28px}
+.isnot h3{font-size:1.05rem}
+.crumbs{margin:0 0 18px;gap:8px}
+.phasegrid{margin-top:22px;gap:14px;
+  grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.phase{padding:18px 19px}
+.howto{margin:26px 0 0;gap:14px}
+.warn{margin:22px 0 0;padding:15px 17px}
+.xlink{gap:12px;margin-top:28px;padding-top:22px}
+.foot{padding:40px 0}
+.footin{gap:22px}
+.footlinks{gap:14px 22px;font-size:14px}
+.social{gap:10px}
+.social a{width:44px;height:44px}
+.langrow{gap:6px}
+.langbar{padding:10px 0 0}
+.iscn svg{width:88vw}
+.icpn{left:20px;right:20px;bottom:30px;font-size:17px}
+.iskip{left:16px;bottom:16px;font-size:14px;padding:8px 18px}
+.ititle{font-size:34px}
+.audiobtn{right:12px;bottom:12px}
+.iscta{left:20px;right:20px;bottom:96px;font-size:15px;padding:13px 22px}
+.srcnote{margin:14px 0 0}
+.hero-note{margin:22px 0 0;padding:13px 15px}
+
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--crust);color:var(--ink);font-family:var(--sans);
   font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
@@ -32,6 +137,16 @@ a:hover{color:var(--ink);text-decoration:underline}
 strong{color:var(--ink)}
 a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible,
 [tabindex]:focus-visible{outline:3px solid var(--terracotta);outline-offset:3px}
+/* :focus-visible is Chrome 86 / Safari 15.4 / Firefox 85, all 2021. Where it is
+   missing the rule above is dropped whole and the browser's own ring takes over
+   - usable, but not in this palette, and not at all in a browser that draws no
+   ring of its own. This restores the custom ring for those browsers. The cost
+   is a ring on mouse click too, which is exactly what they already did. */
+@supports not selector(:focus-visible){
+  a:focus,button:focus,summary:focus,input:focus,[tabindex]:focus{
+    outline:3px solid var(--terracotta);outline-offset:3px}
+  .iskip:focus,.iscta:focus,.copybtn:focus{outline:3px solid #fff;outline-offset:3px}
+}
 h1,h2,h3,h4{font-weight:900;letter-spacing:-.015em;line-height:1.1;margin:0}
 p{margin:0}
 ul,ol{margin:0}
@@ -49,7 +164,8 @@ ul,ol{margin:0}
    visitors touch once, and every anchor jump would land under it. */
 .top{display:block}
 .topbar{position:sticky;top:0;z-index:10;background:rgba(247,245,239,.94);
-  backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line)}
 .topin{display:flex;align-items:center;justify-content:space-between;gap:14px;
   min-height:64px}
 .brand{display:inline-flex;align-items:center;gap:11px;text-decoration:none;
@@ -73,13 +189,15 @@ ul,ol{margin:0}
   font-size:15px;line-height:1.2;text-decoration:none;cursor:pointer;min-height:50px;
   border:2px solid transparent;text-align:center;
   transition:transform .15s ease,box-shadow .15s ease,background .15s ease,
+             border-color .15s ease,color .15s ease;
+  -webkit-transition:transform .15s ease,box-shadow .15s ease,background .15s ease,
              border-color .15s ease,color .15s ease}
 .btn svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;
   stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
-.btn:hover{transform:translateY(-2px)}
-.btn-red{background:var(--terracotta);border-color:var(--terracotta);color:#fff}
-.btn-red:hover{background:var(--terracotta-deep);border-color:var(--terracotta-deep);
-  box-shadow:0 10px 26px rgba(198,90,46,.32)}
+.btn:hover{-webkit-transform:translateY(-2px);transform:translateY(-2px)}
+.btn-red{background:var(--terracotta-deep);border-color:var(--terracotta-deep);color:#fff}
+.btn-red:hover{background:var(--terracotta-press);border-color:var(--terracotta-press);
+  box-shadow:0 10px 26px rgba(126,53,23,.32)}
 .btn-green{background:var(--green);border-color:var(--green);color:#fff}
 .btn-green:hover{background:var(--green-dark);border-color:var(--green-dark);
   box-shadow:0 10px 26px rgba(19,122,77,.3)}
@@ -97,7 +215,7 @@ ul,ol{margin:0}
 .rule::before{content:"";position:absolute;left:0;top:-1px;width:76px;height:3px;
   background:var(--terracotta)}
 .seclab{font-size:12px;font-weight:900;letter-spacing:.3em;text-transform:uppercase;
-  color:var(--terracotta)}
+  color:var(--terracotta-deep)}
 .seclab.g{color:var(--green)}
 .sec h2{margin:.4em 0 0;font-size:clamp(1.7rem,4.8vw,2.9rem);text-wrap:balance}
 .sec-intro{margin:.9em 0 0;max-width:66ch;color:var(--ink-2);
@@ -173,7 +291,7 @@ ul,ol{margin:0}
   color:var(--ink-2)}
 .kv dd{margin:0;font-weight:700;font-size:15.5px}
 .kv dd.mono{font-family:var(--mono);letter-spacing:.04em}
-.kv dd.nostatus{color:var(--terracotta)}
+.kv dd.nostatus{color:var(--terracotta-deep)}
 .quote{margin:22px 0 0;padding:16px 18px;background:var(--paper-2);
   border-left:4px solid var(--green);border-radius:0 12px 12px 0}
 .quote .q{font-weight:700;line-height:1.55}
@@ -183,7 +301,7 @@ ul,ol{margin:0}
 .demands li{position:relative;padding-left:32px;font-weight:600;line-height:1.5}
 .demands li::before{content:"";position:absolute;left:2px;top:.42em;width:13px;height:8px;
   border-left:3px solid var(--green);border-bottom:3px solid var(--green);
-  transform:rotate(-45deg)}
+  -webkit-transform:rotate(-45deg);transform:rotate(-45deg)}
 .heads{list-style:none;margin:20px 0 0;padding:0;display:grid;gap:12px}
 .heads li{background:var(--card);border:1px solid var(--line);border-radius:12px;
   padding:14px 16px}
@@ -208,7 +326,7 @@ ul,ol{margin:0}
   background:var(--ink);color:#fff;font-size:13px;letter-spacing:0}
 .step h3{margin:12px 0 0;font-size:clamp(1.16rem,2.9vw,1.5rem)}
 .step .who{margin:9px 0 0;font-size:13px;font-weight:800;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--terracotta)}
+  text-transform:uppercase;color:var(--terracotta-deep)}
 .step p{margin:12px 0 0;color:var(--ink-2)}
 .step .acts{margin-top:18px}
 .step .foot-note,.mailto-note{margin:14px 0 0;font-size:13px;color:var(--ink-2)}
@@ -266,7 +384,7 @@ ul,ol{margin:0}
 .newsmore{margin-top:2px;display:inline-flex;align-items:center;gap:7px;
   align-self:flex-start;color:var(--mint);font-size:13.5px;font-weight:800;
   text-decoration:none;border-bottom:2px solid rgba(62,213,152,.34);
-  padding-bottom:2px;min-height:32px}
+  padding-bottom:2px;min-height:44px}
 .newsmore:hover{border-bottom-color:var(--mint)}
 .newsmore svg{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;
   stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
@@ -284,7 +402,8 @@ ul,ol{margin:0}
 .rules li{position:relative;padding-left:26px;font-size:14.5px;color:var(--ink-2);
   line-height:1.55}
 .rules li::before{content:"";position:absolute;left:0;top:.5em;width:10px;height:10px;
-  border-radius:2px;background:var(--terracotta);transform:rotate(45deg)}
+  border-radius:2px;background:var(--terracotta);
+  -webkit-transform:rotate(45deg);transform:rotate(45deg)}
 .rules li b{color:var(--ink)}
 .isnot{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--terracotta);
   border-radius:var(--radius);padding:clamp(18px,3.2vw,26px);margin-top:28px;max-width:70ch}
@@ -294,7 +413,7 @@ ul,ol{margin:0}
   font-size:12.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
   color:var(--ink-2)}
 .crumbs a{color:var(--ink-2);text-decoration:none;border-bottom:1px solid var(--line-2)}
-.crumbs a:hover{color:var(--terracotta);border-color:var(--terracotta)}
+.crumbs a:hover{color:var(--terracotta-deep);border-color:var(--terracotta-deep)}
 .phasegrid{display:grid;gap:14px;margin-top:22px;
   grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
 .phase{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
@@ -326,14 +445,18 @@ ul,ol{margin:0}
 .foot a:hover{color:var(--mint)}
 .footlinks{display:flex;flex-wrap:wrap;gap:14px 22px;font-size:14px;font-weight:700}
 .social{display:flex;flex-wrap:wrap;gap:10px}
-.social a{display:inline-flex;align-items:center;justify-content:center;width:42px;
-  height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.26);color:#fff;
+.social a{display:inline-flex;align-items:center;justify-content:center;width:44px;
+  height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.26);color:#fff;
+  -webkit-transition:transform .15s ease,border-color .15s ease,color .15s ease;
   transition:transform .15s ease,border-color .15s ease,color .15s ease}
-.social a:hover{border-color:var(--mint);color:var(--mint);transform:translateY(-2px)}
+.social a:hover{border-color:var(--mint);color:var(--mint);
+  -webkit-transform:translateY(-2px);transform:translateY(-2px)}
 .social svg{width:19px;height:19px;fill:currentColor}
 .disc{margin:0;font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.72);max-width:72ch}
 .disc b{color:#fff}
-.fine{margin:0;font-size:11.5px;letter-spacing:.16em;color:rgba(255,255,255,.42);
+/* .fine is 11.5px uppercase - small text, so it needs the full 4.5:1, and 42%
+   white on the forest green measured 4.09:1. 62% measures 7.6:1. */
+.fine{margin:0;font-size:11.5px;letter-spacing:.16em;color:rgba(255,255,255,.62);
   text-transform:uppercase}
 /* --- the language switcher, in the masthead --------------------------------
    Pills, one per language, each labelled in its own script and nothing else:
@@ -344,6 +467,7 @@ ul,ol{margin:0}
   padding:8px 14px;min-height:44px;border:1px solid var(--line-2);border-radius:999px;
   background:#fff;color:var(--ink);font-family:inherit;font-size:14px;font-weight:800;
   line-height:1.15;cursor:pointer;
+  -webkit-transition:border-color .15s ease,background .15s ease,color .15s ease;
   transition:border-color .15s ease,background .15s ease,color .15s ease}
 .langbtn:hover{border-color:var(--ink)}
 .langbtn[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
@@ -351,8 +475,10 @@ ul,ol{margin:0}
   text-transform:uppercase;color:var(--ink-2)}
 
 /* --- reveal: progressive enhancement. Nothing is hidden without JS. -------- */
-.js .rv{opacity:0;transform:translateY(14px)}
-.js .rv.in{opacity:1;transform:none;transition:opacity .5s ease,transform .5s ease}
+.js .rv{opacity:0;-webkit-transform:translateY(14px);transform:translateY(14px)}
+.js .rv.in{opacity:1;-webkit-transform:none;transform:none;
+  -webkit-transition:opacity .5s ease,transform .5s ease;
+  transition:opacity .5s ease,transform .5s ease}
 
 /* --- responsive ------------------------------------------------------------ */
 @media (max-width:900px){
@@ -379,9 +505,9 @@ ul,ol{margin:0}
 /* --- reduced motion -------------------------------------------------------- */
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
-  .js .rv{opacity:1!important;transform:none!important;transition:none!important}
-  .btn,.social a,.copybtn{transition:none!important}
-  .btn:hover,.social a:hover{transform:none!important}
+  .js .rv{opacity:1!important;-webkit-transform:none!important;transform:none!important;transition:none!important}
+  .btn,.social a,.copybtn,.langbtn,.iskip,.iscta,.audiobtn{-webkit-transition:none!important;transition:none!important}
+  .btn:hover,.social a:hover{-webkit-transform:none!important;transform:none!important}
   .btn .spin{animation:none;border-top-color:rgba(255,255,255,.9)}
 }
 
@@ -398,19 +524,22 @@ ul,ol{margin:0}
   background:rgba(11,20,16,.9);-webkit-backdrop-filter:blur(8px);
   backdrop-filter:blur(8px);color:#fff;touch-action:manipulation;
   cursor:pointer;
-  box-shadow:0 8px 26px rgba(0,0,0,.28);transition:transform .18s ease}
+  box-shadow:0 8px 26px rgba(0,0,0,.28);
+  -webkit-transition:transform .18s ease;transition:transform .18s ease}
 .audiobtn[hidden]{display:none}
-.audiobtn:hover{transform:translateY(-2px)}
+.audiobtn:hover{-webkit-transform:translateY(-2px);transform:translateY(-2px)}
 .audiobtn svg{width:19px;height:19px;flex:none;fill:none;stroke:currentColor;
   stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .audiobtn .wv{display:none}
 .audiobtn[aria-pressed="true"] .wv{display:block}
 .audiobtn[aria-pressed="true"] .mx{display:none}
 /* --- intro film ------------------------------------------------------------ */
-/* One minute, six scenes, played across the whole viewport before the core
-   site is revealed. It is `hidden` in the markup: only vog-support.js starts
-   it - never without JavaScript, never under prefers-reduced-motion - so
-   those readers meet the site directly, and the overlay locks nothing. */
+/* Twenty-four seconds, six scenes, played across the whole viewport before the
+   core site is revealed. It is `hidden` in the markup: only vog-support.js
+   starts it - never without JavaScript, never under prefers-reduced-motion - so
+   those readers meet the site directly, and the overlay locks nothing.
+   vog-support.js owns the same number (FILM_MS) and the six scene switch times;
+   the progress bar below is the visible half of it. */
 .intro{position:fixed;top:0;right:0;bottom:0;left:0;z-index:40;overflow:hidden;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
   -webkit-tap-highlight-color:transparent;touch-action:manipulation;
@@ -431,102 +560,132 @@ ul,ol{margin:0}
   bottom:calc(clamp(30px,7vh,54px) + env(safe-area-inset-bottom,0px));
   margin:0 auto;max-width:30ch;text-align:center;color:#F7EFE3;
   font-size:clamp(17px,4.4vw,21px);font-weight:800;line-height:1.45;
-  text-shadow:0 2px 16px rgba(0,0,0,.6);opacity:0;transform:translateY(12px);
+  text-shadow:0 2px 16px rgba(0,0,0,.6);opacity:0;
+  -webkit-transform:translateY(12px);transform:translateY(12px);
   -webkit-transition:opacity .7s ease,transform .7s ease;transition:opacity .7s ease,transform .7s ease}
-.icpn.on{opacity:1;transform:none}
+.icpn.on{opacity:1;-webkit-transform:none;transform:none}
 .ibar{position:absolute;top:0;left:0;right:0;height:3px;z-index:3;
   background:rgba(247,239,227,.14)}
 .ibar i{display:block;height:100%;width:0;
   background:linear-gradient(90deg,var(--terracotta),var(--mint))}
-.intro.run .ibar i{-webkit-animation:ibarfill 60s linear forwards;animation:ibarfill 60s linear forwards}
+/* 24s: the same length the film runs for, so the bar empties exactly as the
+   last scene ends. vog-support.js owns that number too (FILM_MS) - change both
+   together. */
+.intro.run .ibar i{-webkit-animation:ibarfill 24s linear forwards;animation:ibarfill 24s linear forwards}
 @-webkit-keyframes ibarfill{to{width:100%}}
 @keyframes ibarfill{to{width:100%}}
+/* --- "Play with sound" ------------------------------------------------------
+   Shown only when a browser refused to start the song by itself. Sound is the
+   default on this page; when it does not arrive, the reason is the browser's
+   autoplay policy, and this is the page saying so out loud rather than leaving
+   the reader to guess at a small icon in the corner. Sits above the caption and
+   clear of the fixed sound button. */
+.iscta{position:absolute;z-index:6;left:50%;
+  bottom:calc(clamp(96px,15vh,120px) + env(safe-area-inset-bottom,0px));
+  -webkit-transform:translateX(-50%);transform:translateX(-50%);
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  min-height:48px;padding:13px 26px;border-radius:999px;
+  border:1px solid rgba(247,239,227,.4);
+  background:var(--terracotta-deep);color:#fff;
+  font-family:inherit;font-size:clamp(14.5px,3.6vw,16px);font-weight:800;
+  letter-spacing:.01em;cursor:pointer;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  box-shadow:0 10px 30px rgba(0,0,0,.4);
+  -webkit-transition:opacity .4s ease,transform .18s ease,background .18s ease;
+  transition:opacity .4s ease,transform .18s ease,background .18s ease}
+.iscta[hidden]{display:none}
+.iscta:hover{background:var(--terracotta-press)}
+.iscta:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.iscta svg{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;
+  stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 /* Skip the film. Bottom-left, clear of the fixed sound button (bottom-right)
    and of the iPhone home indicator; icon-less text, large enough to tap. */
 .iskip{position:absolute;z-index:5;
   left:calc(clamp(16px,5vw,26px) + env(safe-area-inset-left,0px));
   bottom:calc(clamp(16px,4vh,26px) + env(safe-area-inset-bottom,0px));
   display:inline-flex;align-items:center;justify-content:center;
-  min-height:40px;padding:8px 18px;border-radius:999px;
+  min-height:44px;padding:8px 18px;border-radius:999px;
   border:1px solid rgba(247,239,227,.34);
   background:rgba(11,20,16,.5);-webkit-backdrop-filter:blur(6px);
   backdrop-filter:blur(6px);color:#F7EFE3;
   font-size:clamp(14px,3.6vw,16px);font-weight:700;letter-spacing:.01em;
   cursor:pointer;touch-action:manipulation;
   -webkit-tap-highlight-color:transparent;
+  -webkit-transition:opacity .4s ease,transform .18s ease,background .18s ease;
   transition:opacity .4s ease,transform .18s ease,background .18s ease;
   opacity:.9}
 .iskip[hidden]{display:none}
-.iskip:hover{background:rgba(11,20,16,.72);transform:translateY(-1px);opacity:1}
+.iskip:hover{background:rgba(11,20,16,.72);opacity:1}
 .iskip:focus-visible{outline:2px solid var(--mint);outline-offset:2px;opacity:1}
 .ititle{margin:0;font-size:clamp(34px,9vw,58px);font-weight:900;
   letter-spacing:-.02em;color:#F7EFE3;text-align:center;
   text-shadow:0 4px 30px rgba(0,0,0,.5)}
 /* scene 1 - dawn over the hills */
-.iscn1 .isun{transform:translate(0,46px);opacity:0}
-.iscn1.on .isun{-webkit-animation:isunrise 7s cubic-bezier(.22,.61,.36,1) .4s forwards;animation:isunrise 7s cubic-bezier(.22,.61,.36,1) .4s forwards}
+.iscn1 .isun{-webkit-transform:translate(0,46px);transform:translate(0,46px);opacity:0}
+.iscn1.on .isun{-webkit-animation:isunrise 3.6s cubic-bezier(.22,.61,.36,1) .3s forwards;animation:isunrise 3.6s cubic-bezier(.22,.61,.36,1) .3s forwards}
 @-webkit-keyframes isunrise{to{-webkit-transform:translate(0,-6px);transform:translate(0,-6px);opacity:1}}
 @keyframes isunrise{to{transform:translate(0,-6px);opacity:1}}
-.iscn1 .ismist{-webkit-animation:ismist 7s ease-in-out infinite alternate;animation:ismist 7s ease-in-out infinite alternate}
+.iscn1 .ismist{-webkit-animation:ismist 4s ease-in-out infinite alternate;animation:ismist 4s ease-in-out infinite alternate}
 @-webkit-keyframes ismist{from{-webkit-transform:translateX(-14px);transform:translateX(-14px)}to{-webkit-transform:translateX(14px);transform:translateX(14px)}}
 @keyframes ismist{from{transform:translateX(-14px)}to{transform:translateX(14px)}}
 /* scene 2 - the problems that stayed; the young walking out of frame */
-.iscn2.on .isfig{-webkit-animation:iwalk 7s ease-in-out 1s forwards;animation:iwalk 7s ease-in-out 1s forwards}
+.iscn2.on .isfig{-webkit-animation:iwalk 3.6s ease-in-out .3s forwards;animation:iwalk 3.6s ease-in-out .3s forwards}
 @-webkit-keyframes iwalk{to{-webkit-transform:translate(52px,-3px);transform:translate(52px,-3px);opacity:.15}}
 @keyframes iwalk{to{transform:translate(52px,-3px);opacity:.15}}
 /* scene 3 - the letter, and the people it gathered */
-.iscn3 .ispaper{transform:translateY(70px);opacity:0}
-.iscn3.on .ispaper{-webkit-animation:ipaper 2.6s cubic-bezier(.22,.61,.36,1) .3s forwards;animation:ipaper 2.6s cubic-bezier(.22,.61,.36,1) .3s forwards}
+.iscn3 .ispaper{-webkit-transform:translateY(70px);transform:translateY(70px);opacity:0}
+.iscn3.on .ispaper{-webkit-animation:ipaper 2.2s cubic-bezier(.22,.61,.36,1) .2s forwards;animation:ipaper 2.2s cubic-bezier(.22,.61,.36,1) .2s forwards}
 @-webkit-keyframes ipaper{to{-webkit-transform:none;transform:none;opacity:1}}
 @keyframes ipaper{to{transform:none;opacity:1}}
-.iscn3 .ippl{opacity:0;transform:translateY(24px)}
-.iscn3.on .ippl{-webkit-animation:irise 1.4s ease forwards;animation:irise 1.4s ease forwards}
-.iscn3.on .ip1{-webkit-animation-delay:.9s;animation-delay:.9s}
-.iscn3.on .ip2{-webkit-animation-delay:1.4s;animation-delay:1.4s}
-.iscn3.on .ip3{-webkit-animation-delay:1.9s;animation-delay:1.9s}
-.iscn3.on .ip4{-webkit-animation-delay:2.4s;animation-delay:2.4s}
-.iscn3.on .ip5{-webkit-animation-delay:2.9s;animation-delay:2.9s}
+.iscn3 .ippl{opacity:0;-webkit-transform:translateY(24px);transform:translateY(24px)}
+.iscn3.on .ippl{-webkit-animation:irise 1.1s ease forwards;animation:irise 1.1s ease forwards}
+.iscn3.on .ip1{-webkit-animation-delay:.7s;animation-delay:.7s}
+.iscn3.on .ip2{-webkit-animation-delay:1.1s;animation-delay:1.1s}
+.iscn3.on .ip3{-webkit-animation-delay:1.5s;animation-delay:1.5s}
+.iscn3.on .ip4{-webkit-animation-delay:1.9s;animation-delay:1.9s}
+.iscn3.on .ip5{-webkit-animation-delay:2.3s;animation-delay:2.3s}
 @-webkit-keyframes irise{to{opacity:1;-webkit-transform:none;transform:none}}
 @keyframes irise{to{opacity:1;transform:none}}
 /* scene 4 - temporary becomes permanent: the well fills, the tree grows,
    the shutter rolls up */
 .iscn4 .istree{transform-box:fill-box;transform-origin:50% 100%;
-  transform:scaleY(.22);opacity:.5}
-.iscn4.on .istree{-webkit-animation:igrow 7s cubic-bezier(.34,1.28,.64,1) .5s forwards;animation:igrow 7s cubic-bezier(.34,1.28,.64,1) .5s forwards}
+  -webkit-transform:scaleY(.22);transform:scaleY(.22);opacity:.5}
+.iscn4.on .istree{-webkit-animation:igrow 3.6s cubic-bezier(.34,1.28,.64,1) .3s forwards;animation:igrow 3.6s cubic-bezier(.34,1.28,.64,1) .3s forwards}
 @-webkit-keyframes igrow{to{-webkit-transform:scaleY(1);transform:scaleY(1);opacity:1}}
 @keyframes igrow{to{transform:scaleY(1);opacity:1}}
 .iscn4 .isleaves{opacity:0}
-.iscn4.on .isleaves{-webkit-animation:ifade 3s ease 3.6s forwards;animation:ifade 3s ease 3.6s forwards}
-.iscn4 .iswater{transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(0)}
-.iscn4.on .iswater{-webkit-animation:ifill 5s ease 1.4s forwards;animation:ifill 5s ease 1.4s forwards}
+.iscn4.on .isleaves{-webkit-animation:ifade 1.6s ease 2.1s forwards;animation:ifade 1.6s ease 2.1s forwards}
+.iscn4 .iswater{transform-box:fill-box;transform-origin:50% 100%;
+  -webkit-transform:scaleY(0);transform:scaleY(0)}
+.iscn4.on .iswater{-webkit-animation:ifill 2.6s ease .8s forwards;animation:ifill 2.6s ease .8s forwards}
 @-webkit-keyframes ifill{to{-webkit-transform:scaleY(1);transform:scaleY(1)}}
 @keyframes ifill{to{transform:scaleY(1)}}
 .iscn4 .isshutter{transform-box:fill-box;transform-origin:50% 0}
-.iscn4.on .isshutter{-webkit-animation:iopen 4s ease 4.4s forwards;animation:iopen 4s ease 4.4s forwards}
+.iscn4.on .isshutter{-webkit-animation:iopen 2.2s ease 2.2s forwards;animation:iopen 2.2s ease 2.2s forwards}
 @-webkit-keyframes iopen{to{-webkit-transform:scaleY(0);transform:scaleY(0)}}
 @keyframes iopen{to{transform:scaleY(0)}}
-.iscn4 .isglow{-webkit-animation:ifade 2s ease 5.6s forwards;animation:ifade 2s ease 5.6s forwards}
+.iscn4 .isglow{-webkit-animation:ifade 1.2s ease 2.8s forwards;animation:ifade 1.2s ease 2.8s forwards}
 @-webkit-keyframes ifade{to{opacity:1}}
 @keyframes ifade{to{opacity:1}}
 /* scene 5 - by us: the flag, the people */
-.iscn5 .ifig{opacity:0;transform:translateY(34px)}
-.iscn5.on .ifig{-webkit-animation:irise 1.6s ease forwards;animation:irise 1.6s ease forwards}
-.iscn5.on .if1{-webkit-animation-delay:.3s;animation-delay:.3s}
-.iscn5.on .if2{-webkit-animation-delay:.9s;animation-delay:.9s}
-.iscn5.on .if3{-webkit-animation-delay:1.5s;animation-delay:1.5s}
-.iscn5.on .if4{-webkit-animation-delay:2.1s;animation-delay:2.1s}
+.iscn5 .ifig{opacity:0;-webkit-transform:translateY(34px);transform:translateY(34px)}
+.iscn5.on .ifig{-webkit-animation:irise 1.2s ease forwards;animation:irise 1.2s ease forwards}
+.iscn5.on .if1{-webkit-animation-delay:.2s;animation-delay:.2s}
+.iscn5.on .if2{-webkit-animation-delay:.6s;animation-delay:.6s}
+.iscn5.on .if3{-webkit-animation-delay:1s;animation-delay:1s}
+.iscn5.on .if4{-webkit-animation-delay:1.4s;animation-delay:1.4s}
 .iscn5 .iflag{transform-box:fill-box;transform-origin:10% 60%;
-  transform:scale(.62);opacity:0}
-.iscn5.on .iflag{-webkit-animation:iflagin 2s cubic-bezier(.22,.61,.36,1) 3.4s forwards;animation:iflagin 2s cubic-bezier(.22,.61,.36,1) 3.4s forwards}
+  -webkit-transform:scale(.62);transform:scale(.62);opacity:0}
+.iscn5.on .iflag{-webkit-animation:iflagin 1.6s cubic-bezier(.22,.61,.36,1) 1.8s forwards;animation:iflagin 1.6s cubic-bezier(.22,.61,.36,1) 1.8s forwards}
 @-webkit-keyframes iflagin{to{-webkit-transform:scale(1);transform:scale(1);opacity:1}}
 @keyframes iflagin{to{transform:scale(1);opacity:1}}
 .iscn5 .iwave{transform-box:fill-box;transform-origin:0 50%}
-.iscn5.on .iwave{-webkit-animation:iwave 2.2s ease-in-out 5.4s infinite alternate;animation:iwave 2.2s ease-in-out 5.4s infinite alternate}
+.iscn5.on .iwave{-webkit-animation:iwave 2s ease-in-out 2.9s infinite alternate;animation:iwave 2s ease-in-out 2.9s infinite alternate}
 @-webkit-keyframes iwave{to{-webkit-transform:skewY(-5deg) translateX(4px);transform:skewY(-5deg) translateX(4px)}}
 @keyframes iwave{to{transform:skewY(-5deg) translateX(4px)}}
 /* scene 6 - the title */
-.iscn6 .ititle{opacity:0;transform:scale(.9);letter-spacing:.16em}
-.iscn6.on .ititle{-webkit-animation:ititle 2.4s cubic-bezier(.22,.61,.36,1) .4s forwards;animation:ititle 2.4s cubic-bezier(.22,.61,.36,1) .4s forwards}
+.iscn6 .ititle{opacity:0;-webkit-transform:scale(.9);transform:scale(.9);letter-spacing:.16em}
+.iscn6.on .ititle{-webkit-animation:ititle 2.2s cubic-bezier(.22,.61,.36,1) .3s forwards;animation:ititle 2.2s cubic-bezier(.22,.61,.36,1) .3s forwards}
 @-webkit-keyframes ititle{to{opacity:1;-webkit-transform:none;transform:none;letter-spacing:-.02em}}
 @keyframes ititle{to{opacity:1;transform:none;letter-spacing:-.02em}}
 /* the film is motion by definition; under reduced motion it never plays */

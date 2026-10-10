@@ -202,40 +202,52 @@
   applyLang();
 
   /* --- 4. the intro film, and the song that plays once ----------------------
-     The homepage opens with a one-minute film - Gudalur at home, the problems
-     that stayed, the moment the change began, temporary fixes becoming
-     permanent, people taking responsibility, the title - and only then reveals
-     the core site. The record pages carry no film: a link opened to read a
-     grievance goes straight to the record, and nothing may stand in the way.
-     The markup carries the overlay `hidden`, so without JavaScript (or under
+     The homepage opens with a short film - Gudalur at home, the problems that
+     stayed, the moment the change began, temporary fixes becoming permanent,
+     people taking responsibility, the title - and only then reveals the core
+     site. The record pages carry no film: a link opened to read a grievance
+     goes straight to the record, and nothing may stand in the way. The markup
+     carries the overlay `hidden`, so without JavaScript (or under
      prefers-reduced-motion) every reader meets the site directly.
 
+     SOUND IS THE DEFAULT here, and this section exists to keep it that way.
+     The song is asked for, unmuted, the instant the page opens; where a browser
+     allows audible autoplay (desktop, Android, most in-app browsers) the film
+     starts with its first downbeat already sounding. Where autoplay is refused
+     - iOS Safari, and desktop Chrome or Firefox on a domain they have not yet
+     learned to trust - the play() promise rejects, the film runs silently, and
+     the reader's first touch anywhere turns the sound on.
+
+     That refusal is announced rather than hidden. #vogSoundCta appears, because
+     a silent film with one small icon in the corner reads as "this site is
+     mute", which is the opposite of what is true: it is the browser's policy,
+     not the page's choice, and the page says so out loud. Skipping the film
+     counts as leaving, not as asking for sound, so the skip button is excluded
+     from the first-touch unmute; the sound button toggles itself.
+
      The song plays exactly once, during the film, and never repeats: there is
-     no loop, and finishIntro() fades it out and pauses it for good - nothing
-     on the core site starts it again. What a browser allows unprompted
-     differs: attempt audible first, fall back to muted, and let the reader's
-     first touch unmute - Safari (desktop and iOS alike) insists on that
-     gesture. Skipping the film counts as leaving, not as asking for sound, so
-     the skip button is excluded from that first touch; the sound button
-     toggles itself.
+     no loop, and finishIntro() fades it out and pauses it for good - nothing on
+     the core site starts it again. It is 60 seconds long against a 24-second
+     film, so the fade is how it ends.
 
      NOTHING IS STORED. The privacy test in tests-static asserts that this file
      writes exactly one key, vog-lang, and a remembered preference would fail
      it - which is the right answer: a preference is not something to keep on
      someone's phone. Reload, and the film - with its song - starts again.
 
-     Volume is low on purpose. This is music under a one-minute film on a page
-     someone may be watching on a phone in a tea estate; it should never be
-     the loudest thing in the room. */
+     Volume is low on purpose. This is music under a short film on a page
+     someone may be watching on a phone in a tea estate; it should never be the
+     loudest thing in the room. */
   var song = $('vogSong'), songBtn = $('vogSongBtn'),
-      intro = $('vogIntro'), introSkip = $('vogIntroSkip');
+      intro = $('vogIntro'), introSkip = $('vogIntroSkip'),
+      soundCta = $('vogSoundCta');
 
   /* Called from applyLang() so the button's label follows the chosen language.
      Declared here and hoisted, so applyLang above can already reach it; the
      guard is what makes that safe on the very first call, before `song` is
-     assigned. The button is icon-only, so only the aria-label (and the
-     language it is spoken in) needs painting - the visible pair of svgs is
-     switched by CSS off aria-pressed. */
+     assigned. The button is icon-only, so only the aria-label (and the language
+     it is spoken in) needs painting - the visible pair of svgs is switched by
+     CSS off aria-pressed. */
   function songPaint() {
     if (!song || !songBtn) return;
     var on = songBtn.getAttribute('aria-pressed') === 'true';
@@ -244,11 +256,17 @@
   }
 
   if (intro && song && songBtn && !reduced) {
-    var introTimers = [], introDone = false, filmStarted = false, settled = false;
+    /* Twenty-four seconds, six scenes. Short on purpose: the film is a door,
+       not a lobby. The reader reaches the petition in one breath, and any
+       scroll, swipe or arrow key ends it early - see leaveFilm(). */
+    var FILM_MS = 24000;
+    var SCENES = [0, 4000, 8000, 12000, 16000, 20000]; /* six windows, 24s */
+    var introTimers = [], introDone = false, filmStarted = false,
+        settled = false, soundOn = false, gestureArmed = false,
+        ctaOffered = false;
     song.volume = 0.28;
     song.loop = false; /* belt and braces: the markup carries no loop either */
 
-    var SCENES = [0, 8000, 16000, 24000, 38000, 50000]; /* six windows, 60s */
     var sceneNodes = intro.querySelectorAll('.iscn');
     var capNodes = intro.querySelectorAll('.icpn');
     var pageBlocks = document.querySelectorAll('header.top, main, footer');
@@ -267,10 +285,14 @@
       }
     }
 
-    function songOff() {
-      songBtn.setAttribute('aria-pressed', 'false');
-      song.muted = true;
-      song.pause();
+    /* The one place that decides what "the sound is on" means, so the element,
+       the icon button and the visible call to action can never disagree with
+       each other. The CTA is an offer, and an offer is shown until it is taken. */
+    function setSound(on) {
+      soundOn = !!on;
+      song.muted = !soundOn;
+      songBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+      if (soundCta) soundCta.hidden = soundOn || introDone || !ctaOffered;
       songPaint();
     }
 
@@ -288,17 +310,16 @@
 
     function songOn() {
       if (introDone) return; /* the film is over: the core site stays silent */
-      song.muted = false;
-      /* Resume where it left off rather than restarting: the song has been
-         running underneath the film the whole time (muted, in step with the
-         scenes), so unmuting mid-film must stay on that beat, not jump back to
-         the first one. */
-      songBtn.setAttribute('aria-pressed', 'true');
-      songPaint();
+      ctaOffered = false;
+      setSound(true);
       var p = tryPlay();
       if (p && typeof p.catch === 'function') p.catch(songOff);
     }
 
+    function songOff() {
+      song.pause();
+      setSound(false);
+    }
     function songFadeOut(ms) {
       var v0 = song.volume, steps = 16, n = 0;
       var iv = setInterval(function () {
@@ -317,10 +338,12 @@
       if (introDone) return;
       introDone = true;
       disarmGesture();
+      disarmLeave();
       for (var k = 0; k < introTimers.length; k++) clearTimeout(introTimers[k]);
       songFadeOut(500);
       songBtn.hidden = true;
       if (introSkip) introSkip.hidden = true;
+      if (soundCta) soundCta.hidden = true;
       intro.classList.remove('run');
       intro.hidden = true;
       lockPage(false);
@@ -343,79 +366,109 @@
       for (var s = 1; s < SCENES.length; s++) {
         (function (n) { introTimers.push(setTimeout(function () { showScene(n); }, SCENES[n])); })(s);
       }
-      introTimers.push(setTimeout(finishIntro, 60000));
+      introTimers.push(setTimeout(finishIntro, FILM_MS));
       songBtn.hidden = false;
       if (introSkip) introSkip.hidden = false;
+      if (soundCta && !soundOn && ctaOffered) soundCta.hidden = false;
+      armLeave();
+      songPaint();
     }
 
-    /* The first-touch unmute. Safari (desktop and iOS alike) refuses to begin
-       sound without a user gesture, so when audible autoplay is refused the film
-       is held muted and this one listener turns the song on at the reader's
-       first touch anywhere. The skip button - which ends the film - and the
-       sound button - which toggles itself - are left out, so a tap on either is
-       never swallowed here. `gestureArmed` guards against the touchstart +
-       mousedown pair that a single tap fires. */
-    var gestureArmed = false;
+    /* --- the first-touch unmute --------------------------------------------
+       Where audible autoplay was refused, the film runs silently and these
+       listeners turn the song on at the reader's first touch anywhere.
+       pointerdown, touchstart, mousedown and click are every event a browser
+       counts as user activation for audio. They are attached before play() is
+       attempted, so a tap that lands while the promise is still pending is
+       never missed. The sound button toggles itself and the CTA has its own
+       handler, so a tap on either is never swallowed here.
+
+       Plain `true` rather than an options object: it works on every browser
+       that has addEventListener at all. `gestureArmed` guards against the
+       pointerdown + mousedown + click triple a single tap fires. */
     function unlockOnGesture(ev) {
-      var tgt = ev.target;
-      if (tgt && tgt.closest && (tgt.closest('#vogIntroSkip') || tgt.closest('#vogSongBtn'))) {
-        disarmGesture(); /* those controls do their own thing */
-        return;
-      }
       if (!gestureArmed) return;
+      var tgt = ev.target;
+      if (tgt && tgt.closest && (tgt.closest('#vogSongBtn') || tgt.closest('#vogSoundCta'))) return;
       disarmGesture();
       if (introDone) return;
-      song.muted = false;
-      songBtn.setAttribute('aria-pressed', 'true');
-      songPaint();
-      var p = tryPlay();
-      if (p && typeof p.catch === 'function') p.catch(songOff);
+      songOn();
     }
     function attachGesture() {
       gestureArmed = true;
-      window.addEventListener('touchstart', unlockOnGesture, { capture: true, passive: true });
-      window.addEventListener('mousedown', unlockOnGesture, { capture: true });
+      window.addEventListener('pointerdown', unlockOnGesture, true);
+      window.addEventListener('touchstart', unlockOnGesture, true);
+      window.addEventListener('mousedown', unlockOnGesture, true);
+      window.addEventListener('click', unlockOnGesture, true);
     }
     function disarmGesture() {
       gestureArmed = false;
-      window.removeEventListener('touchstart', unlockOnGesture, { capture: true });
-      window.removeEventListener('mousedown', unlockOnGesture, { capture: true });
+      window.removeEventListener('pointerdown', unlockOnGesture, true);
+      window.removeEventListener('touchstart', unlockOnGesture, true);
+      window.removeEventListener('mousedown', unlockOnGesture, true);
+      window.removeEventListener('click', unlockOnGesture, true);
     }
 
-    /* Autoplay with sound was refused (iOS Safari above all): the film runs on
-       its own, muted, while the silent song plays underneath in step with the
-       scenes, and the reader's first touch turns the sound on. There is no
-       tap-to-start prompt - the motion begins by itself. */
-    function holdForSound() {
-      song.muted = true;
-      songPaint();
-      runFilm();
-      /* Play the song muted so its timeline matches the film. Muted autoplay is
-         allowed even where audible autoplay is not, so the unmute on the first
-         gesture lands on the right beat instead of restarting the song. */
-      try { song.currentTime = 0; } catch (e) { /* not seekable yet */ }
-      var p = tryPlay();
-      if (p && typeof p.catch === 'function') p.catch(function () { /* silent hold */ });
-      attachGesture();
+    /* --- leaving the film early --------------------------------------------
+       A scroll, a swipe or an arrow key means the reader wants the petition, so
+       the film ends there and then instead of holding them for another beat.
+       Skip is that same wish said in words; this is that same wish done.
+       Tab, Enter and typing are deliberately not navigation keys: a keyboard
+       reader reaching the CTA must be able to activate it without the film
+       vanishing from under them. */
+    function leaveFilm(ev) {
+      if (introDone || !filmStarted) return;
+      if (ev && ev.type === 'keydown') {
+        var tgt = ev.target;
+        if (tgt && tgt.closest && tgt.closest('#vogSoundCta, #vogIntroSkip, #vogSongBtn')) return;
+        var k = ev.keyCode || ev.which || 0;
+        if (k < 32 || k > 40) return; /* space, page up/down, end, home, arrows */
+      }
+      finishIntro();
+    }
+    function armLeave() {
+      window.addEventListener('wheel', leaveFilm, true);
+      window.addEventListener('touchmove', leaveFilm, true);
+      window.addEventListener('keydown', leaveFilm, true);
+    }
+    function disarmLeave() {
+      window.removeEventListener('wheel', leaveFilm, true);
+      window.removeEventListener('touchmove', leaveFilm, true);
+      window.removeEventListener('keydown', leaveFilm, true);
     }
 
-    /* Sound by default: try audible autoplay the instant the page opens, from the
-       very first beat. Where a browser allows it (desktop, Android) the film runs
-       with sound right away; where it refuses (iOS Safari) the film runs muted
-       and the reader's first touch anywhere turns the sound on. No tap-to-start
-       prompt. */
+    /* Sound by default: ask for it, unmuted, the instant the page opens. */
     function audible() {
       if (settled) return; settled = true;
-      songBtn.setAttribute('aria-pressed', 'true'); /* audible already */
-      songPaint();
+      setSound(true);
       runFilm();
     }
     function needGesture() {
       if (settled) return; settled = true;
-      song.muted = true;
-      songPaint();
-      holdForSound();
+      ctaOffered = true;
+      setSound(false);
+      runFilm();
     }
+
+    songBtn.addEventListener('click', function () {
+      var on = songBtn.getAttribute('aria-pressed') === 'true';
+      if (on) songOff(); else songOn();
+    });
+    if (soundCta) {
+      soundCta.addEventListener('click', function () {
+        if (introDone) return;
+        songOn();
+      });
+    }
+    song.addEventListener('ended', songOff); /* one play: it simply ends */
+
+    if (introSkip) {
+      introSkip.addEventListener('click', function () {
+        if (introDone) return;
+        finishIntro();
+      });
+    }
+
     song.muted = false;
     try { song.currentTime = 0; } catch (e) { /* not seekable yet */ }
     /* tryPlay() never throws (old iOS Safari refuses autoplay by throwing
@@ -423,6 +476,7 @@
        film, no animation, no switcher). It returns a promise on modern
        browsers, undefined on old ones that started without one, or null when
        the call was refused outright. */
+    attachGesture();
     var firstPlay = tryPlay();
     if (firstPlay && typeof firstPlay.then === 'function') {
       firstPlay.then(audible, needGesture);
@@ -439,28 +493,13 @@
         needGesture();
       }, 1200);
     } else if (firstPlay) {
-      /* No promise (old Safari): it did not throw, so assume the audible
-         autoplay it returned undefined for actually began. */
-      audible();
+      /* No promise (old Safari): it did not throw, so believe what the element
+         says about itself rather than guessing either way. */
+      if (!song.paused) audible(); else needGesture();
     } else {
-      /* play() threw: autoplay was refused outright. Fall back to muted. */
+      /* play() threw: autoplay was refused outright. */
       needGesture();
-    }
-
-    songBtn.addEventListener('click', function () {
-      var on = songBtn.getAttribute('aria-pressed') === 'true';
-      if (on) songOff(); else songOn();
-    });
-    song.addEventListener('ended', songOff); /* one play: it simply ends */
-
-    /* Skip ends the film at once and reveals the site - the same way reaching the
-       60-second mark does. It is a way of leaving the film, not a request for
-       sound, so it does not unmute: the song simply stops. */
-    if (introSkip) {
-      introSkip.addEventListener('click', function () {
-        if (introDone) return;
-        finishIntro();
-      });
     }
   }
 })();
+

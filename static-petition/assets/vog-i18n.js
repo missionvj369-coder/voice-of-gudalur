@@ -16,8 +16,10 @@
    and stay as they are in every language, because they are what a person
    types or dials.
 
-   201 keys, 1005 strings, five per key. The intro-film keys (introCap1-6,
-   introSkip, introStart) and the news keys are the newest. `newsOut*`, `newsDate*` and
+   203 keys, 1015 strings, five per key. The intro-film keys (introCap1-6,
+   introSkip) and the news keys are the oldest of the set; `audCta` and
+   `audCtaAria` are the newest - the call to action the film shows when a
+   browser refused to start the song by itself. `newsOut*`, `newsDate*` and
    `newsH3*` repeat their English in all
    five slots on purpose: an outlet name and a headline are quotations, and a
    translated quotation is one a reader cannot check against the original.
@@ -210,6 +212,8 @@ window.VOG_I18N = {
   newsRead:       ["செய்தியைப் படிக்கவும்", "Read the report", "റിപ്പോർട്ട് വായിക്കുക", "ವರದಿ ಓದಿ", "खबर पढ़ें"],
   audAria:        ["பின்னணிப் பாடலை இயக்கு", "Play the background song", "പശ്ചാത്തല പാട്ട് കടത്തുക", "ಹಿನ್ನೆಲೆ ಹಾಡು ಆಡಿ", "पृष्ठभूमि गाना चलाएँ"],
   audStopAria:    ["பின்னணிப் பாடலை நிறுத்து", "Stop the background song", "പശ്ചാത്തല പാട്ട് നിർത്തുക", "ಹಿನ್ನೆಲೆ ಹಾಡು ನಿಲ್ಲಿಸಿ", "पृष्ठभूमि गाना बंद करें"],
+  audCta:         ["ஒலியுடன் இயக்கு", "Play with sound", "ഒലിയോടെ കേൾക്കുക", "ಧ್ವನಿಯೊಂದಿಗೆ ಆಡಿಸು", "ध्वनि के साथ चलाएँ"],
+  audCtaAria:     ["பின்னணிப் பாடலை இயக்கு", "Play the background song", "പശ്ചാത്തല പാട്ട് കേൾക്കുക", "ಹಿನ்னೆಲೆ ಹಾಡು ಆಡಿ", "पृष्ठभूमि गाना चलाएँ"],
   introCap1:      ["கூடலூர் — நீலகிரியில் எங்கள் வீடு.", "Gudalur — our home in the Nilgiris.", "ഗൂഡല്ലൂർ — നീലഗിരിയിലെ ഞങ്ങളുടെ വീട്.", "ಗೂಡಲೂರು — ನೀಲಗಿರಿಯಲ್ಲಿ ನಮ್ಮ ಮನೆ.", "गूडलूर — नीलगिरि में हमारा घर।"],
   introCap2:      ["பிரச்சினைகள் நீடித்தன. இளைஞர்கள் சென்றனர்.", "The problems stayed. The young left.", "പ്രശ്നങ്ങൾ തുടർന്നു. യുവാക്കൾ പോയി.", "ಸಮಸ್ಯೆಗಳು ಉಳಿದವು. ಯುವಕರು ಹೋದರು.", "समस्याएँ बनी रहीं। नौजवान चले गए।"],
   introCap3:      ["கூடலூர் ‘போதும்’ என்று சொல்லும் வரை.", "Until Gudalur said: enough.", "ഗൂഡല്ലൂർ ‘മതി’ പറയുന്നതുവരെ.", "ಗೂಡಲೂರು ‘ಸಾಕು’ ಹೇಳುವವರೆಗೆ.", "जब तक गूडलूर ने ‘बस’ नहीं कहा।"],

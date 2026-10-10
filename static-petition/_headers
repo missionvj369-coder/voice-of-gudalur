@@ -51,12 +51,21 @@
 /grievances/*
   Cache-Control: public, max-age=0, must-revalidate
 
-# The shared CSS/JS. Every page now references these with a ?v=N fingerprint, so
-# a deploy bumps N and the new URL is fetched fresh the instant it ships - which
-# is what keeps this long TTL safe. Bump the ?v= on vog.css, vog-i18n.js and
-# vog-support.js together in all three pages whenever any of them changes.
+# The shared CSS/JS. Every page references these with a ?v=N fingerprint, and N
+# is bumped on every deploy, so the URL of a changed file is a URL no browser
+# has ever seen. That is what makes a year-long immutable TTL safe: nothing is
+# ever served stale, because nothing stale is ever requested. It is also the
+# single biggest lever this site has under a crowd - the stylesheet, the copy
+# table and the support script are fetched from the edge once per visitor
+# instead of revalidated on every navigation.
+#
+# The ?v= lives in the query string, so it is part of the cache key the CDN
+# computes; `immutable` tells the browser never to ask again for that key.
+#
+# Bump the ?v= on vog.css, vog-i18n.js and vog-support.js together in all three
+# pages whenever any of them changes.
 /assets/*
-  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+  Cache-Control: public, max-age=31536000, immutable
 
 # The three published PDFs (the government reply, our appeal, and the
 # Gudalur Transformation Plan). Browsers hand these to the built-in PDF viewer
@@ -76,21 +85,35 @@
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
   Content-Type: application/pdf
 
-# Baseline security headers. The page is first-party by design: no third-party
-# script, no iframe, no remote font. It makes exactly one cross-origin request -
-# the POST to the support Worker that mints the Support ID - so connect-src names
-# that one origin and nothing else. The Worker replies with an
-# Access-Control-Allow-Origin for https://voiceofgudalur.space only, so a page
-# served from anywhere else is refused before a record can be written from it.
-# The official follow-up routes (tel:1100, the CM Helpline mailbox, the
-# Mudhalvarin Mugavari portal) are plain <a href> links, which CSP does not
-# restrict, so form-action stays 'self' and frame and img stay closed. If an
-# embed is ever added back, re-open frame-src (and img-src, for its thumbnail
-# host) here at the same time.
+# ─── Security headers ────────────────────────────────────────────────────────
+# The page is first-party by design: no third-party script, no iframe, no remote
+# font, and no network request of any kind beyond its own files. Every official
+# follow-up route (tel:1100, the CM Helpline mailbox, the Mudhalvarin Mugavari
+# portal) is a plain <a href>, which CSP does not restrict, so form-action stays
+# 'self' and frame-src and object-src stay closed.
+#
+# script-src carries NO 'unsafe-inline'. There is exactly one inline script on
+# the whole site - the three-line reveal fallback in the <head> that sets the
+# .js class - and it is byte-identical on all three pages, so one SHA-256 covers
+# every page. tools/csp-hash.mjs recomputes it from the shipped HTML and fails if
+# _headers disagrees; tools/inline-snippet.ps1 rewrites the tag in every page and
+# prints the new hash after an edit. Because .rv is only ever hidden under .js,
+# and .js is only ever set by that script, a hash that fails to match costs the
+# reveal animation and nothing else: the page is fully visible without it.
+#
+# style-src still needs 'unsafe-inline': three elements carry a one-off inline
+# style, and unpicking them for no security gain would be theatre.
+#
+# Everything this petition does not use is switched off outright rather than left
+# for a future feature request to re-open. autoplay is deliberately absent from
+# that list: denying it would silence the intro film's song.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN
-  Permissions-Policy: geolocation=(), microphone=(), camera=(), accelerometer=(), gyroscope=()
+  Permissions-Policy: accelerometer=(), ambient-light-sensor=(), battery=(), camera=(), display-capture=(), document-domain=(), encrypted-media=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), web-share=(), xr-spatial-tracking=()
+  X-Permitted-Cross-Domain-Policies: none
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
   Strict-Transport-Security: max-age=31536000; includeSubDomains
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-eeubnwpLblNMPe6+H2mXRG3JyGSv0f9zNEhGsWtqSTc='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests
